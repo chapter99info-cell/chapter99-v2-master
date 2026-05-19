@@ -33,6 +33,51 @@ const STEPS: { id: WizardStep; label: string }[] = [
   { id: 'confirm', label: 'Confirm' },
 ]
 
+const HH_MM_RE = /^(\d{1,2}):(\d{2})$/
+const BUSINESS_OPEN_MINS = 10 * 60
+const BUSINESS_CLOSE_MINS = 20 * 60
+
+function normalizeHHMM(input: string): string | null {
+  const m = input.trim().match(HH_MM_RE)
+  if (!m) return null
+  const h = parseInt(m[1], 10)
+  const min = parseInt(m[2], 10)
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
+
+function validateCustomTime(
+  input: string,
+  date: string,
+  durationMin: number,
+  bookings: { start_time: string; end_time: string }[]
+): string | null {
+  const normalized = normalizeHHMM(input)
+  if (!normalized) return 'Enter time as HH:MM (e.g. 14:30)'
+
+  const [h, m] = normalized.split(':').map(Number)
+  if (m % 30 !== 0) return 'Time must be in 30-minute increments (e.g. 10:00, 10:30)'
+
+  const startMins = h * 60 + m
+  if (startMins < BUSINESS_OPEN_MINS) return 'Earliest booking time is 10:00'
+
+  const endMins = startMins + durationMin
+  if (endMins > BUSINESS_CLOSE_MINS) {
+    return `Service must finish by 20:00 (${durationMin} min from ${normalized})`
+  }
+
+  const slotStart = new Date(`${date}T${normalized}:00+10:00`)
+  const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
+  const conflict = bookings.some(b => {
+    const bStart = new Date(b.start_time)
+    const bEnd = new Date(b.end_time)
+    return slotStart < bEnd && slotEnd > bStart
+  })
+  if (conflict) return 'This time conflicts with an existing booking'
+
+  return null
+}
+
 export default function BookingWizard({
   shopId,
   bookedBy,
@@ -41,12 +86,15 @@ export default function BookingWizard({
   const [step, setStep] = useState<WizardStep>('service')
   const [services, setServices] = useState<ServiceRow[]>([])
   const [slots, setSlots] = useState<string[]>([])
+  const [dayBookings, setDayBookings] = useState<{ start_time: string; end_time: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const [serviceId, setServiceId] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [time, setTime] = useState('')
+  const [customTime, setCustomTime] = useState('')
+  const [customTimeError, setCustomTimeError] = useState('')
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
   const [clientEmail, setClientEmail] = useState('')
@@ -107,13 +155,58 @@ export default function BookingWizard({
       }
     }
 
+    setDayBookings(existing ?? [])
     setSlots(available)
     setLoading(false)
   }, [date, shopId, serviceId, selectedService])
 
+  function selectPresetSlot(slot: string) {
+    setTime(slot)
+    setCustomTime('')
+    setCustomTimeError('')
+  }
+
+  function handleCustomTimeChange(value: string) {
+    setCustomTime(value)
+    if (!value.trim()) {
+      setCustomTimeError('')
+      return
+    }
+    if (!selectedService) {
+      setCustomTimeError('Select a service first')
+      setTime('')
+      return
+    }
+    const err = validateCustomTime(value, date, selectedService.duration, dayBookings)
+    setCustomTimeError(err ?? '')
+    if (!err) {
+      const normalized = normalizeHHMM(value)
+      if (normalized) setTime(normalized)
+    } else {
+      setTime('')
+    }
+  }
+
   useEffect(() => {
     if (step === 'datetime') generateSlots()
   }, [step, generateSlots])
+
+  useEffect(() => {
+    if (!customTime.trim() || !selectedService) return
+    const err = validateCustomTime(
+      customTime,
+      date,
+      selectedService.duration,
+      dayBookings
+    )
+    setCustomTimeError(err ?? '')
+    if (!err) {
+      const normalized = normalizeHHMM(customTime)
+      if (normalized) setTime(normalized)
+    } else {
+      setTime('')
+    }
+  }, [dayBookings, date, selectedService, customTime])
 
   async function saveBooking() {
     if (!selectedService || !time || !clientName.trim()) return
@@ -169,6 +262,8 @@ export default function BookingWizard({
     setStep('service')
     setServiceId('')
     setTime('')
+    setCustomTime('')
+    setCustomTimeError('')
     setClientName('')
     setClientPhone('')
     setClientEmail('')
@@ -210,6 +305,8 @@ export default function BookingWizard({
                   onClick={() => {
                     setServiceId(svc.id)
                     setTime('')
+                    setCustomTime('')
+                    setCustomTimeError('')
                   }}
                 >
                   <div className="bw-service-name">{svc.name_en}</div>
@@ -246,6 +343,8 @@ export default function BookingWizard({
             onChange={e => {
               setDate(e.target.value)
               setTime('')
+              setCustomTime('')
+              setCustomTimeError('')
             }}
           />
 
@@ -260,13 +359,34 @@ export default function BookingWizard({
                   key={slot}
                   type="button"
                   className={`bw-slot${time === slot ? ' selected' : ''}`}
-                  onClick={() => setTime(slot)}
+                  onClick={() => selectPresetSlot(slot)}
                 >
                   {slot}
                 </button>
               ))}
             </div>
           )}
+
+          <div className="bw-custom-time">
+            <label className="bw-label" htmlFor="bw-custom-time">
+              Custom time
+            </label>
+            <input
+              id="bw-custom-time"
+              type="text"
+              className={`bw-input${customTimeError ? ' invalid' : ''}`}
+              placeholder="HH:MM (e.g. 14:30)"
+              value={customTime}
+              inputMode="numeric"
+              maxLength={5}
+              onChange={e => handleCustomTimeChange(e.target.value)}
+            />
+            {customTimeError ? (
+              <p className="bw-field-error">{customTimeError}</p>
+            ) : (
+              <p className="bw-hint">10:00–20:00, 30-minute increments</p>
+            )}
+          </div>
 
           <div className="bw-nav">
             <button type="button" className="bw-btn secondary" onClick={() => setStep('service')}>
@@ -275,7 +395,7 @@ export default function BookingWizard({
             <button
               type="button"
               className="bw-btn primary"
-              disabled={!time}
+              disabled={!time || !!customTimeError}
               onClick={() => setStep('client')}
             >
               Next →

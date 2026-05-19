@@ -169,6 +169,20 @@
   border-color: #0f6e56;
 }
 
+.bw-custom-time {
+  margin-top: 16px;
+}
+
+.bw-input.invalid {
+  border-color: #c0392b;
+}
+
+.bw-field-error {
+  color: #c0392b;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+
 .bw-summary {
   background: #fff;
   border: 1px solid #e0ddd5;
