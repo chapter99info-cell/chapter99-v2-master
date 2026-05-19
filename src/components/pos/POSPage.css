@@ -158,6 +158,14 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+.services-empty {
+  grid-column: 1 / -1;
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+}
 .svc-btn {
   padding: 12px 8px;
   border-radius: var(--radius-sm);

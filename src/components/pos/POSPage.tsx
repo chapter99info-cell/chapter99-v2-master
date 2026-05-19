@@ -40,15 +40,6 @@ const DEMO_SHOP: Shop = {
   payidAccount: '12345678',
 }
 
-const DEMO_SERVICES: Service[] = [
-  { id: 's1', name: 'Thai Massage', nameEn: 'Thai Massage', duration: 60, price: 80, gstFree: false, category: 'thai' },
-  { id: 's2', name: 'Remedial', nameEn: 'Remedial Massage', duration: 60, price: 100, gstFree: true, itemNo: '205', category: 'remedial' },
-  { id: 's3', name: 'Aroma', nameEn: 'Aromatherapy', duration: 60, price: 90, gstFree: false, category: 'aroma' },
-  { id: 's4', name: 'Deep Tissue', nameEn: 'Deep Tissue', duration: 90, price: 130, gstFree: false, category: 'deep_tissue' },
-  { id: 's5', name: 'Hot Stone', nameEn: 'Hot Stone', duration: 75, price: 110, gstFree: false, category: 'other' },
-  { id: 's6', name: 'Foot Reflex', nameEn: 'Foot Reflexology', duration: 30, price: 50, gstFree: false, category: 'other' },
-]
-
 const TIP_OPTIONS = [0, 10, 15, 20]
 
 type POSMode = 'pos' | 'walkin' | 'queue'
@@ -66,10 +57,12 @@ export default function POSPage() {
   const [currentTx, setCurrentTx] = useState<Transaction | null>(null)
   const [syncStatus, setSyncStatus] = useState({ pending: 0, isOnline: true })
   const [isLoading, setIsLoading] = useState(false)
-  const [services, setServices] = useState<Service[]>(DEMO_SERVICES)
+  const [services, setServices] = useState<Service[]>([])
+  const [servicesLoading, setServicesLoading] = useState(true)
 
   useEffect(() => {
     async function loadServices() {
+      setServicesLoading(true)
       const { data, error } = await supabase
         .from('services')
         .select('*')
@@ -78,9 +71,12 @@ export default function POSPage() {
         .order('sort_order', { ascending: true })
         .order('name_en', { ascending: true })
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         setServices(data.map(row => mapRowToService(row)))
+      } else {
+        setServices([])
       }
+      setServicesLoading(false)
     }
     loadServices()
   }, [])
@@ -240,7 +236,13 @@ export default function POSPage() {
             <div className="pos-card">
               <div className="card-label">เลือกบริการ</div>
               <div className="services-grid">
-                {services.map(svc => {
+                {servicesLoading ? (
+                  <p className="services-empty">กำลังโหลดบริการ…</p>
+                ) : services.length === 0 ? (
+                  <p className="services-empty">
+                    ยังไม่มีบริการที่เปิดใช้งาน — เพิ่มในหน้า Services (Owner)
+                  </p>
+                ) : services.map(svc => {
                   const added = bill.some(i => i.serviceId === svc.id)
                   return (
                     <button
