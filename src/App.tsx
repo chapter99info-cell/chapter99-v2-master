@@ -1,7 +1,7 @@
 // Chapter99 V4 — Main App Entry
 // PIN-based routing to correct dashboard
 
-import { useState } from 'react'
+import { useState, type Dispatch, type SetStateAction } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import QueueBoard from './components/queue/QueueBoard'
 import StaffManager from './components/staff/StaffManager'
@@ -136,7 +136,7 @@ export default function App() {
 // ── PIN Entry Screen ──────────────────────────────────────────
 function PINScreen({ pin, setPin, onVerify, error, loading }: {
   pin: string
-  setPin: (p: string) => void
+  setPin: Dispatch<SetStateAction<string>>
   onVerify: () => void
   error: string
   loading: boolean

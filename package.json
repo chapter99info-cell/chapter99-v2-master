@@ -4,7 +4,7 @@
   "description": "Chapter99 V4 — Thai Massage & Spa PWA + POS — Australia",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

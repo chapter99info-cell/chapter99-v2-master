@@ -7,8 +7,8 @@ import type { ShopOverview, MRRSummary, SuperAdminStats } from '../types/admin'
 
 // Service role client — full access to all shops
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  import.meta.env.VITE_SUPABASE_URL ?? '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 )
 
 const PLAN_PRICES = {
