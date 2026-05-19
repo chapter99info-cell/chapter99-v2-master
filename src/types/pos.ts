@@ -13,7 +13,7 @@ export interface Service {
   price: number           // AUD dollars
   gstFree: boolean        // Remedial Massage = GST-free in AU
   itemNo?: string         // Health Fund Item No (e.g. "205")
-  category: 'thai' | 'remedial' | 'aroma' | 'deep_tissue' | 'other'
+  category: string
 }
 
 export interface BillItem {

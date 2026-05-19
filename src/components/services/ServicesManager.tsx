@@ -12,9 +12,6 @@ const supabase = createClient(
 
 const SHOP_ID = import.meta.env.VITE_SHOP_ID ?? 'shop-001'
 
-const CATEGORIES = ['thai', 'remedial', 'aroma', 'deep_tissue', 'other'] as const
-type ServiceCategory = (typeof CATEGORIES)[number]
-
 interface ServiceRow {
   id: string
   shop_id: string
@@ -36,7 +33,7 @@ interface ServiceForm {
   price: number
   gstFree: boolean
   itemNo: string
-  category: ServiceCategory
+  category: string
   sortOrder: number
 }
 
@@ -47,14 +44,11 @@ const EMPTY_FORM: ServiceForm = {
   price: 80,
   gstFree: false,
   itemNo: '',
-  category: 'thai',
+  category: '',
   sortOrder: 0,
 }
 
 export function mapRowToService(row: ServiceRow): Service {
-  const category = CATEGORIES.includes(row.category as ServiceCategory)
-    ? (row.category as ServiceCategory)
-    : 'other'
   return {
     id: row.id,
     name: row.name_en,
@@ -63,7 +57,7 @@ export function mapRowToService(row: ServiceRow): Service {
     price: Number(row.price),
     gstFree: row.gst_free,
     itemNo: row.item_no ?? undefined,
-    category,
+    category: row.category || 'other',
   }
 }
 
@@ -122,9 +116,7 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       price: Number(row.price),
       gstFree: row.gst_free,
       itemNo: row.item_no ?? '',
-      category: CATEGORIES.includes(row.category as ServiceCategory)
-        ? (row.category as ServiceCategory)
-        : 'other',
+      category: row.category ?? '',
       sortOrder: row.sort_order ?? 0,
     })
     setEditId(row.id)
@@ -143,7 +135,7 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       price: form.price,
       gst_free: form.gstFree,
       item_no: form.itemNo.trim() || null,
-      category: form.category,
+      category: form.category.trim() || 'other',
       sort_order: form.sortOrder,
     }
 
@@ -309,22 +301,13 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
               </div>
             </div>
 
-            <select
+            <label className="form-label">Category</label>
+            <input
               className="form-input"
+              placeholder="e.g. thai, remedial, hot stone"
               value={form.category}
-              onChange={e =>
-                setForm(f => ({
-                  ...f,
-                  category: e.target.value as ServiceCategory,
-                }))
-              }
-            >
-              {CATEGORIES.map(c => (
-                <option key={c} value={c}>
-                  {categoryLabel(c)}
-                </option>
-              ))}
-            </select>
+              onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+            />
 
             <input
               className="form-input"
