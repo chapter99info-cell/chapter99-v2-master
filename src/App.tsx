@@ -92,31 +92,33 @@ export default function App() {
   }
 
   // Cashier / Owner — full dashboard
-  const tabs = [
+  const mainTabs = [
     { id: 'queue', label: '📅 Queue' },
     { id: 'pos', label: '🧾 POS' },
     { id: 'booking', label: '➕ New Booking' },
     { id: 'alerts', label: '🔔 Alerts' },
-    ...(session.level === 'owner'
-      ? [
-          { id: 'staff', label: '👥 Staff' },
-          { id: 'services', label: '🛎 Services' },
-          { id: 'settings', label: '⚙️ Settings' },
-        ]
-      : []),
   ]
+
+  const ownerTabs = [
+    { id: 'staff', label: '👥 Staff' },
+    { id: 'services', label: '🛎 Services' },
+    { id: 'settings', label: '⚙️ Settings' },
+  ]
+
+  const isOwner = session.level === 'owner'
 
   return (
     <div className="app-root">
       <AppHeader
         title="Chapter99 Dashboard"
-        badge={session.level === 'owner' ? 'Owner' : 'Cashier'}
+        badge={isOwner ? 'Owner' : 'Cashier'}
         onLogout={logout}
       />
       <div className="app-tabs">
-        {tabs.map(t => (
+        {mainTabs.map(t => (
           <button
             key={t.id}
+            type="button"
             className={`app-tab${activeTab === t.id ? ' active' : ''}`}
             onClick={() => setActiveTab(t.id)}
           >
@@ -124,6 +126,21 @@ export default function App() {
           </button>
         ))}
       </div>
+      {isOwner && (
+        <div className="app-tabs app-tabs-owner">
+          <span className="app-tabs-owner-label">Owner</span>
+          {ownerTabs.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              className={`app-tab${activeTab === t.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="app-content">
         {activeTab === 'queue' && (
           <QueueBoard shopId={SHOP_ID} pinLevel={session.level as any} />
@@ -133,13 +150,13 @@ export default function App() {
           <BookingWizard shopId={SHOP_ID} bookedBy={session.staffName} />
         )}
         {activeTab === 'alerts' && <AlertDashboard shopId={SHOP_ID} />}
-        {activeTab === 'staff' && session.level === 'owner' && (
+        {activeTab === 'staff' && isOwner && (
           <StaffManager shopId={SHOP_ID} pinLevel="owner" />
         )}
-        {activeTab === 'services' && session.level === 'owner' && (
+        {activeTab === 'services' && isOwner && (
           <ServicesManager shopId={SHOP_ID} />
         )}
-        {activeTab === 'settings' && session.level === 'owner' && (
+        {activeTab === 'settings' && isOwner && (
           <ShopSettings shopId={SHOP_ID} />
         )}
       </div>
