@@ -12,7 +12,7 @@ import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
 import { sendSMS, SMS } from '../../lib/notifyService'
 import { getSyncStatus } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
-import { issueReceipt, downloadAndRecordReceipt } from '../../lib/receiptService'
+import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
 import { SHOP_ID, supabase } from '../../lib/supabase'
 
 const TIP_OPTIONS = [0, 10, 15, 20]
@@ -37,6 +37,7 @@ export default function POSPage() {
   const [shop, setShop] = useState<Shop | null>(null)
   const [receiptNote, setReceiptNote] = useState('')
   const [receiptLoading, setReceiptLoading] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
 
   useEffect(() => {
     fetchShop(SHOP_ID).then(setShop)
@@ -116,14 +117,6 @@ export default function POSPage() {
       setCurrentTx(tx)
       setStep('success')
 
-      const receiptResult = await issueReceipt(tx, shop)
-      if (receiptResult.emailSent) {
-        setReceiptNote('Receipt emailed to customer')
-        setCurrentTx({ ...tx, receiptSent: true })
-      } else if (tx.clientEmail) {
-        setReceiptNote('Email could not be sent — download PDF below')
-      }
-
       if (clientPhone) {
         await sendSMS(
           clientPhone,
@@ -154,7 +147,30 @@ export default function POSPage() {
     const result = await downloadAndRecordReceipt(currentTx, shop)
     setReceiptLoading(false)
     if (!result.ok) setReceiptNote(result.error ?? 'Download failed')
-    else setReceiptNote('Receipt downloaded')
+    else {
+      setReceiptNote(
+        result.receiptNumber
+          ? `Receipt ${result.receiptNumber} downloaded`
+          : 'Receipt downloaded'
+      )
+    }
+  }
+
+  const handleEmailReceipt = async () => {
+    if (!currentTx || !shop) return
+    setEmailLoading(true)
+    const result = await emailReceipt(currentTx, shop)
+    setEmailLoading(false)
+    if (result.ok) {
+      setReceiptNote(
+        result.receiptNumber
+          ? `Receipt ${result.receiptNumber} emailed to ${currentTx.clientEmail}`
+          : 'Receipt emailed to customer'
+      )
+      setCurrentTx({ ...currentTx, receiptSent: true })
+    } else {
+      setReceiptNote(result.error ?? 'Could not send email')
+    }
   }
 
   const handlePrint = async () => {
@@ -416,6 +432,15 @@ export default function POSPage() {
             >
               {receiptLoading ? 'Generating…' : '📄 Download Receipt'}
             </button>
+            {currentTx?.clientEmail && (
+              <button
+                className="s-btn primary"
+                disabled={emailLoading || !shop}
+                onClick={handleEmailReceipt}
+              >
+                {emailLoading ? 'Sending…' : '✉️ Email Receipt'}
+              </button>
+            )}
             <button className="s-btn" onClick={handlePrint}>🖨 Print Receipt</button>
             <button className="s-btn" onClick={handleHealthFund}>❤️ Health Fund PDF</button>
             <button className="s-btn" onClick={reset}>ปิดบิล</button>
