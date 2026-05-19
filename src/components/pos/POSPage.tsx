@@ -20,7 +20,7 @@ const supabase = createClient(
 
 const SHOP_ID = import.meta.env.VITE_SHOP_ID ?? 'shop-001'
 
-// ── Demo Data (fallback if Supabase has no services) ─────────
+// ── Demo shop config (shop record from DB in future) ─────────
 const DEMO_SHOP: Shop = {
   id: 'shop-001',
   name: 'Thai Bliss Massage',

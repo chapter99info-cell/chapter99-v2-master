@@ -9,7 +9,7 @@ import ServicesManager from './components/services/ServicesManager'
 import POSPage from './components/pos/POSPage'
 import AlertDashboard from './components/alerts/AlertDashboard'
 import SuperAdminDashboard from './components/dashboard/SuperAdminDashboard'
-import BookingSystem from './components/booking/BookingSystem'
+import BookingWizard from './components/booking/BookingWizard'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -128,7 +128,7 @@ export default function App() {
         )}
         {activeTab === 'pos' && <POSPage />}
         {activeTab === 'booking' && (
-          <BookingSystem shopId={SHOP_ID} mode="walkin" />
+          <BookingWizard shopId={SHOP_ID} bookedBy={session.staffName} />
         )}
         {activeTab === 'alerts' && <AlertDashboard shopId={SHOP_ID} />}
         {activeTab === 'staff' && session.level === 'owner' && (

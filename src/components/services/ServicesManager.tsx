@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import type { Service } from '../../types/pos'
+import Toast, { type ToastType } from '../ui/Toast'
 import './ServicesManager.css'
 
 const supabase = createClient(
@@ -74,6 +75,9 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [formErrors, setFormErrors] = useState<{ nameEn?: string; price?: string }>({})
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
 
   useEffect(() => {
     loadServices()
@@ -123,8 +127,20 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
     setShowForm(true)
   }
 
+  function validateForm(): boolean {
+    const errors: { nameEn?: string; price?: string } = {}
+    if (!form.nameEn.trim()) errors.nameEn = 'English name is required'
+    if (form.price === undefined || form.price === null || Number.isNaN(form.price)) {
+      errors.price = 'Price is required'
+    } else if (form.price < 0) {
+      errors.price = 'Price must be 0 or greater'
+    }
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   async function saveService() {
-    if (!form.nameEn.trim()) return
+    if (!validateForm()) return
     setSaving(true)
     setError('')
 
@@ -145,9 +161,15 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
 
     if (result.error) {
       setError(result.error.message)
+      setToast({ message: result.error.message, type: 'error' })
     } else {
       setShowForm(false)
+      setFormErrors({})
       await loadServices()
+      setToast({
+        message: editId ? 'Service updated' : 'Service added',
+        type: 'success',
+      })
     }
     setSaving(false)
   }
@@ -160,8 +182,16 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       .eq('id', id)
       .eq('shop_id', shopId)
 
-    if (updateError) setError(updateError.message)
-    else loadServices()
+    if (updateError) {
+      setError(updateError.message)
+      setToast({ message: updateError.message, type: 'error' })
+    } else {
+      loadServices()
+      setToast({
+        message: active ? 'Service is now visible on POS' : 'Service hidden from POS',
+        type: 'success',
+      })
+    }
   }
 
   async function deleteService(id: string) {
@@ -172,24 +202,53 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       .eq('id', id)
       .eq('shop_id', shopId)
 
-    if (deleteError) setError(deleteError.message)
-    else {
+    if (deleteError) {
+      setError(deleteError.message)
+      setToast({ message: deleteError.message, type: 'error' })
+    } else {
       setConfirmDelete(null)
       loadServices()
+      setToast({ message: 'Service deleted', type: 'success' })
     }
   }
+
+  const filteredServices = services.filter(row => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+    return (
+      row.name_en.toLowerCase().includes(q) ||
+      (row.name_th?.toLowerCase().includes(q) ?? false) ||
+      row.category.toLowerCase().includes(q)
+    )
+  })
 
   const categoryLabel = (c: string) =>
     c.replace('_', ' ').replace(/\b\w/g, ch => ch.toUpperCase())
 
   return (
     <div className="services-manager">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="services-header">
         <h2 className="services-title">Services</h2>
         <button type="button" className="add-service-btn" onClick={startAdd}>
           + Add service
         </button>
       </div>
+
+      <input
+        type="search"
+        className="services-search"
+        placeholder="Search by name or category…"
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+      />
 
       {error && <div className="services-error">{error}</div>}
       {loading && <div className="services-loading">Loading services…</div>}
@@ -199,7 +258,10 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
           {services.length === 0 && (
             <p className="services-empty">No services yet. Add your first service.</p>
           )}
-          {services.map(row => (
+          {services.length > 0 && filteredServices.length === 0 && (
+            <p className="services-empty">No services match your search.</p>
+          )}
+          {filteredServices.map(row => (
             <div
               key={row.id}
               className={`service-card${row.active ? '' : ' inactive'}`}
@@ -261,11 +323,17 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
             </div>
 
             <input
-              className="form-input"
+              className={`form-input${formErrors.nameEn ? ' invalid' : ''}`}
               placeholder="Name (English) *"
               value={form.nameEn}
-              onChange={e => setForm(f => ({ ...f, nameEn: e.target.value }))}
+              onChange={e => {
+                setForm(f => ({ ...f, nameEn: e.target.value }))
+                if (formErrors.nameEn) setFormErrors(e => ({ ...e, nameEn: undefined }))
+              }}
             />
+            {formErrors.nameEn && (
+              <p className="form-field-error">{formErrors.nameEn}</p>
+            )}
             <input
               className="form-input"
               placeholder="ชื่อ (ไทย)"
@@ -287,17 +355,21 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
                 />
               </div>
               <div>
-                <label className="form-label">Price (AUD)</label>
+                <label className="form-label">Price (AUD) *</label>
                 <input
-                  className="form-input"
+                  className={`form-input${formErrors.price ? ' invalid' : ''}`}
                   type="number"
                   min={0}
                   step={0.01}
                   value={form.price}
-                  onChange={e =>
+                  onChange={e => {
                     setForm(f => ({ ...f, price: +e.target.value || 0 }))
-                  }
+                    if (formErrors.price) setFormErrors(e => ({ ...e, price: undefined }))
+                  }}
                 />
+                {formErrors.price && (
+                  <p className="form-field-error">{formErrors.price}</p>
+                )}
               </div>
             </div>
 
@@ -352,7 +424,7 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
                 type="button"
                 className="modal-btn primary"
                 onClick={saveService}
-                disabled={!form.nameEn.trim() || form.duration < 1 || saving}
+                disabled={form.duration < 1 || saving}
               >
                 {saving ? 'Saving…' : editId ? 'Save changes' : 'Add service'}
               </button>

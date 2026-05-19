@@ -1,0 +1,238 @@
+.booking-wizard {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 0 24px;
+}
+
+.bw-progress {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.bw-progress-step {
+  flex: 1;
+  min-width: 72px;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: #f0efe8;
+  opacity: 0.7;
+}
+
+.bw-progress-step.active {
+  background: #e1f5ee;
+  opacity: 1;
+  border: 1px solid #0f6e56;
+}
+
+.bw-progress-step.done {
+  opacity: 1;
+}
+
+.bw-progress-num {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f6e56;
+}
+
+.bw-progress-label {
+  font-size: 11px;
+  color: #666;
+}
+
+.bw-error {
+  background: #faece7;
+  color: #993c1d;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.bw-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bw-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.bw-subtitle {
+  font-size: 14px;
+  margin: 8px 0 0;
+  color: #555;
+}
+
+.bw-empty,
+.bw-hint {
+  font-size: 13px;
+  color: #888;
+}
+
+.bw-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.bw-service-card {
+  text-align: left;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e0ddd5;
+  background: #fff;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.bw-service-card.selected {
+  border-color: #0f6e56;
+  background: #e1f5ee;
+}
+
+.bw-service-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.bw-service-th {
+  font-size: 12px;
+  color: #666;
+}
+
+.bw-service-meta {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.bw-staff-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bw-staff-chip {
+  padding: 10px 14px;
+  border-radius: 20px;
+  border: 1px solid #e0ddd5;
+  background: #faf9f5;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.bw-staff-chip.selected {
+  background: #0f6e56;
+  color: #fff;
+  border-color: #0f6e56;
+}
+
+.bw-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.bw-input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0ddd5;
+  font-size: 14px;
+  width: 100%;
+}
+
+.bw-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.bw-slot {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e0ddd5;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.bw-slot.selected {
+  background: #0f6e56;
+  color: #fff;
+  border-color: #0f6e56;
+}
+
+.bw-summary {
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.bw-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0efe8;
+  font-size: 14px;
+}
+
+.bw-summary-row:last-child {
+  border-bottom: none;
+}
+
+.bw-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.bw-btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 44px;
+  border: none;
+  flex: 1;
+}
+
+.bw-btn.primary {
+  background: #0f6e56;
+  color: #fff;
+}
+
+.bw-btn.primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.bw-btn.secondary {
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  color: #555;
+  flex: 0 1 auto;
+}
+
+.bw-done {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.bw-done-icon {
+  width: 56px;
+  height: 56px;
+  line-height: 56px;
+  border-radius: 50%;
+  background: #e1f5ee;
+  color: #0f6e56;
+  font-size: 28px;
+  margin: 0 auto 16px;
+}
