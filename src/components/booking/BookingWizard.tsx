@@ -20,11 +20,6 @@ interface ServiceRow {
   gst_free: boolean
 }
 
-interface StaffRow {
-  id: string
-  name_en: string
-}
-
 interface BookingWizardProps {
   shopId: string
   bookedBy?: string
@@ -45,13 +40,11 @@ export default function BookingWizard({
 }: BookingWizardProps) {
   const [step, setStep] = useState<WizardStep>('service')
   const [services, setServices] = useState<ServiceRow[]>([])
-  const [staff, setStaff] = useState<StaffRow[]>([])
   const [slots, setSlots] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const [serviceId, setServiceId] = useState('')
-  const [staffId, setStaffId] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [time, setTime] = useState('')
   const [clientName, setClientName] = useState('')
@@ -59,7 +52,6 @@ export default function BookingWizard({
   const [clientEmail, setClientEmail] = useState('')
 
   const selectedService = services.find(s => s.id === serviceId)
-  const selectedStaff = staff.find(s => s.id === staffId)
 
   useEffect(() => {
     supabase
@@ -75,22 +67,8 @@ export default function BookingWizard({
       })
   }, [shopId])
 
-  useEffect(() => {
-    if (!serviceId) {
-      setStaff([])
-      return
-    }
-    supabase
-      .from('staff')
-      .select('id, name_en')
-      .eq('shop_id', shopId)
-      .eq('active', true)
-      .order('name_en')
-      .then(({ data }) => setStaff((data as StaffRow[]) ?? []))
-  }, [shopId, serviceId])
-
   const generateSlots = useCallback(async () => {
-    if (!date || !staffId || !serviceId || !selectedService) {
+    if (!date || !serviceId || !selectedService) {
       setSlots([])
       return
     }
@@ -103,7 +81,7 @@ export default function BookingWizard({
     const { data: existing } = await supabase
       .from('bookings')
       .select('start_time, end_time')
-      .eq('staff_id', staffId)
+      .eq('shop_id', shopId)
       .gte('start_time', dayStart)
       .lte('start_time', dayEnd)
       .neq('status', 'cancelled')
@@ -131,14 +109,14 @@ export default function BookingWizard({
 
     setSlots(available)
     setLoading(false)
-  }, [date, staffId, serviceId, selectedService])
+  }, [date, shopId, serviceId, selectedService])
 
   useEffect(() => {
     if (step === 'datetime') generateSlots()
   }, [step, generateSlots])
 
   async function saveBooking() {
-    if (!selectedService || !staffId || !time || !clientName.trim()) return
+    if (!selectedService || !time || !clientName.trim()) return
     setLoading(true)
     setError('')
 
@@ -165,7 +143,6 @@ export default function BookingWizard({
         shop_id: shopId,
         client_id: clientId,
         service_id: serviceId,
-        staff_id: staffId,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         status: 'confirmed',
@@ -191,7 +168,6 @@ export default function BookingWizard({
   function resetWizard() {
     setStep('service')
     setServiceId('')
-    setStaffId('')
     setTime('')
     setClientName('')
     setClientPhone('')
@@ -233,7 +209,6 @@ export default function BookingWizard({
                   className={`bw-service-card${serviceId === svc.id ? ' selected' : ''}`}
                   onClick={() => {
                     setServiceId(svc.id)
-                    setStaffId('')
                     setTime('')
                   }}
                 >
@@ -248,31 +223,10 @@ export default function BookingWizard({
             </div>
           )}
 
-          {serviceId && staff.length > 0 && (
-            <>
-              <h3 className="bw-subtitle">Therapist</h3>
-              <div className="bw-staff-row">
-                {staff.map(s => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`bw-staff-chip${staffId === s.id ? ' selected' : ''}`}
-                    onClick={() => {
-                      setStaffId(s.id)
-                      setTime('')
-                    }}
-                  >
-                    {s.name_en}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
           <button
             type="button"
             className="bw-btn primary"
-            disabled={!serviceId || !staffId}
+            disabled={!serviceId}
             onClick={() => setStep('datetime')}
           >
             Next →
@@ -334,7 +288,7 @@ export default function BookingWizard({
         <div className="bw-step">
           <h2 className="bw-title">Client information</h2>
           <p className="bw-hint">
-            {date} at {time} · {selectedService?.name_en} · {selectedStaff?.name_en}
+            {date} at {time} · {selectedService?.name_en}
           </p>
           <input
             className="bw-input"
@@ -386,10 +340,6 @@ export default function BookingWizard({
             <div className="bw-summary-row">
               <span>Price</span>
               <strong>${Number(selectedService?.price ?? 0).toFixed(2)}</strong>
-            </div>
-            <div className="bw-summary-row">
-              <span>Therapist</span>
-              <strong>{selectedStaff?.name_en}</strong>
             </div>
             <div className="bw-summary-row">
               <span>When</span>
