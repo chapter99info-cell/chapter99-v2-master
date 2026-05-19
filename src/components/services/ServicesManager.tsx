@@ -325,6 +325,9 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
                 setForm(f => ({ ...f, sortOrder: +e.target.value || 0 }))
               }
             />
+            <p className="form-hint">
+              ลำดับการแสดงในหน้า POS — เลขน้อยแสดงก่อน (เช่น 0, 1, 2...)
+            </p>
 
             <label className="form-checkbox">
               <input
