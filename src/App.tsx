@@ -1,7 +1,7 @@
 // Chapter99 V4 — Main App Entry
 // PIN-based routing to correct dashboard
 
-import { useState, type Dispatch, type SetStateAction } from 'react'
+import { useState, useCallback, type Dispatch, type SetStateAction } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import QueueBoard from './components/queue/QueueBoard'
 import StaffManager from './components/staff/StaffManager'
@@ -33,14 +33,14 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('queue')
 
-  async function verifyPIN() {
-    if (pin.length !== 4) return
+  const verifyPIN = useCallback(async (pinToVerify: string) => {
+    if (pinToVerify.length !== 4) return
     setLoading(true)
     setError('')
 
     const { data } = await supabase.rpc('verify_pin', {
       p_shop_id: SHOP_ID,
-      p_pin: pin,
+      p_pin: pinToVerify,
     })
 
     setLoading(false)
@@ -56,7 +56,7 @@ export default function App() {
       setError('Invalid PIN. Please try again.')
       setPin('')
     }
-  }
+  }, [])
 
   function logout() {
     setSession({ level: null })
@@ -137,16 +137,25 @@ export default function App() {
 function PINScreen({ pin, setPin, onVerify, error, loading }: {
   pin: string
   setPin: Dispatch<SetStateAction<string>>
-  onVerify: () => void
+  onVerify: (pinToVerify: string) => void
   error: string
   loading: boolean
 }) {
   const numpad = ['1','2','3','4','5','6','7','8','9','','0','⌫']
 
   function press(key: string) {
-    if (key === '⌫') { setPin(p => p.slice(0, -1)); return }
-    if (key === '') return
-    if (pin.length < 4) setPin(p => p + key)
+    if (loading) return
+    if (key === '⌫') {
+      setPin(p => p.slice(0, -1))
+      return
+    }
+    if (key === '' || pin.length >= 4) return
+
+    const nextPin = pin + key
+    setPin(nextPin)
+    if (nextPin.length === 4) {
+      onVerify(nextPin)
+    }
   }
 
   return (
@@ -169,7 +178,7 @@ function PINScreen({ pin, setPin, onVerify, error, loading }: {
           <button
             key={i}
             className={`numpad-btn${key === '' ? ' invisible' : ''}`}
-            onClick={() => { press(key); if (pin.length === 3 && key !== '⌫') setTimeout(onVerify, 100) }}
+            onClick={() => press(key)}
             disabled={loading}
           >
             {loading && key !== '⌫' ? '' : key}
