@@ -5,7 +5,15 @@
 import { google } from 'googleapis'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { Transaction } from '../src/types/pos'
-import { buildTransactionRow, TRANSACTION_HEADERS } from '../src/lib/googleSheets'
+import { buildTransactionRow } from '../src/lib/googleSheets'
+
+const LEGACY_TRANSACTION_HEADERS = [
+  'Date', 'Receipt No', 'Client', 'Services',
+  'Gross ($)', 'GST Collected ($)', 'Ex-GST ($)', 'GST-Free ($)',
+  'Card Surcharge ($)', 'Tips ($)', 'Total Charged ($)',
+  'Payment Method', 'GP Cost ($)', 'Net Revenue ($)',
+  'Therapist', 'Status', 'Health Fund',
+]
 
 async function getSheetsClient() {
   const auth = new google.auth.GoogleAuth({
@@ -35,7 +43,7 @@ export async function syncSheetHandler(req: VercelRequest, res: VercelResponse) 
         spreadsheetId,
         range: 'Transactions!A1',
         valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [TRANSACTION_HEADERS] },
+        requestBody: { values: [LEGACY_TRANSACTION_HEADERS] },
       })
     }
 

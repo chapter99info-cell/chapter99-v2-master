@@ -23,6 +23,8 @@ export interface ShopRow {
   payid_bsb: string | null
   payid_account: string | null
   stripe_pub_key: string | null
+  google_sheet_url: string | null
+  google_sheet_sync_enabled: boolean | null
 }
 
 export interface ShopSettingsInput {
@@ -41,6 +43,8 @@ export interface ShopSettingsInput {
   amexSurchargeRate: number
   payidBsb: string
   payidAccount: string
+  googleSheetUrl: string
+  googleSheetSyncEnabled: boolean
 }
 
 const DEFAULT_SHOP: Shop = {
@@ -81,6 +85,8 @@ export function mapRowToShop(row: ShopRow): Shop {
     payidBsb: row.payid_bsb ?? undefined,
     payidAccount: row.payid_account ?? undefined,
     stripePublicKey: row.stripe_pub_key ?? undefined,
+    googleSheetUrl: row.google_sheet_url ?? undefined,
+    googleSheetSyncEnabled: row.google_sheet_sync_enabled ?? false,
   }
 }
 
@@ -101,6 +107,8 @@ export function shopToUpdatePayload(input: ShopSettingsInput) {
     amex_surcharge: input.amexSurchargeRate,
     payid_bsb: input.payidBsb || null,
     payid_account: input.payidAccount || null,
+    google_sheet_url: input.googleSheetUrl || null,
+    google_sheet_sync_enabled: input.googleSheetSyncEnabled,
   }
 }
 

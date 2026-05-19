@@ -13,6 +13,7 @@ import { sendSMS, SMS } from '../../lib/notifyService'
 import { getSyncStatus } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
+import { syncTransactionToSheet } from '../../lib/googleSheets'
 import { SHOP_ID, supabase } from '../../lib/supabase'
 
 const TIP_OPTIONS = [0, 10, 15, 20]
@@ -116,6 +117,10 @@ export default function POSPage() {
       await saveTransaction(tx)
       setCurrentTx(tx)
       setStep('success')
+
+      if (shop.googleSheetSyncEnabled && shop.googleSheetUrl) {
+        void syncTransactionToSheet(shop.googleSheetUrl, shop.id, tx)
+      }
 
       if (clientPhone) {
         await sendSMS(

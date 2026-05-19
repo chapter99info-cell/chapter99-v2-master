@@ -9,6 +9,7 @@ import {
   type ShopSettingsInput,
 } from '../../lib/shopService'
 import { SHOP_ID } from '../../lib/supabase'
+import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
 import './ShopSettings.css'
 
@@ -33,6 +34,8 @@ function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsIn
     amexSurchargeRate: shop.amexSurchargeRate,
     payidBsb: shop.payidBsb ?? '',
     payidAccount: shop.payidAccount ?? '',
+    googleSheetUrl: shop.googleSheetUrl ?? '',
+    googleSheetSyncEnabled: shop.googleSheetSyncEnabled ?? false,
   }
 }
 
@@ -43,6 +46,7 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
   const [uploading, setUploading] = useState<'logo' | 'signature' | null>(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
+  const [sheetTesting, setSheetTesting] = useState(false)
 
   useEffect(() => {
     load()
@@ -92,6 +96,38 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
       return
     }
     setToast({ message: 'Settings saved', type: 'success' })
+  }
+
+  async function handleTestSheet() {
+    if (!form?.googleSheetUrl.trim()) {
+      setToast({ message: 'Enter a Google Sheet URL first', type: 'error' })
+      return
+    }
+    setSheetTesting(true)
+    const result = await testGoogleSheetConnection(form.googleSheetUrl.trim(), shopId)
+    setSheetTesting(false)
+    if (result.ok) {
+      setToast({
+        message: `Connected: ${result.title ?? 'Spreadsheet'} (${result.sheetTitles?.length ?? 0} tabs)`,
+        type: 'success',
+      })
+    } else {
+      setToast({
+        message: result.error ?? 'Connection failed — share sheet with service account email',
+        type: 'error',
+      })
+    }
+  }
+
+  async function handleRefreshDailySummary() {
+    if (!form?.googleSheetUrl.trim()) return
+    setSheetTesting(true)
+    const ok = await refreshDailySheetSummary(form.googleSheetUrl.trim(), shopId)
+    setSheetTesting(false)
+    setToast({
+      message: ok ? 'Daily summary updated' : 'Could not update daily summary',
+      type: ok ? 'success' : 'error',
+    })
   }
 
   if (loading || !form) {
@@ -283,6 +319,53 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
             <input value={form.payidAccount} onChange={e => update('payidAccount', e.target.value)} />
           </div>
         </div>
+      </section>
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Google Sheets (tax reporting)</h2>
+        <p className="ss-hint" style={{ marginBottom: 12 }}>
+          Auto-sync POS transactions and bookings. Share the sheet with your Google service
+          account email (Editor). Set credentials in Vercel: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+          GOOGLE_PRIVATE_KEY.
+        </p>
+        <label className="ss-checkbox">
+          <input
+            type="checkbox"
+            checked={form.googleSheetSyncEnabled}
+            onChange={e => update('googleSheetSyncEnabled', e.target.checked)}
+          />
+          Enable auto-sync to Google Sheets
+        </label>
+        <div className="ss-field">
+          <label>Google Sheet URL</label>
+          <input
+            type="url"
+            placeholder="https://docs.google.com/spreadsheets/d/..."
+            value={form.googleSheetUrl}
+            onChange={e => update('googleSheetUrl', e.target.value)}
+          />
+        </div>
+        <div className="ss-actions" style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            className="ss-btn secondary"
+            disabled={sheetTesting || !form.googleSheetUrl.trim()}
+            onClick={handleTestSheet}
+          >
+            {sheetTesting ? 'Testing…' : 'Test connection'}
+          </button>
+          <button
+            type="button"
+            className="ss-btn secondary"
+            disabled={sheetTesting || !form.googleSheetUrl.trim()}
+            onClick={handleRefreshDailySummary}
+          >
+            Refresh daily summary
+          </button>
+        </div>
+        <p className="ss-hint">
+          Sheets created automatically: Transactions, Bookings, Daily Summary
+        </p>
       </section>
 
       <div className="ss-actions">

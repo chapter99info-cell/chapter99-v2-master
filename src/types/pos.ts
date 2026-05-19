@@ -92,6 +92,8 @@ export interface Shop {
   stripePublicKey?: string
   payidBsb?: string
   payidAccount?: string
+  googleSheetUrl?: string
+  googleSheetSyncEnabled?: boolean
 }
 
 export interface ReceiptRecord {

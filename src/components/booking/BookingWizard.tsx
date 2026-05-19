@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { fetchShop } from '../../lib/shopService'
+import { syncBookingToSheet } from '../../lib/googleSheets'
 import './BookingWizard.css'
 
 const supabase = createClient(
@@ -253,6 +255,18 @@ export default function BookingWizard({
     }
 
     if (booking) {
+      const shop = await fetchShop(shopId)
+      if (shop.googleSheetSyncEnabled && shop.googleSheetUrl && selectedService) {
+        void syncBookingToSheet(shop.googleSheetUrl, shopId, {
+          bookingId: booking.id,
+          date,
+          time,
+          service: selectedService.name_en,
+          customer: clientName.trim(),
+          phone: clientPhone.trim(),
+          status: 'confirmed',
+        })
+      }
       onComplete?.(booking.id)
       setStep('done')
     }
