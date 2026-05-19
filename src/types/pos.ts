@@ -80,6 +80,8 @@ export interface Shop {
   gstRegistered: boolean
   currency: 'AUD'
   timezone: string
+  logoUrl?: string
+  themeColor: string
   // Health Fund
   providerName: string
   providerNumber: string
@@ -91,3 +93,26 @@ export interface Shop {
   payidBsb?: string
   payidAccount?: string
 }
+
+export interface ReceiptRecord {
+  id: string
+  shopId: string
+  transactionId: string
+  receiptNumber: string
+  clientName?: string
+  clientEmail?: string
+  paymentMethod: string
+  total: number
+  pdfUrl?: string
+  emailSent: boolean
+  healthFund: boolean
+  issuedAt: string
+}
+
+export const THEME_PRESETS = [
+  { id: 'green', label: 'Forest Green', hex: '#0F6E56' },
+  { id: 'blue', label: 'Ocean Blue', hex: '#1E6FD9' },
+  { id: 'gold', label: 'Warm Gold', hex: '#C9A227' },
+  { id: 'purple', label: 'Royal Purple', hex: '#6B4E9B' },
+  { id: 'terracotta', label: 'Terracotta', hex: '#993C1D' },
+] as const

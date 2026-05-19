@@ -1,0 +1,297 @@
+// Chapter99 V4 — Shop settings (Owner only)
+
+import { useState, useEffect } from 'react'
+import { THEME_PRESETS } from '../../types/pos'
+import {
+  fetchShop,
+  saveShopSettings,
+  uploadShopAsset,
+  type ShopSettingsInput,
+} from '../../lib/shopService'
+import { SHOP_ID } from '../../lib/supabase'
+import Toast, { type ToastType } from '../ui/Toast'
+import './ShopSettings.css'
+
+interface ShopSettingsProps {
+  shopId?: string
+}
+
+function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsInput {
+  return {
+    name: shop.name,
+    abn: shop.abn,
+    address: shop.address,
+    phone: shop.phone,
+    email: shop.email,
+    gstRegistered: shop.gstRegistered,
+    logoUrl: shop.logoUrl,
+    themeColor: shop.themeColor,
+    providerName: shop.providerName,
+    providerNumber: shop.providerNumber,
+    signatureUrl: shop.signatureUrl,
+    cardSurchargeRate: shop.cardSurchargeRate,
+    amexSurchargeRate: shop.amexSurchargeRate,
+    payidBsb: shop.payidBsb ?? '',
+    payidAccount: shop.payidAccount ?? '',
+  }
+}
+
+export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
+  const [form, setForm] = useState<ShopSettingsInput | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState<'logo' | 'signature' | null>(null)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
+
+  useEffect(() => {
+    load()
+  }, [shopId])
+
+  async function load() {
+    setLoading(true)
+    setError('')
+    const shop = await fetchShop(shopId)
+    setForm(shopToForm(shop))
+    setLoading(false)
+  }
+
+  function update<K extends keyof ShopSettingsInput>(key: K, value: ShopSettingsInput[K]) {
+    setForm(prev => (prev ? { ...prev, [key]: value } : prev))
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>, kind: 'logo' | 'signature') {
+    const file = e.target.files?.[0]
+    if (!file || !form) return
+    setUploading(kind)
+    const { url, error: uploadErr } = await uploadShopAsset(shopId, file, kind)
+    setUploading(null)
+    if (uploadErr) {
+      setToast({ message: uploadErr, type: 'error' })
+      return
+    }
+    if (kind === 'logo') update('logoUrl', url)
+    else update('signatureUrl', url)
+    setToast({ message: `${kind === 'logo' ? 'Logo' : 'Signature'} uploaded`, type: 'success' })
+    e.target.value = ''
+  }
+
+  async function handleSave() {
+    if (!form) return
+    if (!form.name.trim()) {
+      setError('Shop name is required')
+      return
+    }
+    setSaving(true)
+    setError('')
+    const result = await saveShopSettings(shopId, form)
+    setSaving(false)
+    if (!result.ok) {
+      setError(result.error ?? 'Save failed')
+      setToast({ message: result.error ?? 'Save failed', type: 'error' })
+      return
+    }
+    setToast({ message: 'Settings saved', type: 'success' })
+  }
+
+  if (loading || !form) {
+    return (
+      <div className="shop-settings">
+        <p className="ss-hint">Loading settings…</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="shop-settings">
+      <div className="ss-header">
+        <h1 className="ss-title">⚙️ Shop Settings</h1>
+        <p className="ss-subtitle">Logo, theme, receipt & health fund details</p>
+      </div>
+
+      {error && <p className="ss-error">{error}</p>}
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Branding</h2>
+        <div className="ss-logo-row">
+          <div className="ss-logo-preview">
+            {form.logoUrl ? (
+              <img src={form.logoUrl} alt="Shop logo" />
+            ) : (
+              <span className="ss-hint">No logo</span>
+            )}
+          </div>
+          <div>
+            <label className="ss-btn secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>
+              {uploading === 'logo' ? 'Uploading…' : 'Upload logo'}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                hidden
+                onChange={e => handleLogoUpload(e, 'logo')}
+                disabled={!!uploading}
+              />
+            </label>
+            {form.logoUrl && (
+              <button
+                type="button"
+                className="ss-btn secondary"
+                style={{ marginLeft: 8 }}
+                onClick={() => update('logoUrl', undefined)}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+
+        <p className="ss-hint" style={{ marginTop: 12 }}>
+          Theme color (used on receipts & PDF headers)
+        </p>
+        <div className="ss-theme-grid">
+          {THEME_PRESETS.map(preset => (
+            <button
+              key={preset.id}
+              type="button"
+              className={`ss-theme-swatch${form.themeColor === preset.hex ? ' selected' : ''}`}
+              onClick={() => update('themeColor', preset.hex)}
+            >
+              <span className="ss-theme-dot" style={{ background: preset.hex }} />
+              <span className="ss-theme-label">{preset.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="ss-field" style={{ marginTop: 12 }}>
+          <label>Custom hex</label>
+          <input
+            type="text"
+            value={form.themeColor}
+            onChange={e => update('themeColor', e.target.value)}
+            placeholder="#0F6E56"
+            maxLength={7}
+          />
+        </div>
+      </section>
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Shop details</h2>
+        <div className="ss-field">
+          <label>Shop name *</label>
+          <input value={form.name} onChange={e => update('name', e.target.value)} />
+        </div>
+        <div className="ss-row">
+          <div className="ss-field">
+            <label>ABN</label>
+            <input value={form.abn} onChange={e => update('abn', e.target.value)} placeholder="12 345 678 901" />
+          </div>
+          <div className="ss-field">
+            <label>Phone</label>
+            <input value={form.phone} onChange={e => update('phone', e.target.value)} />
+          </div>
+        </div>
+        <div className="ss-field">
+          <label>Address</label>
+          <textarea value={form.address} onChange={e => update('address', e.target.value)} />
+        </div>
+        <div className="ss-field">
+          <label>Email</label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={e => update('email', e.target.value)}
+          />
+        </div>
+        <label className="ss-checkbox">
+          <input
+            type="checkbox"
+            checked={form.gstRegistered}
+            onChange={e => update('gstRegistered', e.target.checked)}
+          />
+          GST registered
+        </label>
+      </section>
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Health fund provider</h2>
+        <div className="ss-row">
+          <div className="ss-field">
+            <label>Provider name</label>
+            <input
+              value={form.providerName}
+              onChange={e => update('providerName', e.target.value)}
+            />
+          </div>
+          <div className="ss-field">
+            <label>Provider number</label>
+            <input
+              value={form.providerNumber}
+              onChange={e => update('providerNumber', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="ss-logo-row">
+          {form.signatureUrl ? (
+            <img src={form.signatureUrl} alt="Signature" style={{ maxHeight: 48 }} />
+          ) : null}
+          <label className="ss-btn secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>
+            {uploading === 'signature' ? 'Uploading…' : 'Upload signature'}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              hidden
+              onChange={e => handleLogoUpload(e, 'signature')}
+              disabled={!!uploading}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Payment details</h2>
+        <div className="ss-row">
+          <div className="ss-field">
+            <label>Card surcharge rate</label>
+            <input
+              type="number"
+              step="0.001"
+              min="0"
+              max="0.1"
+              value={form.cardSurchargeRate}
+              onChange={e => update('cardSurchargeRate', parseFloat(e.target.value) || 0)}
+            />
+            <p className="ss-hint">e.g. 0.015 = 1.5%</p>
+          </div>
+          <div className="ss-field">
+            <label>Amex surcharge rate</label>
+            <input
+              type="number"
+              step="0.001"
+              min="0"
+              max="0.1"
+              value={form.amexSurchargeRate}
+              onChange={e => update('amexSurchargeRate', parseFloat(e.target.value) || 0)}
+            />
+          </div>
+        </div>
+        <div className="ss-row">
+          <div className="ss-field">
+            <label>PayID BSB</label>
+            <input value={form.payidBsb} onChange={e => update('payidBsb', e.target.value)} />
+          </div>
+          <div className="ss-field">
+            <label>PayID account</label>
+            <input value={form.payidAccount} onChange={e => update('payidAccount', e.target.value)} />
+          </div>
+        </div>
+      </section>
+
+      <div className="ss-actions">
+        <button type="button" className="ss-btn primary" disabled={saving} onClick={handleSave}>
+          {saving ? 'Saving…' : 'Save settings'}
+        </button>
+      </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  )
+}

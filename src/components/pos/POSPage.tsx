@@ -3,7 +3,6 @@
 // PIN: 4444 / 9999
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import type { BillItem, PaymentMethod, Transaction, Shop, Service } from '../../types/pos'
 import { mapRowToService } from '../services/ServicesManager'
 import { calcPayment, formatAUD, generateReceiptId } from '../../lib/posCalc'
@@ -12,33 +11,9 @@ import { printReceipt } from '../../lib/thermalPrinter'
 import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
 import { sendSMS, SMS } from '../../lib/notifyService'
 import { getSyncStatus } from '../../lib/syncService'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-)
-
-const SHOP_ID = import.meta.env.VITE_SHOP_ID ?? 'shop-001'
-
-// ── Demo shop config (shop record from DB in future) ─────────
-const DEMO_SHOP: Shop = {
-  id: 'shop-001',
-  name: 'Thai Bliss Massage',
-  abn: '12 345 678 901',
-  address: '123 King St, Sydney NSW 2000',
-  phone: '0412 345 678',
-  email: 'info@thaibliss.com.au',
-  gstRegistered: true,
-  currency: 'AUD',
-  timezone: 'Australia/Sydney',
-  providerName: 'Saen Jaidee',
-  providerNumber: 'A348132F',
-  signatureUrl: undefined,
-  cardSurchargeRate: 0.015,
-  amexSurchargeRate: 0.02,
-  payidBsb: '062-000',
-  payidAccount: '12345678',
-}
+import { fetchShop } from '../../lib/shopService'
+import { issueReceipt, downloadAndRecordReceipt } from '../../lib/receiptService'
+import { SHOP_ID, supabase } from '../../lib/supabase'
 
 const TIP_OPTIONS = [0, 10, 15, 20]
 
@@ -59,6 +34,13 @@ export default function POSPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [services, setServices] = useState<Service[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
+  const [shop, setShop] = useState<Shop | null>(null)
+  const [receiptNote, setReceiptNote] = useState('')
+  const [receiptLoading, setReceiptLoading] = useState(false)
+
+  useEffect(() => {
+    fetchShop(SHOP_ID).then(setShop)
+  }, [])
 
   useEffect(() => {
     async function loadServices() {
@@ -111,12 +93,14 @@ export default function POSPage() {
 
   // Charge — save transaction
   const handleCharge = async () => {
-    if (!bill.length || !payMethod || !payment) return
+    if (!bill.length || !payMethod || !payment || !shop) return
     setIsLoading(true)
+    setReceiptNote('')
     try {
+      const shopCode = shop.id.replace(/[^A-Z0-9]/gi, '').slice(0, 3).toUpperCase() || 'RCP'
       const tx: Transaction = {
-        id: generateReceiptId('TBM'),
-        shopId: DEMO_SHOP.id,
+        id: generateReceiptId(shopCode),
+        shopId: shop.id,
         clientName: clientName || undefined,
         clientEmail: clientEmail || undefined,
         items: bill,
@@ -132,11 +116,18 @@ export default function POSPage() {
       setCurrentTx(tx)
       setStep('success')
 
-      // Send SMS if phone provided
+      const receiptResult = await issueReceipt(tx, shop)
+      if (receiptResult.emailSent) {
+        setReceiptNote('Receipt emailed to customer')
+        setCurrentTx({ ...tx, receiptSent: true })
+      } else if (tx.clientEmail) {
+        setReceiptNote('Email could not be sent — download PDF below')
+      }
+
       if (clientPhone) {
         await sendSMS(
           clientPhone,
-          SMS.receiptConfirm(DEMO_SHOP.name, formatAUD(payment.total))
+          SMS.receiptConfirm(shop.name, formatAUD(payment.total))
         )
       }
     } finally {
@@ -153,20 +144,30 @@ export default function POSPage() {
     setClientEmail('')
     setClientPhone('')
     setCurrentTx(null)
+    setReceiptNote('')
     setStep('bill')
   }
 
-  // Print thermal receipt
-  const handlePrint = async () => {
-    if (!currentTx) return
-    await printReceipt(currentTx, DEMO_SHOP)
+  const handleDownloadReceipt = async () => {
+    if (!currentTx || !shop) return
+    setReceiptLoading(true)
+    const result = await downloadAndRecordReceipt(currentTx, shop)
+    setReceiptLoading(false)
+    if (!result.ok) setReceiptNote(result.error ?? 'Download failed')
+    else setReceiptNote('Receipt downloaded')
   }
 
-  // Health Fund PDF
-  const handleHealthFund = async () => {
-    if (!currentTx) return
-    await downloadHealthFundPDF(currentTx, DEMO_SHOP)
+  const handlePrint = async () => {
+    if (!currentTx || !shop) return
+    await printReceipt(currentTx, shop)
   }
+
+  const handleHealthFund = async () => {
+    if (!currentTx || !shop) return
+    await downloadHealthFundPDF(currentTx, shop)
+  }
+
+  const shopName = shop?.name ?? 'Loading…'
 
   return (
     <div className="pos-root">
@@ -174,7 +175,7 @@ export default function POSPage() {
       <div className="pos-topbar">
         <div className="pos-shopname">
           <span className="pos-dot online" />
-          {DEMO_SHOP.name}
+          {shopName}
         </div>
         <div className="pos-topbar-right">
           {syncStatus.pending > 0 && (
@@ -208,18 +209,19 @@ export default function POSPage() {
           {/* Left — Services + Client */}
           <div className="pos-left">
             {/* Client Info (Walk-in) */}
-            {mode === 'walkin' && (
+            {(mode === 'walkin' || mode === 'pos') && (
               <div className="pos-card">
-                <div className="card-label">ข้อมูลลูกค้า</div>
+                <div className="card-label">ข้อมูลลูกค้า (optional)</div>
                 <input
                   className="pos-input"
-                  placeholder="ชื่อลูกค้า (optional)"
+                  placeholder="ชื่อลูกค้า"
                   value={clientName}
                   onChange={e => setClientName(e.target.value)}
                 />
                 <input
                   className="pos-input"
-                  placeholder="Email (สำหรับใบเสร็จ)"
+                  placeholder="Email (auto-send receipt)"
+                  type="email"
                   value={clientEmail}
                   onChange={e => setClientEmail(e.target.value)}
                 />
@@ -368,7 +370,7 @@ export default function POSPage() {
               {/* Charge Button */}
               <button
                 className="charge-btn"
-                disabled={!bill.length || !payMethod || isLoading}
+                disabled={!bill.length || !payMethod || isLoading || !shop}
                 onClick={handleCharge}
               >
                 {isLoading
@@ -403,10 +405,20 @@ export default function POSPage() {
           <div className="success-method">
             {currentTx?.paymentMethod.toUpperCase()} · {currentTx?.id}
           </div>
+          {receiptNote && (
+            <p style={{ fontSize: 13, color: '#0f6e56', marginTop: 8 }}>{receiptNote}</p>
+          )}
           <div className="success-actions">
+            <button
+              className="s-btn primary"
+              disabled={receiptLoading || !shop}
+              onClick={handleDownloadReceipt}
+            >
+              {receiptLoading ? 'Generating…' : '📄 Download Receipt'}
+            </button>
             <button className="s-btn" onClick={handlePrint}>🖨 Print Receipt</button>
             <button className="s-btn" onClick={handleHealthFund}>❤️ Health Fund PDF</button>
-            <button className="s-btn primary" onClick={reset}>ปิดบิล</button>
+            <button className="s-btn" onClick={reset}>ปิดบิล</button>
           </div>
         </div>
       )}

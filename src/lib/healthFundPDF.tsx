@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   shopBlock: { flex: 1 },
   shopName: { fontSize: 16, fontFamily: 'Helvetica-Bold', marginBottom: 4 },
   shopDetail: { fontSize: 9, color: '#555', lineHeight: 1.5 },
-  receiptTitle: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: '#0F6E56' },
+  receiptTitle: { fontSize: 22, fontFamily: 'Helvetica-Bold' },
   receiptMeta: { fontSize: 9, color: '#555', marginTop: 4, lineHeight: 1.6 },
   section: { marginBottom: 16 },
   sectionLabel: {
@@ -123,6 +123,7 @@ interface HealthFundReceiptProps {
 }
 
 function HealthFundReceiptDoc({ tx, shop }: HealthFundReceiptProps) {
+  const accent = shop.themeColor || '#0F6E56'
   const date = new Date(tx.paidAt ?? tx.createdAt)
   const dateStr = date.toLocaleDateString('en-AU', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -144,7 +145,7 @@ function HealthFundReceiptDoc({ tx, shop }: HealthFundReceiptProps) {
             <Text style={styles.shopDetail}>ABN: {shop.abn}</Text>
           </View>
           <View>
-            <Text style={styles.receiptTitle}>RECEIPT</Text>
+            <Text style={[styles.receiptTitle, { color: accent }]}>RECEIPT</Text>
             <Text style={styles.receiptMeta}>Receipt No: {tx.id}</Text>
             <Text style={styles.receiptMeta}>Date Issued: {dateStr}</Text>
             <Text style={styles.receiptMeta}>Date of Service: {dateStr}</Text>
@@ -164,7 +165,7 @@ function HealthFundReceiptDoc({ tx, shop }: HealthFundReceiptProps) {
         {/* Services Table */}
         <View style={styles.section}>
           <View style={styles.table}>
-            <View style={styles.tableHeader}>
+            <View style={[styles.tableHeader, { backgroundColor: accent }]}>
               <Text style={[styles.tableHeaderText, styles.col1]}>Description</Text>
               <Text style={[styles.tableHeaderText, styles.col2]}>Amount</Text>
             </View>

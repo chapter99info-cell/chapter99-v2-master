@@ -10,6 +10,7 @@ import POSPage from './components/pos/POSPage'
 import AlertDashboard from './components/alerts/AlertDashboard'
 import SuperAdminDashboard from './components/dashboard/SuperAdminDashboard'
 import BookingWizard from './components/booking/BookingWizard'
+import ShopSettings from './components/settings/ShopSettings'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -100,6 +101,7 @@ export default function App() {
       ? [
           { id: 'staff', label: '👥 Staff' },
           { id: 'services', label: '🛎 Services' },
+          { id: 'settings', label: '⚙️ Settings' },
         ]
       : []),
   ]
@@ -136,6 +138,9 @@ export default function App() {
         )}
         {activeTab === 'services' && session.level === 'owner' && (
           <ServicesManager shopId={SHOP_ID} />
+        )}
+        {activeTab === 'settings' && session.level === 'owner' && (
+          <ShopSettings shopId={SHOP_ID} />
         )}
       </div>
     </div>
