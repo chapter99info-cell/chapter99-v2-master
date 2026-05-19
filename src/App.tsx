@@ -5,6 +5,7 @@ import { useState, useCallback, type Dispatch, type SetStateAction } from 'react
 import { createClient } from '@supabase/supabase-js'
 import QueueBoard from './components/queue/QueueBoard'
 import StaffManager from './components/staff/StaffManager'
+import ServicesManager from './components/services/ServicesManager'
 import POSPage from './components/pos/POSPage'
 import AlertDashboard from './components/alerts/AlertDashboard'
 import SuperAdminDashboard from './components/dashboard/SuperAdminDashboard'
@@ -95,7 +96,12 @@ export default function App() {
     { id: 'pos', label: '🧾 POS' },
     { id: 'booking', label: '➕ New Booking' },
     { id: 'alerts', label: '🔔 Alerts' },
-    ...(session.level === 'owner' ? [{ id: 'staff', label: '👥 Staff' }] : []),
+    ...(session.level === 'owner'
+      ? [
+          { id: 'staff', label: '👥 Staff' },
+          { id: 'services', label: '🛎 Services' },
+        ]
+      : []),
   ]
 
   return (
@@ -127,6 +133,9 @@ export default function App() {
         {activeTab === 'alerts' && <AlertDashboard shopId={SHOP_ID} />}
         {activeTab === 'staff' && session.level === 'owner' && (
           <StaffManager shopId={SHOP_ID} pinLevel="owner" />
+        )}
+        {activeTab === 'services' && session.level === 'owner' && (
+          <ServicesManager shopId={SHOP_ID} />
         )}
       </div>
     </div>

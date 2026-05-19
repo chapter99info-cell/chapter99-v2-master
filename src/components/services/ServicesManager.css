@@ -1,0 +1,174 @@
+.services-manager {
+  padding: 12px 0;
+}
+
+.services-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.services-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.add-service-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #0f6e56;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.services-error {
+  background: #faece7;
+  color: #993c1d;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.services-loading,
+.services-empty {
+  font-size: 13px;
+  color: #666;
+  padding: 16px 0;
+}
+
+.services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service-card {
+  background: #fff;
+  border: 0.5px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.service-card.inactive {
+  opacity: 0.65;
+  background: #faf9f5;
+}
+
+.service-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.service-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.service-name-th {
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.service-meta {
+  font-size: 12px;
+  color: #888;
+  margin-top: 6px;
+}
+
+.service-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-status {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.service-status.active {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+.service-status.inactive {
+  background: #f0efe8;
+  color: #888;
+}
+
+.service-btn {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 0.5px solid #e0ddd5;
+  background: #fff;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.service-btn.danger {
+  color: #993c1d;
+  border-color: #f5c4b3;
+}
+
+.services-modal {
+  padding: 20px;
+  gap: 8px;
+}
+
+.services-modal .form-input {
+  padding: 9px 12px;
+  border-radius: 6px;
+  border: 0.5px solid #e0ddd5;
+  font-size: 13px;
+  background: #faf9f5;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+  margin: 8px 0 12px;
+}
+
+.services-delete-msg {
+  font-size: 13px;
+  color: #555;
+  margin: 12px 0;
+}
+
+.modal-btn.danger {
+  background: #993c1d;
+  color: #fff;
+  border: none;
+}

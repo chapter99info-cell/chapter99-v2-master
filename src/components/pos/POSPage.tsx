@@ -3,7 +3,9 @@
 // PIN: 4444 / 9999
 
 import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import type { BillItem, PaymentMethod, Transaction, Shop, Service } from '../../types/pos'
+import { mapRowToService } from '../services/ServicesManager'
 import { calcPayment, formatAUD, generateReceiptId } from '../../lib/posCalc'
 import { saveTransaction } from '../../lib/posDb'
 import { printReceipt } from '../../lib/thermalPrinter'
@@ -11,7 +13,14 @@ import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
 import { sendSMS, SMS } from '../../lib/notifyService'
 import { getSyncStatus } from '../../lib/syncService'
 
-// ── Demo Data (replace with Supabase fetch) ─────────────────
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL ?? '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+)
+
+const SHOP_ID = import.meta.env.VITE_SHOP_ID ?? 'shop-001'
+
+// ── Demo Data (fallback if Supabase has no services) ─────────
 const DEMO_SHOP: Shop = {
   id: 'shop-001',
   name: 'Thai Bliss Massage',
@@ -57,6 +66,24 @@ export default function POSPage() {
   const [currentTx, setCurrentTx] = useState<Transaction | null>(null)
   const [syncStatus, setSyncStatus] = useState({ pending: 0, isOnline: true })
   const [isLoading, setIsLoading] = useState(false)
+  const [services, setServices] = useState<Service[]>(DEMO_SERVICES)
+
+  useEffect(() => {
+    async function loadServices() {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('shop_id', SHOP_ID)
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+        .order('name_en', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        setServices(data.map(row => mapRowToService(row)))
+      }
+    }
+    loadServices()
+  }, [])
 
   // Update sync status
   useEffect(() => {
@@ -213,7 +240,7 @@ export default function POSPage() {
             <div className="pos-card">
               <div className="card-label">เลือกบริการ</div>
               <div className="services-grid">
-                {DEMO_SERVICES.map(svc => {
+                {services.map(svc => {
                   const added = bill.some(i => i.serviceId === svc.id)
                   return (
                     <button
