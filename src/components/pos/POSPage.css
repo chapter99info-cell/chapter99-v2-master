@@ -1,0 +1,397 @@
+/* Chapter99 V4 — Phase 5 POS Styles
+   iPad-first: touch targets ≥ 44px, landscape optimised */
+
+:root {
+  --teal: #0F6E56;
+  --teal-light: #E1F5EE;
+  --teal-dark: #085041;
+  --amber: #BA7517;
+  --amber-light: #FAEEDA;
+  --coral: #993C1D;
+  --coral-light: #FAECE7;
+  --green: #3B6D11;
+  --green-light: #EAF3DE;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, 'SF Pro Display', sans-serif;
+  background: #f0efe8;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Top Bar */
+.pos-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 0.5px solid #e0ddd5;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.pos-shopname {
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pos-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+}
+.pos-dot.online { background: #3B6D11; }
+.pos-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pin-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--amber-light);
+  color: #633806;
+  border: 0.5px solid #EF9F27;
+}
+.sync-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--coral-light);
+  color: var(--coral);
+  border: 0.5px solid #F5C4B3;
+}
+.pos-clock {
+  font-size: 13px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mode Tabs */
+.pos-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 0.5px solid #e0ddd5;
+}
+.pos-tab {
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 0.5px solid #e0ddd5;
+  background: #f5f4ee;
+  color: #666;
+  cursor: pointer;
+  min-height: 36px;
+  transition: all 0.15s;
+}
+.pos-tab.active {
+  background: var(--teal-light);
+  border-color: var(--teal);
+  color: var(--teal-dark);
+  font-weight: 500;
+}
+
+/* Layout */
+.pos-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 12px;
+  padding: 12px 16px;
+  height: calc(100vh - 98px);
+  overflow: hidden;
+}
+.pos-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+.pos-right {
+  overflow-y: auto;
+}
+
+/* Cards */
+.pos-card {
+  background: #fff;
+  border-radius: var(--radius);
+  border: 0.5px solid #e0ddd5;
+  padding: 14px;
+}
+.card-label {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+
+/* Input */
+.pos-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  font-size: 13px;
+  margin-bottom: 8px;
+  background: #faf9f5;
+  min-height: 44px;
+}
+.pos-input:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
+/* Services Grid */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.svc-btn {
+  padding: 12px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  background: #faf9f5;
+  cursor: pointer;
+  text-align: center;
+  min-height: 72px;
+  transition: all 0.15s;
+  -webkit-user-select: none;
+}
+.svc-btn:active { transform: scale(0.97); }
+.svc-btn.added {
+  background: var(--teal-light);
+  border-color: var(--teal);
+}
+.svc-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 3px;
+}
+.svc-price {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--teal);
+  margin-bottom: 2px;
+}
+.svc-dur {
+  font-size: 10px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.gst-free-tag {
+  font-size: 9px;
+  background: var(--green-light);
+  color: var(--green);
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+/* Bill */
+.bill-card { display: flex; flex-direction: column; }
+.bill-items { min-height: 80px; display: flex; flex-direction: column; gap: 6px; }
+.bill-empty {
+  font-size: 12px;
+  color: #ccc;
+  text-align: center;
+  padding: 24px 0;
+}
+.bill-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #faf9f5;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.bill-item-info { flex: 1; }
+.bill-item-name { font-weight: 500; color: #1a1a1a; }
+.bill-item-sub { font-size: 10px; color: #999; margin-top: 1px; }
+.bill-item-price { font-weight: 500; color: #1a1a1a; white-space: nowrap; }
+.bill-item-del {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: #ccc;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.bill-item-del:hover { color: #E24B4A; background: #FCEBEB; }
+
+/* Totals */
+.totals-block {
+  border-top: 0.5px solid #e0ddd5;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #555;
+  padding: 3px 0;
+}
+.total-row.surcharge { color: var(--coral); }
+.total-row.gst-free { color: var(--green); }
+.total-row.grand {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  border-top: 0.5px solid #e0ddd5;
+  margin-top: 6px;
+  padding-top: 8px;
+}
+
+/* Payment Methods */
+.pay-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.pay-btn {
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  background: #faf9f5;
+  cursor: pointer;
+  text-align: center;
+  min-height: 64px;
+  transition: all 0.15s;
+}
+.pay-btn:active { transform: scale(0.97); }
+.pay-btn.selected {
+  border: 2px solid var(--amber);
+  background: var(--amber-light);
+}
+.pay-icon { font-size: 20px; margin-bottom: 2px; }
+.pay-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+.pay-sub { font-size: 10px; color: #999; margin-top: 1px; }
+.pay-btn.selected .pay-sub { color: #854F0B; }
+
+/* Tip */
+.tip-row { display: flex; gap: 6px; }
+.tip-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  background: #faf9f5;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  min-height: 40px;
+}
+.tip-btn.active {
+  background: var(--green-light);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 500;
+}
+
+/* Buttons */
+.charge-btn {
+  width: 100%;
+  padding: 16px;
+  margin-top: 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--teal);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 52px;
+  transition: background 0.15s;
+}
+.charge-btn:hover { background: var(--teal-dark); }
+.charge-btn:disabled {
+  background: #e0ddd5;
+  color: #bbb;
+  cursor: not-allowed;
+}
+.hf-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--green);
+  background: var(--green-light);
+  color: var(--green);
+  font-size: 12px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.void-btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #F5C4B3;
+  background: var(--coral-light);
+  color: var(--coral);
+  font-size: 11px;
+  cursor: pointer;
+  min-height: 40px;
+}
+
+/* Success Screen */
+.success-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 98px);
+  gap: 12px;
+}
+.success-icon { font-size: 64px; }
+.success-title { font-size: 24px; font-weight: 500; color: var(--teal); }
+.success-amount { font-size: 32px; font-weight: 500; color: #1a1a1a; }
+.success-method { font-size: 13px; color: #999; }
+.success-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+.s-btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.s-btn.primary {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+
+/* Mobile / Phone override */
+@media (max-width: 768px) {
+  .pos-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .services-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Landscape iPad */
+@media (min-width: 1024px) {
+  .services-grid { grid-template-columns: repeat(3, 1fr); }
+}
