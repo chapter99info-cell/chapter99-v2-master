@@ -13,6 +13,7 @@ import BookingWizard from './components/booking/BookingWizard'
 import ShopSettings from './components/settings/ShopSettings'
 import RevenueSummary from './components/dashboard/RevenueSummary'
 import GiftVoucherList from './components/dashboard/GiftVoucherList'
+import OwnerReports from './components/dashboard/OwnerReports'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -105,6 +106,7 @@ export default function App() {
     { id: 'staff', label: '👥 Staff' },
     { id: 'services', label: '🛎 Services' },
     { id: 'vouchers', label: '🎁 Vouchers' },
+    { id: 'reports', label: '📊 Reports' },
     { id: 'settings', label: '⚙️ Settings' },
   ]
 
@@ -164,6 +166,9 @@ export default function App() {
         )}
         {activeTab === 'vouchers' && isOwner && (
           <GiftVoucherList shopId={SHOP_ID} />
+        )}
+        {activeTab === 'reports' && isOwner && (
+          <OwnerReports shopId={SHOP_ID} />
         )}
         {activeTab === 'settings' && isOwner && (
           <ShopSettings shopId={SHOP_ID} />
@@ -250,12 +255,7 @@ function AppHeader({ title, badge, onLogout }: {
 
 function LogoutBtn({ onLogout }: { onLogout: () => void }) {
   return (
-    <button
-      style={{ position: 'fixed', top: 12, right: 16, fontSize: 12,
-               padding: '4px 12px', borderRadius: 20, border: '0.5px solid #333',
-               background: 'transparent', color: '#888', cursor: 'pointer' }}
-      onClick={onLogout}
-    >
+    <button type="button" className="super-admin-lock" onClick={onLogout}>
       Lock 🔒
     </button>
   )

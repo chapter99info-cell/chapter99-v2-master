@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { checkAllAlerts, type Alert, type AlertSeverity } from '../../lib/alertSystem'
+import './AlertDashboard.css'
 
 const SEVERITY_CONFIG: Record<AlertSeverity, {
   bg: string; border: string; text: string; dot: string; label: string

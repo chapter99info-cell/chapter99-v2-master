@@ -1,3 +1,5 @@
+/* Shop Settings — Zen Spa Premium */
+
 .shop-settings {
   max-width: 720px;
   margin: 0 auto;
@@ -12,27 +14,29 @@
   font-size: 22px;
   font-weight: 600;
   margin: 0 0 4px;
+  color: var(--text-primary);
 }
 
 .ss-subtitle {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .ss-section {
-  background: #fff;
-  border: 1px solid #e0ddd5;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
 }
 
 .ss-section-title {
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 14px;
-  color: #333;
+  color: var(--color-primary);
 }
 
 .ss-row {
@@ -54,23 +58,9 @@
 .ss-field label {
   display: block;
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 4px;
-}
-
-.ss-field input,
-.ss-field textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e0ddd5;
-  border-radius: 8px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.ss-field textarea {
-  min-height: 72px;
-  resize: vertical;
+  font-weight: 500;
 }
 
 .ss-logo-row {
@@ -83,13 +73,13 @@
 .ss-logo-preview {
   width: 80px;
   height: 80px;
-  border: 1px dashed #ccc;
-  border-radius: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #faf9f6;
+  background: var(--bg);
 }
 
 .ss-logo-preview img {
@@ -111,15 +101,16 @@
   gap: 4px;
   padding: 8px;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
   background: none;
   min-width: 72px;
+  font-family: inherit;
 }
 
 .ss-theme-swatch.selected {
-  border-color: #333;
-  background: #f5f4ee;
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 
 .ss-theme-dot {
@@ -130,7 +121,7 @@
 
 .ss-theme-label {
   font-size: 10px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .ss-checkbox {
@@ -150,15 +141,17 @@
 
 .ss-btn {
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: none;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
 }
 
 .ss-btn.primary {
-  background: #0f6e56;
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -168,19 +161,19 @@
 }
 
 .ss-btn.secondary {
-  background: #f0efe8;
-  color: #333;
-  border: 1px solid #e0ddd5;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
 .ss-error {
-  color: #c0392b;
+  color: var(--color-danger-dark);
   font-size: 13px;
   margin-top: 8px;
 }
 
 .ss-hint {
   font-size: 12px;
-  color: #888;
+  color: var(--text-secondary);
   margin-top: 4px;
 }

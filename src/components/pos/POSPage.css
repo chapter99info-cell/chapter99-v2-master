@@ -1,47 +1,26 @@
-/* Chapter99 V4 — Phase 5 POS Styles
-   iPad-first: touch targets ≥ 44px, landscape optimised */
-
-:root {
-  --teal: #0F6E56;
-  --teal-light: #E1F5EE;
-  --teal-dark: #085041;
-  --amber: #BA7517;
-  --amber-light: #FAEEDA;
-  --coral: #993C1D;
-  --coral-light: #FAECE7;
-  --green: #3B6D11;
-  --green-light: #EAF3DE;
-  --radius: 10px;
-  --radius-sm: 6px;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: -apple-system, 'SF Pro Display', sans-serif;
-  background: #f0efe8;
-  min-height: 100vh;
-  -webkit-tap-highlight-color: transparent;
-}
+/* POS — Zen Spa Premium (iPad-first) */
 
 /* Top Bar */
 .pos-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  background: #fff;
-  border-bottom: 0.5px solid #e0ddd5;
+  padding: 14px 20px;
+  background: var(--color-primary);
+  color: #fff;
+  border-bottom: 2px solid var(--color-accent);
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 2px 12px rgba(27, 77, 62, 0.2);
 }
 .pos-shopname {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #fff;
 }
 .pos-dot {
   width: 8px; height: 8px;
@@ -72,34 +51,36 @@ body {
 }
 .pos-clock {
   font-size: 13px;
-  color: #888;
+  color: rgba(255, 255, 255, 0.8);
   font-variant-numeric: tabular-nums;
 }
 
 /* Mode Tabs */
 .pos-tabs {
   display: flex;
-  gap: 6px;
-  padding: 10px 16px;
-  background: #fff;
-  border-bottom: 0.5px solid #e0ddd5;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 .pos-tab {
   font-size: 13px;
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 0.5px solid #e0ddd5;
-  background: #f5f4ee;
-  color: #666;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
   cursor: pointer;
-  min-height: 36px;
+  min-height: 40px;
+  font-family: inherit;
+  font-weight: 500;
   transition: all 0.15s;
 }
 .pos-tab.active {
-  background: var(--teal-light);
-  border-color: var(--teal);
-  color: var(--teal-dark);
-  font-weight: 500;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
 }
 
 /* Layout */
@@ -110,6 +91,7 @@ body {
   padding: 12px 16px;
   height: calc(100vh - 98px);
   overflow: hidden;
+  background: var(--bg);
 }
 .pos-left {
   display: flex;
@@ -123,10 +105,11 @@ body {
 
 /* Cards */
 .pos-card {
-  background: #fff;
+  background: var(--surface);
   border-radius: var(--radius);
-  border: 0.5px solid #e0ddd5;
-  padding: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
 }
 .card-label {
   font-size: 11px;
@@ -149,7 +132,9 @@ body {
 }
 .pos-input:focus {
   outline: none;
-  border-color: var(--teal);
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+  background: var(--surface);
 }
 
 /* Services Grid */
@@ -167,20 +152,23 @@ body {
   line-height: 1.5;
 }
 .svc-btn {
-  padding: 12px 8px;
-  border-radius: var(--radius-sm);
-  border: 0.5px solid #e0ddd5;
-  background: #faf9f5;
+  padding: 14px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   text-align: center;
-  min-height: 72px;
+  min-height: 80px;
   transition: all 0.15s;
   -webkit-user-select: none;
+  font-family: inherit;
 }
-.svc-btn:active { transform: scale(0.97); }
+.svc-btn:active { transform: scale(0.98); }
 .svc-btn.added {
-  background: var(--teal-light);
-  border-color: var(--teal);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(27, 77, 62, 0.15);
 }
 .svc-name {
   font-size: 13px;
@@ -275,19 +263,22 @@ body {
   gap: 6px;
 }
 .pay-btn {
-  padding: 10px 8px;
-  border-radius: var(--radius-sm);
-  border: 0.5px solid #e0ddd5;
-  background: #faf9f5;
+  padding: 12px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   text-align: center;
-  min-height: 64px;
+  min-height: 72px;
   transition: all 0.15s;
+  font-family: inherit;
 }
-.pay-btn:active { transform: scale(0.97); }
+.pay-btn:active { transform: scale(0.98); }
 .pay-btn.selected {
-  border: 2px solid var(--amber);
-  background: var(--amber-light);
+  border: 2px solid var(--color-accent);
+  background: var(--color-accent-light);
+  box-shadow: var(--focus-ring);
 }
 .pay-icon { font-size: 20px; margin-bottom: 2px; }
 .pay-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
@@ -516,6 +507,86 @@ body {
   margin: 8px 0;
 }
 .voucher-sold-hint { font-size: 12px; color: #888; margin: 12px 0 16px; }
+.voucher-email-ok { color: #0f6e56; }
+.voucher-email-err { color: #993c1d; }
+
+/* Split payment */
+.payment-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.split-toggle-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent-light);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+}
+.split-payment-block {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.split-remaining {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.split-remaining strong {
+  font-size: 20px;
+  color: var(--color-primary);
+}
+.split-remaining-of {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.split-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.split-row span:first-child { flex: 1; }
+.split-remove {
+  border: none;
+  background: none;
+  font-size: 20px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.split-add-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin-top: 8px;
+}
+.split-add-btn {
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
+}
 
 /* Mobile / Phone override */
 @media (max-width: 768px) {

@@ -63,6 +63,16 @@ function isFourDigitPin(pin: string): boolean {
   return /^\d{4}$/.test(pin)
 }
 
+function roleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    therapist: 'Therapist',
+    cashier: 'Cashier',
+    manager: 'Manager',
+    owner: 'Owner',
+  }
+  return labels[role] ?? role
+}
+
 function validateStaffForm(form: StaffForm, isEdit: boolean): string | null {
   if (!form.nameEn.trim()) {
     return 'Name is required'
@@ -265,12 +275,12 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
         </button>
       </div>
 
-      {loadError && <p className="form-field-error">{loadError}</p>}
+      {loadError && <p className="staff-banner staff-banner--error">{loadError}</p>}
 
-      {loading && <p className="form-hint">Loading staff…</p>}
+      {loading && <p className="staff-banner">Loading staff…</p>}
 
       {!loading && !loadError && staffList.length === 0 && (
-        <p className="form-hint">
+        <p className="staff-banner">
           No staff yet for shop <strong>{shopId}</strong>. Add your first team member below.
         </p>
       )}
@@ -279,61 +289,97 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
         {staffList.map(s => {
           const indemnityDays = daysUntil(s.indemnity_expiry ?? '')
           const visaDays = daysUntil(s.visa_expiry ?? '')
+          const hasAlerts =
+            (indemnityDays !== null && indemnityDays <= 60) ||
+            (visaDays !== null && visaDays <= 90)
 
           return (
-            <div key={s.id} className={`staff-card${!s.active ? ' inactive' : ''}`}>
-              <div className="staff-card-main">
-                <div className="staff-avatar">
-                  {s.name_en.charAt(0).toUpperCase()}
-                </div>
-                <div className="staff-info">
-                  <div className="staff-name">{s.name_en}</div>
-                  {s.name_th && (
-                    <div className="staff-meta">Nickname: {s.name_th}</div>
-                  )}
-                  <div className="staff-meta">
-                    {s.role} · {(s.commission_rate * 100).toFixed(0)}% commission · $
-                    {s.base_hourly ?? 0}/hr
+            <article
+              key={s.id}
+              className={`staff-card${!s.active ? ' staff-card--suspended' : ''}`}
+            >
+              <div className="staff-card-top">
+                <div className="staff-card-identity">
+                  <div className="staff-avatar" aria-hidden>
+                    {s.name_en.charAt(0).toUpperCase()}
                   </div>
-                  <div className="staff-alerts">
-                    {indemnityDays !== null && indemnityDays <= 60 && (
-                      <span className={`alert-tag ${alertColor(indemnityDays)}`}>
-                        🛡 Insurance: {indemnityDays}d
+                  <div className="staff-head">
+                    <div className="staff-name-row">
+                      <h3 className="staff-name">{s.name_en}</h3>
+                      <span className={`staff-role-badge staff-role-badge--${s.role}`}>
+                        {roleLabel(s.role)}
                       </span>
-                    )}
-                    {visaDays !== null && visaDays <= 90 && (
-                      <span className={`alert-tag ${alertColor(visaDays)}`}>
-                        🛂 Visa: {visaDays}d
-                      </span>
+                    </div>
+                    {s.name_th ? (
+                      <p className="staff-nickname">{s.name_th}</p>
+                    ) : (
+                      <p className="staff-nickname staff-nickname--empty">No nickname</p>
                     )}
                   </div>
                 </div>
-                <div className="staff-actions">
-                  <span className={`staff-status ${s.active ? 'active' : 'inactive'}`}>
-                    {s.active ? 'Active' : 'Inactive'}
+                <span
+                  className={`staff-status ${s.active ? 'staff-status--active' : 'staff-status--suspended'}`}
+                >
+                  {s.active ? 'Active' : 'Suspended'}
+                </span>
+              </div>
+
+              <div className="staff-stats">
+                <div className="staff-stat">
+                  <span className="staff-stat-label">Commission</span>
+                  <span className="staff-stat-value">
+                    {(s.commission_rate * 100).toFixed(0)}%
                   </span>
-                  <button type="button" className="staff-btn" onClick={() => startEdit(s)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="staff-btn"
-                    onClick={() => toggleActive(s.id, !s.active)}
-                  >
-                    {s.active ? 'Suspend' : 'Activate'}
-                  </button>
-                  {pinLevel === 'owner' && (
-                    <button
-                      type="button"
-                      className="staff-btn danger"
-                      onClick={() => setConfirmDelete(s.id)}
-                    >
-                      Delete
-                    </button>
-                  )}
+                </div>
+                <div className="staff-stat">
+                  <span className="staff-stat-label">Base rate</span>
+                  <span className="staff-stat-value">
+                    ${Number(s.base_hourly ?? 0).toFixed(2)}/hr
+                  </span>
                 </div>
               </div>
-            </div>
+
+              {hasAlerts && (
+                <div className="staff-alerts">
+                  {indemnityDays !== null && indemnityDays <= 60 && (
+                    <span className={`staff-alert-tag staff-alert-tag--${alertColor(indemnityDays)}`}>
+                      🛡 Insurance · {indemnityDays}d
+                    </span>
+                  )}
+                  {visaDays !== null && visaDays <= 90 && (
+                    <span className={`staff-alert-tag staff-alert-tag--${alertColor(visaDays)}`}>
+                      🛂 Visa · {visaDays}d
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="staff-card-actions">
+                <button
+                  type="button"
+                  className="staff-btn staff-btn--primary"
+                  onClick={() => startEdit(s)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="staff-btn staff-btn--secondary"
+                  onClick={() => toggleActive(s.id, !s.active)}
+                >
+                  {s.active ? 'Suspend' : 'Activate'}
+                </button>
+                {pinLevel === 'owner' && (
+                  <button
+                    type="button"
+                    className="staff-btn staff-btn--danger"
+                    onClick={() => setConfirmDelete(s.id)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </article>
           )
         })}
       </div>
@@ -495,9 +541,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
               onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
             />
 
-            {validationError && (
-              <p className="form-hint">{validationError}</p>
-            )}
+            {validationError && <p className="form-hint">{validationError}</p>}
             {formError && <p className="form-field-error">{formError}</p>}
 
             <div className="modal-footer">
@@ -519,9 +563,9 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
 
       {confirmDelete && (
         <div className="modal-overlay">
-          <div className="modal-box" style={{ maxWidth: 400 }}>
+          <div className="modal-box staff-delete-modal">
             <div className="modal-title">⚠️ Delete Staff Member?</div>
-            <p style={{ fontSize: 13, color: '#555', margin: '12px 0', padding: '0 20px' }}>
+            <p className="staff-delete-msg">
               Their booking history and financial records will be kept for legal purposes.
               Only their login access will be removed.
             </p>

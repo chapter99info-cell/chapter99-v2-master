@@ -50,6 +50,43 @@ export async function sendReceiptEmail(
   return res.ok
 }
 
+export interface GiftVoucherEmailRequest {
+  to: string
+  buyerName: string
+  voucherCode: string
+  amount: number
+  expiryDate: string
+  shopName: string
+  shopAddress: string
+  shopPhone: string
+  shopEmail?: string
+  logoUrl?: string
+}
+
+/** Send gift voucher email via Resend (only when buyer email is provided). */
+export async function sendGiftVoucherEmail(
+  payload: GiftVoucherEmailRequest
+): Promise<{ ok: boolean; error?: string }> {
+  if (!payload.to?.trim()) {
+    return { ok: false, error: 'No email address' }
+  }
+
+  try {
+    const res = await fetch('/api/email-voucher', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    if (!res.ok) {
+      return { ok: false, error: data.error ?? 'Email could not be sent' }
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Email service unavailable' }
+  }
+}
+
 // SMS Templates
 export const SMS = {
   receiptConfirm: (shopName: string, total: string) =>

@@ -3,9 +3,15 @@
 // PIN: 4444 / 9999
 
 import { useState, useEffect, useCallback } from 'react'
-import type { BillItem, PaymentMethod, Transaction, Shop, Service } from '../../types/pos'
+import type { BillItem, PaymentMethod, PaymentSplit, Transaction, Shop, Service } from '../../types/pos'
 import { mapRowToService } from '../services/ServicesManager'
-import { calcPayment, formatAUD, generateReceiptId } from '../../lib/posCalc'
+import {
+  calcPayment,
+  calcPaymentWithSplits,
+  formatAUD,
+  generateReceiptId,
+  splitTotalAmount,
+} from '../../lib/posCalc'
 import { saveTransaction } from '../../lib/posDb'
 import {
   sellGiftVoucher,
@@ -17,7 +23,7 @@ import { VOUCHER_PRESET_AMOUNTS } from '../../types/giftVoucher'
 import type { GiftVoucher, ValidatedVoucher } from '../../types/giftVoucher'
 import { printReceipt } from '../../lib/thermalPrinter'
 import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
-import { sendSMS, SMS } from '../../lib/notifyService'
+import { sendSMS, SMS, sendGiftVoucherEmail } from '../../lib/notifyService'
 import { getSyncStatus } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
@@ -27,6 +33,7 @@ import GoogleReviewQR from './GoogleReviewQR'
 
 type POSMode = 'pos' | 'walkin' | 'queue'
 type POSStep = 'bill' | 'payment' | 'success'
+type SplittableMethod = Exclude<PaymentMethod, 'split'>
 
 export default function POSPage() {
   const [mode, setMode] = useState<POSMode>('pos')
@@ -49,11 +56,12 @@ export default function POSPage() {
   // Gift voucher — sell
   const [showSellVoucher, setShowSellVoucher] = useState(false)
   const [soldVoucher, setSoldVoucher] = useState<GiftVoucher | null>(null)
+  const [soldVoucherEmailNote, setSoldVoucherEmailNote] = useState<string | null>(null)
   const [sellAmount, setSellAmount] = useState<number | 'custom'>(50)
   const [sellCustomAmount, setSellCustomAmount] = useState('')
   const [sellBuyerName, setSellBuyerName] = useState('')
   const [sellBuyerEmail, setSellBuyerEmail] = useState('')
-  const [sellPayMethod, setSellPayMethod] = useState<PaymentMethod>('cash')
+  const [sellPayMethod, setSellPayMethod] = useState<SplittableMethod>('cash')
   const [sellLoading, setSellLoading] = useState(false)
   const [sellError, setSellError] = useState('')
 
@@ -65,8 +73,34 @@ export default function POSPage() {
   const [chargeError, setChargeError] = useState('')
   const [appliedVoucher, setAppliedVoucher] = useState<ValidatedVoucher | null>(null)
 
+  // Split payment
+  const [splitMode, setSplitMode] = useState(false)
+  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([])
+  const [splitDraftMethod, setSplitDraftMethod] = useState<SplittableMethod>('cash')
+  const [splitDraftAmount, setSplitDraftAmount] = useState('')
+  const [splitError, setSplitError] = useState('')
+
+  // Therapist (for reports)
+  const [therapists, setTherapists] = useState<{ id: string; name_en: string }[]>([])
+  const [therapistId, setTherapistId] = useState('')
+  const [therapistName, setTherapistName] = useState('')
+
   useEffect(() => {
     fetchShop(SHOP_ID).then(setShop)
+  }, [])
+
+  useEffect(() => {
+    async function loadTherapists() {
+      const { data } = await supabase
+        .from('staff')
+        .select('id, name_en')
+        .eq('shop_id', SHOP_ID)
+        .eq('active', true)
+        .in('role', ['therapist', 'owner'])
+        .order('name_en')
+      setTherapists(data ?? [])
+    }
+    loadTherapists()
   }, [])
 
   useEffect(() => {
@@ -98,9 +132,16 @@ export default function POSPage() {
     return () => clearInterval(id)
   }, [])
 
-  const payment = payMethod
-    ? calcPayment(bill, payMethod as PaymentMethod)
-    : null
+  const payment = (() => {
+    if (!bill.length) return null
+    if (splitMode && paymentSplits.length > 0) {
+      return calcPaymentWithSplits(bill, paymentSplits)
+    }
+    if (!splitMode && payMethod && payMethod !== 'split') {
+      return calcPayment(bill, payMethod as SplittableMethod)
+    }
+    return calcPayment(bill, 'cash')
+  })()
 
   const voucherDeduction = appliedVoucher && payment
     ? Math.min(appliedVoucher.remainingBalance, payment.total)
@@ -109,6 +150,11 @@ export default function POSPage() {
     ? Math.round(Math.max(0, payment.total - voucherDeduction) * 100) / 100
     : 0
   const voucherCoversAll = voucherDeduction > 0 && amountToCollect === 0
+  const splitsPaid = splitTotalAmount(paymentSplits)
+  const remainingToSplit =
+    amountToCollect > 0
+      ? Math.round(Math.max(0, amountToCollect - splitsPaid) * 100) / 100
+      : 0
 
   const resolvedSellAmount =
     sellAmount === 'custom'
@@ -189,6 +235,29 @@ export default function POSPage() {
         healthFundIssued: false,
       })
 
+      const buyerEmail = sellBuyerEmail.trim()
+      if (buyerEmail) {
+        const emailResult = await sendGiftVoucherEmail({
+          to: buyerEmail,
+          buyerName: sellBuyerName,
+          voucherCode: voucher.code,
+          amount: resolvedSellAmount,
+          expiryDate: voucher.expiryDate,
+          shopName: shop.name,
+          shopAddress: shop.address,
+          shopPhone: shop.phone,
+          shopEmail: shop.email,
+          logoUrl: shop.logoUrl,
+        })
+        setSoldVoucherEmailNote(
+          emailResult.ok
+            ? `Voucher emailed to ${buyerEmail}`
+            : emailResult.error ?? 'Could not send voucher email'
+        )
+      } else {
+        setSoldVoucherEmailNote(null)
+      }
+
       setSoldVoucher(voucher)
       setShowSellVoucher(false)
       setSellBuyerName('')
@@ -202,9 +271,42 @@ export default function POSPage() {
   }
 
   // Charge — save transaction
+  const addPaymentSplit = () => {
+    setSplitError('')
+    const amt = Math.round((parseFloat(splitDraftAmount) || 0) * 100) / 100
+    if (amt <= 0) {
+      setSplitError('Enter an amount greater than zero')
+      return
+    }
+    if (paymentSplits.length >= 3) {
+      setSplitError('Maximum 3 payment methods')
+      return
+    }
+    if (amt > remainingToSplit + 0.01) {
+      setSplitError(`Amount exceeds remaining ${formatAUD(remainingToSplit)}`)
+      return
+    }
+    setPaymentSplits(prev => [...prev, { method: splitDraftMethod, amount: amt }])
+    setSplitDraftAmount('')
+  }
+
+  const removePaymentSplit = (index: number) => {
+    setPaymentSplits(prev => prev.filter((_, i) => i !== index))
+    setSplitError('')
+  }
+
   const handleCharge = async () => {
     if (!bill.length || !payment || !shop) return
-    if (amountToCollect > 0 && !payMethod) return
+    if (amountToCollect > 0) {
+      if (splitMode) {
+        if (paymentSplits.length === 0 || remainingToSplit > 0.01) {
+          setChargeError('Split payments must equal the amount to collect')
+          return
+        }
+      } else if (!payMethod) {
+        return
+      }
+    }
     setIsLoading(true)
     setReceiptNote('')
     setChargeError('')
@@ -218,14 +320,22 @@ export default function POSPage() {
       }
 
       const shopCode = shop.id.replace(/[^A-Z0-9]/gi, '').slice(0, 3).toUpperCase() || 'RCP'
+      const finalPayment =
+        splitMode && paymentSplits.length > 0
+          ? calcPaymentWithSplits(bill, paymentSplits)
+          : payment
+
       const tx: Transaction = {
         id: generateReceiptId(shopCode),
         shopId: shop.id,
         clientName: clientName || undefined,
         clientEmail: clientEmail || undefined,
+        therapistId: therapistId || undefined,
+        therapistName: therapistName || undefined,
         items: bill,
-        payment,
-        paymentMethod: (payMethod || 'cash') as PaymentMethod,
+        payment: finalPayment,
+        paymentMethod: splitMode ? 'split' : ((payMethod || 'cash') as PaymentMethod),
+        paymentSplits: splitMode ? paymentSplits : undefined,
         status: 'paid',
         createdAt: new Date().toISOString(),
         paidAt: new Date().toISOString(),
@@ -257,6 +367,12 @@ export default function POSPage() {
   const reset = () => {
     setBill([])
     setPayMethod('')
+    setSplitMode(false)
+    setPaymentSplits([])
+    setSplitDraftAmount('')
+    setSplitError('')
+    setTherapistId('')
+    setTherapistName('')
     setClientName('')
     setClientEmail('')
     setClientPhone('')
@@ -325,6 +441,7 @@ export default function POSPage() {
             onClick={() => {
               setShowSellVoucher(true)
               setSellError('')
+              setSoldVoucherEmailNote(null)
             }}
           >
             🎁 Gift Voucher
@@ -382,6 +499,23 @@ export default function POSPage() {
                   value={clientPhone}
                   onChange={e => setClientPhone(e.target.value)}
                 />
+                {therapists.length > 0 && (
+                  <select
+                    className="pos-input"
+                    value={therapistId}
+                    onChange={e => {
+                      const id = e.target.value
+                      setTherapistId(id)
+                      const t = therapists.find(x => x.id === id)
+                      setTherapistName(t?.name_en ?? '')
+                    }}
+                  >
+                    <option value="">Therapist (optional)</option>
+                    {therapists.map(t => (
+                      <option key={t.id} value={t.id}>{t.name_en}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
 
@@ -541,18 +675,34 @@ export default function POSPage() {
               )}
 
               {/* Payment Methods */}
-              <div className="card-label" style={{ marginTop: 12 }}>วิธีชำระเงิน</div>
+              <div className="card-label payment-label-row" style={{ marginTop: 12 }}>
+                <span>วิธีชำระเงิน</span>
+                <button
+                  type="button"
+                  className="split-toggle-btn"
+                  onClick={() => {
+                    setSplitMode(m => !m)
+                    setPayMethod('')
+                    setPaymentSplits([])
+                    setSplitError('')
+                  }}
+                >
+                  {splitMode ? 'Single payment' : 'Split payment'}
+                </button>
+              </div>
+              {!splitMode ? (
               <div className="pay-grid">
                 {[
-                  { method: 'cash' as PaymentMethod, label: 'Cash', sub: 'ไม่มี surcharge', icon: '💵' },
-                  { method: 'payid' as PaymentMethod, label: 'PayID', sub: 'ฟรี 100% ⭐', icon: '📱' },
-                  { method: 'card' as PaymentMethod, label: 'Card', sub: '+1.5% surcharge', icon: '💳' },
-                  { method: 'hicaps' as PaymentMethod, label: 'HICAPS', sub: 'Health Fund', icon: '❤️' },
+                  { method: 'cash' as SplittableMethod, label: 'Cash', sub: 'ไม่มี surcharge', icon: '💵' },
+                  { method: 'payid' as SplittableMethod, label: 'PayID', sub: 'ฟรี 100% ⭐', icon: '📱' },
+                  { method: 'card' as SplittableMethod, label: 'Card', sub: '+1.5% surcharge', icon: '💳' },
+                  { method: 'hicaps' as SplittableMethod, label: 'HICAPS', sub: 'Health Fund', icon: '❤️' },
                 ].map(({ method, label, sub, icon }) => (
                   <button
                     key={method}
                     className={`pay-btn${payMethod === method ? ' selected' : ''}`}
-                    onClick={() => setPayMethod(prev => prev === method ? '' : method)}
+                    type="button"
+                    onClick={() => setPayMethod(prev => (prev === method ? '' : method))}
                   >
                     <div className="pay-icon">{icon}</div>
                     <div className="pay-label">{label}</div>
@@ -560,6 +710,49 @@ export default function POSPage() {
                   </button>
                 ))}
               </div>
+              ) : (
+                <div className="split-payment-block">
+                  <div className="split-remaining">
+                    <span>Remaining</span>
+                    <strong>{formatAUD(remainingToSplit)}</strong>
+                    <span className="split-remaining-of">of {formatAUD(amountToCollect)}</span>
+                  </div>
+                  {paymentSplits.map((s, i) => (
+                    <div key={i} className="split-row">
+                      <span>{s.method.toUpperCase()}</span>
+                      <span>{formatAUD(s.amount)}</span>
+                      <button type="button" className="split-remove" onClick={() => removePaymentSplit(i)}>×</button>
+                    </div>
+                  ))}
+                  {paymentSplits.length < 3 && remainingToSplit > 0 && (
+                    <div className="split-add-row">
+                      <select
+                        className="pos-input"
+                        value={splitDraftMethod}
+                        onChange={e => setSplitDraftMethod(e.target.value as SplittableMethod)}
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="payid">PayID</option>
+                        <option value="card">Card</option>
+                        <option value="hicaps">HICAPS</option>
+                      </select>
+                      <input
+                        className="pos-input"
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        placeholder={formatAUD(remainingToSplit)}
+                        value={splitDraftAmount}
+                        onChange={e => setSplitDraftAmount(e.target.value)}
+                      />
+                      <button type="button" className="split-add-btn" onClick={addPaymentSplit}>
+                        Add
+                      </button>
+                    </div>
+                  )}
+                  {splitError && <p className="voucher-form-error">{splitError}</p>}
+                </div>
+              )}
 
               {/* Charge Button */}
               {chargeError && <p className="voucher-form-error">{chargeError}</p>}
@@ -569,8 +762,11 @@ export default function POSPage() {
                   !bill.length ||
                   isLoading ||
                   !shop ||
-                  (amountToCollect > 0 && !payMethod) ||
-                  (!payMethod && !voucherCoversAll)
+                  (amountToCollect > 0 &&
+                    (splitMode
+                      ? paymentSplits.length === 0 || remainingToSplit > 0.01
+                      : !payMethod)) ||
+                  (!splitMode && !payMethod && !voucherCoversAll)
                 }
                 onClick={handleCharge}
               >
@@ -582,7 +778,7 @@ export default function POSPage() {
               </button>
 
               {/* Health Fund button if HICAPS selected */}
-              {payMethod === 'hicaps' && (
+              {(payMethod === 'hicaps' || paymentSplits.some(s => s.method === 'hicaps')) && (
                 <button className="hf-btn" onClick={handleHealthFund}>
                   ❤️ ออก Health Fund Receipt
                 </button>
@@ -607,7 +803,10 @@ export default function POSPage() {
             {currentTx && formatAUD(currentTx.payment.total)}
           </div>
           <div className="success-method">
-            {currentTx?.paymentMethod.toUpperCase()} · {currentTx?.id}
+            {currentTx?.paymentMethod === 'split' && currentTx.paymentSplits?.length
+              ? currentTx.paymentSplits.map(s => `${s.method.toUpperCase()} ${formatAUD(s.amount)}`).join(' + ')
+              : currentTx?.paymentMethod.toUpperCase()}
+            {' · '}{currentTx?.id}
             {currentTx?.voucherCode && (
               <> · Voucher {currentTx.voucherCode} (−{formatAUD(currentTx.voucherAmount ?? 0)})</>
             )}
@@ -695,7 +894,7 @@ export default function POSPage() {
 
             <div className="card-label">Payment for voucher</div>
             <div className="pay-grid">
-              {(['cash', 'payid', 'card'] as PaymentMethod[]).map(method => (
+              {(['cash', 'payid', 'card'] as SplittableMethod[]).map(method => (
                 <button
                   key={method}
                   type="button"
@@ -727,7 +926,13 @@ export default function POSPage() {
       )}
 
       {soldVoucher && (
-        <div className="pos-modal-overlay" onClick={() => setSoldVoucher(null)}>
+        <div
+          className="pos-modal-overlay"
+          onClick={() => {
+            setSoldVoucher(null)
+            setSoldVoucherEmailNote(null)
+          }}
+        >
           <div className="pos-modal pos-modal--success" onClick={e => e.stopPropagation()}>
             <div className="voucher-sold-icon">🎁</div>
             <h3 className="pos-modal-title">Voucher sold</h3>
@@ -736,7 +941,21 @@ export default function POSPage() {
               {formatAUD(soldVoucher.originalAmount)} · Expires {formatVoucherExpiry(soldVoucher.expiryDate)}
             </p>
             <p className="voucher-sold-hint">Give this code to the customer. Print or write it down.</p>
-            <button type="button" className="s-btn primary" onClick={() => setSoldVoucher(null)}>
+            {soldVoucherEmailNote && (
+              <p
+                className={`voucher-sold-hint${soldVoucherEmailNote.startsWith('Voucher emailed') ? ' voucher-email-ok' : ' voucher-email-err'}`}
+              >
+                {soldVoucherEmailNote}
+              </p>
+            )}
+            <button
+              type="button"
+              className="s-btn primary"
+              onClick={() => {
+                setSoldVoucher(null)
+                setSoldVoucherEmailNote(null)
+              }}
+            >
               Done
             </button>
           </div>

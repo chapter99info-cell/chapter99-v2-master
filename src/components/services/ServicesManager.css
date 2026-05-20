@@ -1,5 +1,8 @@
+/* Services Manager — Zen Spa Premium */
+
 .services-manager {
   padding: 12px 0;
+  max-width: 900px;
 }
 
 .services-header {
@@ -9,76 +12,64 @@
   margin-bottom: 12px;
 }
 
-.services-search {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #e0ddd5;
-  font-size: 14px;
-  margin-bottom: 16px;
-  background: #fff;
-}
-
-.form-input.invalid {
-  border-color: #993c1d;
-  background: #faf5f3;
-}
-
-.form-field-error {
-  font-size: 12px;
-  color: #993c1d;
-  margin: -4px 0 8px;
-}
-
 .services-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .add-service-btn {
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
   border: none;
-  background: #0f6e56;
+  background: var(--color-primary);
   color: #fff;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   min-height: 44px;
+  font-family: inherit;
+  box-shadow: var(--shadow-card);
+}
+
+.services-search {
+  margin-bottom: 16px;
 }
 
 .services-error {
-  background: #faece7;
-  color: #993c1d;
-  padding: 10px 12px;
-  border-radius: 8px;
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+  padding: 12px 14px;
+  border-radius: var(--radius);
   font-size: 13px;
   margin-bottom: 12px;
+  border: 1px solid var(--color-danger-border);
 }
 
 .services-loading,
 .services-empty {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   padding: 16px 0;
 }
 
 .services-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .service-card {
-  background: #fff;
-  border: 0.5px solid #e0ddd5;
-  border-radius: 10px;
-  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
 }
 
 .service-card.inactive {
   opacity: 0.65;
-  background: #faf9f5;
+  background: var(--bg);
 }
 
 .service-card-main {
@@ -90,20 +81,20 @@
 }
 
 .service-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .service-name-th {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
 .service-meta {
   font-size: 12px;
-  color: #888;
+  color: var(--text-secondary);
   margin-top: 6px;
 }
 
@@ -116,33 +107,37 @@
 
 .service-status {
   font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
 }
 
 .service-status.active {
-  background: #eaf3de;
-  color: #3b6d11;
+  background: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .service-status.inactive {
-  background: #f0efe8;
-  color: #888;
+  background: var(--bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
 }
 
 .service-btn {
   font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 0.5px solid #e0ddd5;
-  background: #fff;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
   cursor: pointer;
   min-height: 36px;
+  font-family: inherit;
+  font-weight: 500;
 }
 
-.service-btn.danger {
-  color: #993c1d;
-  border-color: #f5c4b3;
+.service-btn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 
 .services-modal {
@@ -151,12 +146,6 @@
 }
 
 .services-modal .form-input {
-  padding: 9px 12px;
-  border-radius: 6px;
-  border: 0.5px solid #e0ddd5;
-  font-size: 13px;
-  background: #faf9f5;
-  width: 100%;
   margin-bottom: 8px;
 }
 
@@ -169,13 +158,16 @@
 .form-label {
   display: block;
   font-size: 11px;
-  color: #999;
+  color: var(--text-secondary);
   margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .form-hint {
   font-size: 12px;
-  color: #888;
+  color: var(--text-secondary);
   margin: -4px 0 12px;
   line-height: 1.4;
 }
@@ -185,18 +177,12 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #555;
+  color: var(--text-primary);
   margin: 8px 0 12px;
 }
 
 .services-delete-msg {
   font-size: 13px;
-  color: #555;
+  color: var(--text-secondary);
   margin: 12px 0;
-}
-
-.modal-btn.danger {
-  background: #993c1d;
-  color: #fff;
-  border: none;
 }

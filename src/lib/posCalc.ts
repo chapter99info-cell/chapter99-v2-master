@@ -2,7 +2,7 @@
 // POS Calculation Engine
 // All calculations in AUD, rounded to 2dp
 
-import type { BillItem, PaymentBreakdown, PaymentMethod } from '../types/pos'
+import type { BillItem, PaymentBreakdown, PaymentMethod, PaymentSplit } from '../types/pos'
 
 const SURCHARGE_RATES: Record<string, number> = {
   cash: 0,
@@ -24,9 +24,11 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
+type SplittableMethod = Exclude<PaymentMethod, 'split'>
+
 export function calcPayment(
   items: BillItem[],
-  method: PaymentMethod
+  method: SplittableMethod
 ): PaymentBreakdown {
   const subtotal = round2(items.reduce((sum, i) => sum + i.price, 0))
   const gstFreeAmt = round2(
@@ -93,4 +95,40 @@ export function calcCommission(
   const therapistEarns = round2(subtotal * commissionRate)
   const shopEarns = round2(subtotal - therapistEarns)
   return { therapistEarns, shopEarns }
+}
+
+/** Payment breakdown when bill is split across up to 3 methods */
+export function calcPaymentWithSplits(
+  items: BillItem[],
+  splits: PaymentSplit[]
+): PaymentBreakdown {
+  const base = calcPayment(items, 'cash')
+  if (splits.length === 0) return base
+
+  let surcharge = 0
+  let gpCost = 0
+  for (const s of splits) {
+    const rate = SURCHARGE_RATES[s.method] ?? 0
+    const gp = GP_RATES[s.method] ?? 0
+    surcharge = round2(surcharge + s.amount * rate)
+    gpCost = round2(gpCost + s.amount * gp)
+  }
+
+  const total = round2(base.subtotal + surcharge)
+  const netRevenue = round2(total - gpCost)
+  const primary = splits[0]?.method ?? 'cash'
+  const surchargeRate = SURCHARGE_RATES[primary] ?? 0
+
+  return {
+    ...base,
+    surcharge,
+    surchargeRate,
+    total,
+    gpCost,
+    netRevenue,
+  }
+}
+
+export function splitTotalAmount(splits: PaymentSplit[]): number {
+  return round2(splits.reduce((sum, s) => sum + s.amount, 0))
 }

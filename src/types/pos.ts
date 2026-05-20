@@ -1,7 +1,12 @@
 // Chapter99 V4 — Phase 5 POS Types
 // All monetary values in AUD cents to avoid float errors
 
-export type PaymentMethod = 'cash' | 'payid' | 'card' | 'hicaps' | 'amex'
+export type PaymentMethod = 'cash' | 'payid' | 'card' | 'hicaps' | 'amex' | 'split'
+
+export interface PaymentSplit {
+  method: Exclude<PaymentMethod, 'split'>
+  amount: number
+}
 
 export type BillStatus = 'open' | 'paid' | 'voided' | 'refunded'
 
@@ -49,6 +54,7 @@ export interface Transaction {
   items: BillItem[]
   payment: PaymentBreakdown
   paymentMethod: PaymentMethod
+  paymentSplits?: PaymentSplit[]
   status: BillStatus
   createdAt: string       // ISO string
   paidAt?: string

@@ -4,19 +4,20 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import './QueueBoard.css'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
 )
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  confirmed:   { label: 'Confirmed',   color: '#185FA5', bg: '#E6F1FB' },
-  arrived:     { label: 'Arrived',     color: '#BA7517', bg: '#FAEEDA' },
-  in_progress: { label: 'In Progress', color: '#0F6E56', bg: '#E1F5EE' },
-  completed:   { label: 'Completed',   color: '#3B6D11', bg: '#EAF3DE' },
-  no_show:     { label: 'No Show',     color: '#993C1D', bg: '#FAECE7' },
-  cancelled:   { label: 'Cancelled',   color: '#888',    bg: '#f5f4ee' },
+const STATUS_CONFIG: Record<string, { label: string }> = {
+  confirmed:   { label: 'Confirmed' },
+  arrived:     { label: 'Arrived' },
+  in_progress: { label: 'In Progress' },
+  completed:   { label: 'Completed' },
+  no_show:     { label: 'No Show' },
+  cancelled:   { label: 'Cancelled' },
 }
 
 interface QueueBoardProps {
@@ -218,8 +219,7 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
 
                     {/* Status badge */}
                     <div
-                      className="status-badge"
-                      style={{ background: cfg.bg, color: cfg.color }}
+                      className={`status-badge status-badge--${booking.status}`}
                     >
                       {cfg.label}
                     </div>
