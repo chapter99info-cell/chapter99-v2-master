@@ -195,6 +195,7 @@ export default function POSPage() {
     }
     setAppliedVoucher(result.voucher)
     setShowRedeemVoucher(false)
+    setRedeemError('')
   }
 
   const handleSellVoucher = async () => {
@@ -604,92 +605,102 @@ export default function POSPage() {
                       <span>{formatAUD(payment.surcharge)}</span>
                     </div>
                   )}
-                  <div className="total-row grand">
-                    <span>TOTAL</span>
-                    <span>{formatAUD(payment.total)}</span>
-                  </div>
-                  {appliedVoucher && voucherDeduction > 0 && (
-                    <>
-                      <div className="total-row voucher-deduct">
-                        <span>Voucher {appliedVoucher.code}</span>
-                        <span>−{formatAUD(voucherDeduction)}</span>
-                      </div>
-                      <div className="total-row grand collect">
-                        <span>Collect</span>
-                        <span>{formatAUD(amountToCollect)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {bill.length > 0 && payment && (
-                <div className="voucher-redeem-block">
-                  {!appliedVoucher ? (
-                    <>
-                      <button
-                        type="button"
-                        className="voucher-redeem-btn"
-                        onClick={() => {
-                          setShowRedeemVoucher(v => !v)
-                          setRedeemError('')
-                        }}
-                      >
-                        🎫 Redeem Voucher
-                      </button>
-                      {showRedeemVoucher && (
-                        <div className="voucher-redeem-form">
-                          <input
-                            className="pos-input"
-                            placeholder="Enter code e.g. CH99-A1B2"
-                            value={redeemCode}
-                            onChange={e => setRedeemCode(e.target.value.toUpperCase())}
-                          />
-                          {redeemError && <p className="voucher-form-error">{redeemError}</p>}
-                          <button
-                            type="button"
-                            className="voucher-apply-btn"
-                            disabled={redeemLoading || !redeemCode.trim()}
-                            onClick={handleApplyVoucher}
-                          >
-                            {redeemLoading ? 'Checking…' : 'Apply voucher'}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="voucher-applied">
-                      <div>
-                        <strong>{appliedVoucher.code}</strong>
-                        <span> — {formatAUD(appliedVoucher.remainingBalance)} left</span>
-                      </div>
-                      <p className="voucher-applied-exp">
-                        Expires {formatVoucherExpiry(appliedVoucher.expiryDate)}
-                      </p>
-                      <button type="button" className="voucher-remove-btn" onClick={clearAppliedVoucher}>
-                        Remove voucher
-                      </button>
+                  {payment.total !== amountToCollect && appliedVoucher && (
+                    <div className="total-row subtotal-before-voucher">
+                      <span>Subtotal</span>
+                      <span>{formatAUD(payment.total)}</span>
                     </div>
                   )}
+                  {appliedVoucher && voucherDeduction > 0 && (
+                    <div className="total-row voucher-deduct">
+                      <span>Voucher {appliedVoucher.code}</span>
+                      <span>−{formatAUD(voucherDeduction)}</span>
+                    </div>
+                  )}
+                  <div className="total-row grand">
+                    <span>{appliedVoucher && voucherDeduction > 0 ? 'TOTAL DUE' : 'TOTAL'}</span>
+                    <span>
+                      {formatAUD(
+                        appliedVoucher && voucherDeduction > 0
+                          ? amountToCollect
+                          : payment.total
+                      )}
+                    </span>
+                  </div>
                 </div>
               )}
 
               {/* Payment Methods */}
               <div className="card-label payment-label-row" style={{ marginTop: 12 }}>
                 <span>วิธีชำระเงิน</span>
-                <button
-                  type="button"
-                  className="split-toggle-btn"
-                  onClick={() => {
-                    setSplitMode(m => !m)
-                    setPayMethod('')
-                    setPaymentSplits([])
-                    setSplitError('')
-                  }}
-                >
-                  {splitMode ? 'Single payment' : 'Split payment'}
-                </button>
+                <div className="payment-action-btns">
+                  <button
+                    type="button"
+                    className={`split-toggle-btn${showRedeemVoucher && !appliedVoucher ? ' active' : ''}`}
+                    onClick={() => {
+                      if (appliedVoucher) return
+                      setShowRedeemVoucher(v => !v)
+                      setRedeemError('')
+                    }}
+                    disabled={!!appliedVoucher}
+                  >
+                    🎫 Redeem Voucher
+                  </button>
+                  <button
+                    type="button"
+                    className={`split-toggle-btn${splitMode ? ' active' : ''}`}
+                    onClick={() => {
+                      setSplitMode(m => !m)
+                      setPayMethod('')
+                      setPaymentSplits([])
+                      setSplitError('')
+                    }}
+                  >
+                    {splitMode ? 'Single payment' : 'Split payment'}
+                  </button>
+                </div>
               </div>
+
+              {showRedeemVoucher && !appliedVoucher && bill.length > 0 && (
+                <div className="voucher-redeem-panel">
+                  <input
+                    className="pos-input"
+                    placeholder="Voucher code e.g. CH99-A1B2"
+                    value={redeemCode}
+                    onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && handleApplyVoucher()}
+                  />
+                  <button
+                    type="button"
+                    className="voucher-apply-btn"
+                    disabled={redeemLoading || !redeemCode.trim()}
+                    onClick={handleApplyVoucher}
+                  >
+                    {redeemLoading ? 'Checking…' : 'Apply'}
+                  </button>
+                  {redeemError && <p className="voucher-form-error">{redeemError}</p>}
+                </div>
+              )}
+
+              {appliedVoucher && (
+                <div className="voucher-applied">
+                  <div className="voucher-applied-main">
+                    <strong>{appliedVoucher.code}</strong>
+                    <span className="voucher-applied-balance">
+                      Balance {formatAUD(appliedVoucher.remainingBalance)}
+                      {voucherDeduction > 0 && (
+                        <> · Applying {formatAUD(voucherDeduction)}</>
+                      )}
+                    </span>
+                  </div>
+                  <p className="voucher-applied-exp">
+                    Expires {formatVoucherExpiry(appliedVoucher.expiryDate)}
+                  </p>
+                  <button type="button" className="voucher-remove-btn" onClick={clearAppliedVoucher}>
+                    Remove voucher
+                  </button>
+                </div>
+              )}
               {!splitMode ? (
               <div className="pay-grid">
                 {[
