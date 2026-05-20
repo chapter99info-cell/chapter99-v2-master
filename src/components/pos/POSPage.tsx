@@ -7,6 +7,14 @@ import type { BillItem, PaymentMethod, Transaction, Shop, Service } from '../../
 import { mapRowToService } from '../services/ServicesManager'
 import { calcPayment, formatAUD, generateReceiptId } from '../../lib/posCalc'
 import { saveTransaction } from '../../lib/posDb'
+import {
+  sellGiftVoucher,
+  validateGiftVoucher,
+  redeemGiftVoucher,
+  formatVoucherExpiry,
+} from '../../lib/giftVoucherService'
+import { VOUCHER_PRESET_AMOUNTS } from '../../types/giftVoucher'
+import type { GiftVoucher, ValidatedVoucher } from '../../types/giftVoucher'
 import { printReceipt } from '../../lib/thermalPrinter'
 import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
 import { sendSMS, SMS } from '../../lib/notifyService'
@@ -37,6 +45,25 @@ export default function POSPage() {
   const [receiptNote, setReceiptNote] = useState('')
   const [receiptLoading, setReceiptLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
+
+  // Gift voucher — sell
+  const [showSellVoucher, setShowSellVoucher] = useState(false)
+  const [soldVoucher, setSoldVoucher] = useState<GiftVoucher | null>(null)
+  const [sellAmount, setSellAmount] = useState<number | 'custom'>(50)
+  const [sellCustomAmount, setSellCustomAmount] = useState('')
+  const [sellBuyerName, setSellBuyerName] = useState('')
+  const [sellBuyerEmail, setSellBuyerEmail] = useState('')
+  const [sellPayMethod, setSellPayMethod] = useState<PaymentMethod>('cash')
+  const [sellLoading, setSellLoading] = useState(false)
+  const [sellError, setSellError] = useState('')
+
+  // Gift voucher — redeem
+  const [showRedeemVoucher, setShowRedeemVoucher] = useState(false)
+  const [redeemCode, setRedeemCode] = useState('')
+  const [redeemLoading, setRedeemLoading] = useState(false)
+  const [redeemError, setRedeemError] = useState('')
+  const [chargeError, setChargeError] = useState('')
+  const [appliedVoucher, setAppliedVoucher] = useState<ValidatedVoucher | null>(null)
 
   useEffect(() => {
     fetchShop(SHOP_ID).then(setShop)
@@ -75,6 +102,19 @@ export default function POSPage() {
     ? calcPayment(bill, payMethod as PaymentMethod)
     : null
 
+  const voucherDeduction = appliedVoucher && payment
+    ? Math.min(appliedVoucher.remainingBalance, payment.total)
+    : 0
+  const amountToCollect = payment
+    ? Math.round(Math.max(0, payment.total - voucherDeduction) * 100) / 100
+    : 0
+  const voucherCoversAll = voucherDeduction > 0 && amountToCollect === 0
+
+  const resolvedSellAmount =
+    sellAmount === 'custom'
+      ? parseFloat(sellCustomAmount) || 0
+      : sellAmount
+
   // Toggle service in bill
   const toggleService = useCallback((svc: Service) => {
     setBill(prev => {
@@ -91,12 +131,92 @@ export default function POSPage() {
     })
   }, [])
 
+  const clearAppliedVoucher = () => {
+    setAppliedVoucher(null)
+    setRedeemCode('')
+    setRedeemError('')
+    setShowRedeemVoucher(false)
+  }
+
+  const handleApplyVoucher = async () => {
+    setRedeemLoading(true)
+    setRedeemError('')
+    const result = await validateGiftVoucher(redeemCode)
+    setRedeemLoading(false)
+    if (!result.ok) {
+      setRedeemError('error' in result ? result.error : 'Invalid voucher')
+      return
+    }
+    setAppliedVoucher(result.voucher)
+    setShowRedeemVoucher(false)
+  }
+
+  const handleSellVoucher = async () => {
+    if (!shop || resolvedSellAmount <= 0 || !sellBuyerName.trim()) {
+      setSellError('Enter amount and buyer name')
+      return
+    }
+    setSellLoading(true)
+    setSellError('')
+    try {
+      const voucher = await sellGiftVoucher({
+        amount: resolvedSellAmount,
+        buyerName: sellBuyerName,
+        buyerEmail: sellBuyerEmail || undefined,
+      })
+
+      const voucherItem: BillItem = {
+        serviceId: `voucher-${voucher.id}`,
+        serviceName: `Gift Voucher (${voucher.code})`,
+        duration: 0,
+        price: resolvedSellAmount,
+        gstFree: false,
+      }
+      const voucherPayment = calcPayment([voucherItem], sellPayMethod)
+      const shopCode = shop.id.replace(/[^A-Z0-9]/gi, '').slice(0, 3).toUpperCase() || 'RCP'
+      await saveTransaction({
+        id: generateReceiptId(shopCode),
+        shopId: shop.id,
+        clientName: sellBuyerName,
+        clientEmail: sellBuyerEmail || undefined,
+        items: [voucherItem],
+        payment: voucherPayment,
+        paymentMethod: sellPayMethod,
+        status: 'paid',
+        createdAt: new Date().toISOString(),
+        paidAt: new Date().toISOString(),
+        receiptSent: false,
+        healthFundIssued: false,
+      })
+
+      setSoldVoucher(voucher)
+      setShowSellVoucher(false)
+      setSellBuyerName('')
+      setSellBuyerEmail('')
+      setSellCustomAmount('')
+    } catch (e) {
+      setSellError(e instanceof Error ? e.message : 'Could not sell voucher')
+    } finally {
+      setSellLoading(false)
+    }
+  }
+
   // Charge — save transaction
   const handleCharge = async () => {
-    if (!bill.length || !payMethod || !payment || !shop) return
+    if (!bill.length || !payment || !shop) return
+    if (amountToCollect > 0 && !payMethod) return
     setIsLoading(true)
     setReceiptNote('')
+    setChargeError('')
     try {
+      if (appliedVoucher && voucherDeduction > 0) {
+        const redeem = await redeemGiftVoucher(appliedVoucher.code, voucherDeduction)
+        if (!redeem.ok) {
+          setChargeError('error' in redeem ? redeem.error : 'Redemption failed')
+          return
+        }
+      }
+
       const shopCode = shop.id.replace(/[^A-Z0-9]/gi, '').slice(0, 3).toUpperCase() || 'RCP'
       const tx: Transaction = {
         id: generateReceiptId(shopCode),
@@ -105,12 +225,14 @@ export default function POSPage() {
         clientEmail: clientEmail || undefined,
         items: bill,
         payment,
-        paymentMethod: payMethod as PaymentMethod,
+        paymentMethod: (payMethod || 'cash') as PaymentMethod,
         status: 'paid',
         createdAt: new Date().toISOString(),
         paidAt: new Date().toISOString(),
         receiptSent: false,
         healthFundIssued: false,
+        voucherCode: appliedVoucher?.code,
+        voucherAmount: voucherDeduction > 0 ? voucherDeduction : undefined,
       }
       await saveTransaction(tx)
       setCurrentTx(tx)
@@ -140,6 +262,7 @@ export default function POSPage() {
     setClientPhone('')
     setCurrentTx(null)
     setReceiptNote('')
+    clearAppliedVoucher()
     setStep('bill')
   }
 
@@ -196,6 +319,16 @@ export default function POSPage() {
           {shopName}
         </div>
         <div className="pos-topbar-right">
+          <button
+            type="button"
+            className="voucher-sell-btn"
+            onClick={() => {
+              setShowSellVoucher(true)
+              setSellError('')
+            }}
+          >
+            🎁 Gift Voucher
+          </button>
           {syncStatus.pending > 0 && (
             <span className="sync-badge">
               {syncStatus.pending} pending sync
@@ -341,6 +474,69 @@ export default function POSPage() {
                     <span>TOTAL</span>
                     <span>{formatAUD(payment.total)}</span>
                   </div>
+                  {appliedVoucher && voucherDeduction > 0 && (
+                    <>
+                      <div className="total-row voucher-deduct">
+                        <span>Voucher {appliedVoucher.code}</span>
+                        <span>−{formatAUD(voucherDeduction)}</span>
+                      </div>
+                      <div className="total-row grand collect">
+                        <span>Collect</span>
+                        <span>{formatAUD(amountToCollect)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {bill.length > 0 && payment && (
+                <div className="voucher-redeem-block">
+                  {!appliedVoucher ? (
+                    <>
+                      <button
+                        type="button"
+                        className="voucher-redeem-btn"
+                        onClick={() => {
+                          setShowRedeemVoucher(v => !v)
+                          setRedeemError('')
+                        }}
+                      >
+                        🎫 Redeem Voucher
+                      </button>
+                      {showRedeemVoucher && (
+                        <div className="voucher-redeem-form">
+                          <input
+                            className="pos-input"
+                            placeholder="Enter code e.g. CH99-A1B2"
+                            value={redeemCode}
+                            onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                          />
+                          {redeemError && <p className="voucher-form-error">{redeemError}</p>}
+                          <button
+                            type="button"
+                            className="voucher-apply-btn"
+                            disabled={redeemLoading || !redeemCode.trim()}
+                            onClick={handleApplyVoucher}
+                          >
+                            {redeemLoading ? 'Checking…' : 'Apply voucher'}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="voucher-applied">
+                      <div>
+                        <strong>{appliedVoucher.code}</strong>
+                        <span> — {formatAUD(appliedVoucher.remainingBalance)} left</span>
+                      </div>
+                      <p className="voucher-applied-exp">
+                        Expires {formatVoucherExpiry(appliedVoucher.expiryDate)}
+                      </p>
+                      <button type="button" className="voucher-remove-btn" onClick={clearAppliedVoucher}>
+                        Remove voucher
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -366,14 +562,23 @@ export default function POSPage() {
               </div>
 
               {/* Charge Button */}
+              {chargeError && <p className="voucher-form-error">{chargeError}</p>}
               <button
                 className="charge-btn"
-                disabled={!bill.length || !payMethod || isLoading || !shop}
+                disabled={
+                  !bill.length ||
+                  isLoading ||
+                  !shop ||
+                  (amountToCollect > 0 && !payMethod) ||
+                  (!payMethod && !voucherCoversAll)
+                }
                 onClick={handleCharge}
               >
                 {isLoading
                   ? 'Processing...'
-                  : `รับเงิน — ${payment ? formatAUD(payment.total) : '$0.00'}`}
+                  : voucherCoversAll
+                    ? 'Complete — paid by voucher'
+                    : `รับเงิน — ${payment ? formatAUD(amountToCollect > 0 ? amountToCollect : payment.total) : '$0.00'}`}
               </button>
 
               {/* Health Fund button if HICAPS selected */}
@@ -403,6 +608,9 @@ export default function POSPage() {
           </div>
           <div className="success-method">
             {currentTx?.paymentMethod.toUpperCase()} · {currentTx?.id}
+            {currentTx?.voucherCode && (
+              <> · Voucher {currentTx.voucherCode} (−{formatAUD(currentTx.voucherAmount ?? 0)})</>
+            )}
           </div>
           {receiptNote && <p className="success-note">{receiptNote}</p>}
           <div className="success-actions">
@@ -430,6 +638,108 @@ export default function POSPage() {
           {shop?.googleReviewUrl?.trim() && (
             <GoogleReviewQR url={shop.googleReviewUrl} />
           )}
+        </div>
+      )}
+
+      {showSellVoucher && (
+        <div className="pos-modal-overlay" onClick={() => setShowSellVoucher(false)}>
+          <div className="pos-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="pos-modal-title">Sell Gift Voucher</h3>
+            <p className="pos-modal-sub">Valid for 1 year · Code generated automatically</p>
+
+            <div className="voucher-amount-grid">
+              {VOUCHER_PRESET_AMOUNTS.map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  className={`voucher-amount-btn${sellAmount === amt ? ' selected' : ''}`}
+                  onClick={() => setSellAmount(amt)}
+                >
+                  {formatAUD(amt)}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`voucher-amount-btn${sellAmount === 'custom' ? ' selected' : ''}`}
+                onClick={() => setSellAmount('custom')}
+              >
+                Custom
+              </button>
+            </div>
+
+            {sellAmount === 'custom' && (
+              <input
+                className="pos-input"
+                type="number"
+                min="1"
+                step="0.01"
+                placeholder="Custom amount"
+                value={sellCustomAmount}
+                onChange={e => setSellCustomAmount(e.target.value)}
+              />
+            )}
+
+            <input
+              className="pos-input"
+              placeholder="Buyer name *"
+              value={sellBuyerName}
+              onChange={e => setSellBuyerName(e.target.value)}
+            />
+            <input
+              className="pos-input"
+              type="email"
+              placeholder="Buyer email (optional)"
+              value={sellBuyerEmail}
+              onChange={e => setSellBuyerEmail(e.target.value)}
+            />
+
+            <div className="card-label">Payment for voucher</div>
+            <div className="pay-grid">
+              {(['cash', 'payid', 'card'] as PaymentMethod[]).map(method => (
+                <button
+                  key={method}
+                  type="button"
+                  className={`pay-btn${sellPayMethod === method ? ' selected' : ''}`}
+                  onClick={() => setSellPayMethod(method)}
+                >
+                  <div className="pay-label">{method.toUpperCase()}</div>
+                </button>
+              ))}
+            </div>
+
+            {sellError && <p className="voucher-form-error">{sellError}</p>}
+
+            <div className="pos-modal-actions">
+              <button type="button" className="s-btn" onClick={() => setShowSellVoucher(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="s-btn primary"
+                disabled={sellLoading || resolvedSellAmount <= 0 || !sellBuyerName.trim()}
+                onClick={handleSellVoucher}
+              >
+                {sellLoading ? 'Saving…' : `Sell ${formatAUD(resolvedSellAmount)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {soldVoucher && (
+        <div className="pos-modal-overlay" onClick={() => setSoldVoucher(null)}>
+          <div className="pos-modal pos-modal--success" onClick={e => e.stopPropagation()}>
+            <div className="voucher-sold-icon">🎁</div>
+            <h3 className="pos-modal-title">Voucher sold</h3>
+            <p className="voucher-sold-code">{soldVoucher.code}</p>
+            <p className="pos-modal-sub">
+              {formatAUD(soldVoucher.originalAmount)} · Expires {formatVoucherExpiry(soldVoucher.expiryDate)}
+            </p>
+            <p className="voucher-sold-hint">Give this code to the customer. Print or write it down.</p>
+            <button type="button" className="s-btn primary" onClick={() => setSoldVoucher(null)}>
+              Done
+            </button>
+          </div>
         </div>
       )}
     </div>

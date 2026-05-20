@@ -408,6 +408,115 @@ body {
   border-color: var(--teal);
 }
 
+/* Gift vouchers */
+.voucher-sell-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 0.5px solid var(--teal);
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  cursor: pointer;
+  min-height: 36px;
+}
+.voucher-redeem-block { margin-top: 10px; }
+.voucher-redeem-btn,
+.voucher-apply-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--teal);
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.voucher-apply-btn { margin-top: 6px; }
+.voucher-redeem-form { margin-top: 8px; }
+.voucher-form-error {
+  font-size: 12px;
+  color: var(--coral);
+  margin: 4px 0;
+}
+.voucher-applied {
+  padding: 10px;
+  background: var(--teal-light);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.voucher-applied-exp { color: #666; margin: 4px 0 8px; }
+.voucher-remove-btn {
+  font-size: 11px;
+  border: none;
+  background: none;
+  color: var(--coral);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.total-row.voucher-deduct { color: var(--teal); }
+.total-row.grand.collect { color: var(--amber); }
+
+.pos-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+.pos-modal {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.pos-modal--success { text-align: center; }
+.pos-modal-title { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+.pos-modal-sub { font-size: 12px; color: #888; margin-bottom: 14px; }
+.pos-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.pos-modal-actions .s-btn { flex: 1; }
+.voucher-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.voucher-amount-btn {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  background: #faf9f5;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 48px;
+}
+.voucher-amount-btn.selected {
+  border-color: var(--teal);
+  background: var(--teal-light);
+  color: var(--teal-dark);
+}
+.voucher-sold-icon { font-size: 48px; margin-bottom: 8px; }
+.voucher-sold-code {
+  font-family: ui-monospace, monospace;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--teal);
+  letter-spacing: 0.05em;
+  margin: 8px 0;
+}
+.voucher-sold-hint { font-size: 12px; color: #888; margin: 12px 0 16px; }
+
 /* Mobile / Phone override */
 @media (max-width: 768px) {
   .pos-layout {

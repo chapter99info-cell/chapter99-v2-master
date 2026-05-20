@@ -1,0 +1,105 @@
+.voucher-list {
+  background: #fff;
+  border-radius: 10px;
+  border: 0.5px solid #e0ddd5;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.voucher-list-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.voucher-list-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.voucher-list-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.voucher-list-error {
+  color: #993c1d;
+  font-size: 13px;
+}
+
+.voucher-list-loading,
+.voucher-list-empty {
+  font-size: 13px;
+  color: #888;
+  padding: 12px 0;
+}
+
+.voucher-table-wrap {
+  overflow-x: auto;
+}
+
+.voucher-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.voucher-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+  padding: 8px 10px;
+  border-bottom: 0.5px solid #e0ddd5;
+}
+
+.voucher-table td {
+  padding: 10px;
+  border-bottom: 0.5px solid #f0efe8;
+  vertical-align: top;
+}
+
+.voucher-code {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  color: #0f6e56;
+}
+
+.voucher-status {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.voucher-status--active {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+.voucher-status--redeemed {
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+.voucher-status--expired {
+  background: #faece7;
+  color: #993c1d;
+}
+
+.voucher-buyer-email {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .voucher-table th:nth-child(6),
+  .voucher-table td:nth-child(6) {
+    display: none;
+  }
+}

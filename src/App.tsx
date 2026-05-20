@@ -12,6 +12,7 @@ import SuperAdminDashboard from './components/dashboard/SuperAdminDashboard'
 import BookingWizard from './components/booking/BookingWizard'
 import ShopSettings from './components/settings/ShopSettings'
 import RevenueSummary from './components/dashboard/RevenueSummary'
+import GiftVoucherList from './components/dashboard/GiftVoucherList'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -103,6 +104,7 @@ export default function App() {
   const ownerTabs = [
     { id: 'staff', label: '👥 Staff' },
     { id: 'services', label: '🛎 Services' },
+    { id: 'vouchers', label: '🎁 Vouchers' },
     { id: 'settings', label: '⚙️ Settings' },
   ]
 
@@ -159,6 +161,9 @@ export default function App() {
         )}
         {activeTab === 'services' && isOwner && (
           <ServicesManager shopId={SHOP_ID} />
+        )}
+        {activeTab === 'vouchers' && isOwner && (
+          <GiftVoucherList shopId={SHOP_ID} />
         )}
         {activeTab === 'settings' && isOwner && (
           <ShopSettings shopId={SHOP_ID} />

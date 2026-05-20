@@ -56,6 +56,8 @@ export interface Transaction {
   voidReason?: string
   receiptSent: boolean
   healthFundIssued: boolean
+  voucherCode?: string
+  voucherAmount?: number
 }
 
 export interface Staff {
