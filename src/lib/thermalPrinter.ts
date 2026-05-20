@@ -62,10 +62,6 @@ export function buildReceiptText(tx: Transaction, shop: Shop): string {
     lines.push(leftRight('Card surcharge (1.5%):', formatAUD(tx.payment.surcharge)))
   }
 
-  if (tx.payment.tip > 0) {
-    lines.push(leftRight('Tip:', formatAUD(tx.payment.tip)))
-  }
-
   lines.push(divider('═'))
   lines.push(leftRight('TOTAL:', formatAUD(tx.payment.total)))
   lines.push(leftRight('Payment:', tx.paymentMethod.toUpperCase()))

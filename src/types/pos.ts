@@ -33,8 +33,6 @@ export interface PaymentBreakdown {
   exGst: number           // subtotal - gst
   surcharge: number       // card surcharge 1.5%
   surchargeRate: number   // 0.015 for card
-  tip: number
-  tipPct: number
   total: number           // final charge to customer
   gpCost: number          // actual card processing cost
   netRevenue: number      // total - gpCost

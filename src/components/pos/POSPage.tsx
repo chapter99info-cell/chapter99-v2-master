@@ -17,8 +17,6 @@ import { syncTransactionToSheet } from '../../lib/googleSheets'
 import { SHOP_ID, supabase } from '../../lib/supabase'
 import GoogleReviewQR from './GoogleReviewQR'
 
-const TIP_OPTIONS = [0, 10, 15, 20]
-
 type POSMode = 'pos' | 'walkin' | 'queue'
 type POSStep = 'bill' | 'payment' | 'success'
 
@@ -27,7 +25,6 @@ export default function POSPage() {
   const [step, setStep] = useState<POSStep>('bill')
   const [bill, setBill] = useState<BillItem[]>([])
   const [payMethod, setPayMethod] = useState<PaymentMethod | ''>('')
-  const [tipPct, setTipPct] = useState(0)
   const [clientName, setClientName] = useState('')
   const [clientEmail, setClientEmail] = useState('')
   const [clientPhone, setClientPhone] = useState('')
@@ -75,7 +72,7 @@ export default function POSPage() {
   }, [])
 
   const payment = payMethod
-    ? calcPayment(bill, payMethod as PaymentMethod, tipPct)
+    ? calcPayment(bill, payMethod as PaymentMethod)
     : null
 
   // Toggle service in bill
@@ -138,7 +135,6 @@ export default function POSPage() {
   const reset = () => {
     setBill([])
     setPayMethod('')
-    setTipPct(0)
     setClientName('')
     setClientEmail('')
     setClientPhone('')
@@ -341,12 +337,6 @@ export default function POSPage() {
                       <span>{formatAUD(payment.surcharge)}</span>
                     </div>
                   )}
-                  {payment.tip > 0 && (
-                    <div className="total-row">
-                      <span>Tip ({payment.tipPct}%)</span>
-                      <span>{formatAUD(payment.tip)}</span>
-                    </div>
-                  )}
                   <div className="total-row grand">
                     <span>TOTAL</span>
                     <span>{formatAUD(payment.total)}</span>
@@ -371,20 +361,6 @@ export default function POSPage() {
                     <div className="pay-icon">{icon}</div>
                     <div className="pay-label">{label}</div>
                     <div className="pay-sub">{sub}</div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tip */}
-              <div className="card-label" style={{ marginTop: 10 }}>Tip</div>
-              <div className="tip-row">
-                {TIP_OPTIONS.map(pct => (
-                  <button
-                    key={pct}
-                    className={`tip-btn${tipPct === pct ? ' active' : ''}`}
-                    onClick={() => setTipPct(pct)}
-                  >
-                    {pct === 0 ? 'No tip' : `${pct}%`}
                   </button>
                 ))}
               </div>

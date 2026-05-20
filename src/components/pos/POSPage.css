@@ -294,26 +294,6 @@ body {
 .pay-sub { font-size: 10px; color: #999; margin-top: 1px; }
 .pay-btn.selected .pay-sub { color: #854F0B; }
 
-/* Tip */
-.tip-row { display: flex; gap: 6px; }
-.tip-btn {
-  flex: 1;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  border: 0.5px solid #e0ddd5;
-  background: #faf9f5;
-  font-size: 12px;
-  color: #666;
-  cursor: pointer;
-  min-height: 40px;
-}
-.tip-btn.active {
-  background: var(--green-light);
-  border-color: var(--green);
-  color: var(--green);
-  font-weight: 500;
-}
-
 /* Buttons */
 .charge-btn {
   width: 100%;

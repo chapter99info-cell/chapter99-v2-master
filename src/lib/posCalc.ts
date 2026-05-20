@@ -26,8 +26,7 @@ function round2(n: number): number {
 
 export function calcPayment(
   items: BillItem[],
-  method: PaymentMethod,
-  tipPct: number = 0
+  method: PaymentMethod
 ): PaymentBreakdown {
   const subtotal = round2(items.reduce((sum, i) => sum + i.price, 0))
   const gstFreeAmt = round2(
@@ -42,8 +41,7 @@ export function calcPayment(
   const surchargeRate = SURCHARGE_RATES[method] ?? 0
   const surcharge = round2(subtotal * surchargeRate)
 
-  const tip = round2(subtotal * (tipPct / 100))
-  const total = round2(subtotal + surcharge + tip)
+  const total = round2(subtotal + surcharge)
 
   const gpCost = round2(total * (GP_RATES[method] ?? 0))
   const netRevenue = round2(total - gpCost)
@@ -56,8 +54,6 @@ export function calcPayment(
     exGst,
     surcharge,
     surchargeRate,
-    tip,
-    tipPct,
     total,
     gpCost,
     netRevenue,

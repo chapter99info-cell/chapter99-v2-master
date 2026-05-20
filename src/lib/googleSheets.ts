@@ -29,7 +29,6 @@ export function buildTransactionRow(tx: Transaction): (string | number)[] {
     tx.payment.exGst,
     tx.payment.gstFreeAmt,
     tx.payment.surcharge,
-    tx.payment.tip,
     tx.payment.total,
     tx.paymentMethod.toUpperCase(),
     tx.payment.gpCost,

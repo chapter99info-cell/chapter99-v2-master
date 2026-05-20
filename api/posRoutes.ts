@@ -161,7 +161,6 @@ export async function POST_googleSheet(req: VercelRequest, res: VercelResponse) 
     tx.payment.exGst,
     tx.payment.gstFreeAmt,
     tx.payment.surcharge,
-    tx.payment.tip,
     tx.payment.total,
     tx.paymentMethod.toUpperCase(),
     tx.payment.netRevenue,

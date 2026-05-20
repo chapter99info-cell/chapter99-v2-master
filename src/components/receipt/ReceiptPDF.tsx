@@ -218,10 +218,6 @@ export async function buildReceiptPDF(
     )
   }
 
-  if (tx.payment.tip > 0) {
-    addTotalRow(`Tip (${tx.payment.tipPct}%)`, formatAUD(tx.payment.tip))
-  }
-
   y += 2
   doc.setDrawColor(theme[0], theme[1], theme[2])
   doc.line(margin, y, pageW - margin, y)
