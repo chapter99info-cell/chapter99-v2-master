@@ -25,6 +25,7 @@ export interface ShopRow {
   stripe_pub_key: string | null
   google_sheet_url: string | null
   google_sheet_sync_enabled: boolean | null
+  google_review_url: string | null
 }
 
 export interface ShopSettingsInput {
@@ -45,6 +46,7 @@ export interface ShopSettingsInput {
   payidAccount: string
   googleSheetUrl: string
   googleSheetSyncEnabled: boolean
+  googleReviewUrl: string
 }
 
 const DEFAULT_SHOP: Shop = {
@@ -87,6 +89,7 @@ export function mapRowToShop(row: ShopRow): Shop {
     stripePublicKey: row.stripe_pub_key ?? undefined,
     googleSheetUrl: row.google_sheet_url ?? undefined,
     googleSheetSyncEnabled: row.google_sheet_sync_enabled ?? false,
+    googleReviewUrl: row.google_review_url ?? undefined,
   }
 }
 
@@ -109,6 +112,7 @@ export function shopToUpdatePayload(input: ShopSettingsInput) {
     payid_account: input.payidAccount || null,
     google_sheet_url: input.googleSheetUrl || null,
     google_sheet_sync_enabled: input.googleSheetSyncEnabled,
+    google_review_url: input.googleReviewUrl || null,
   }
 }
 

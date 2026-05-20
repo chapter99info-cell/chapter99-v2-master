@@ -94,6 +94,7 @@ export interface Shop {
   payidAccount?: string
   googleSheetUrl?: string
   googleSheetSyncEnabled?: boolean
+  googleReviewUrl?: string
 }
 
 export interface ReceiptRecord {

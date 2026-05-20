@@ -36,6 +36,7 @@ function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsIn
     payidAccount: shop.payidAccount ?? '',
     googleSheetUrl: shop.googleSheetUrl ?? '',
     googleSheetSyncEnabled: shop.googleSheetSyncEnabled ?? false,
+    googleReviewUrl: shop.googleReviewUrl ?? '',
   }
 }
 
@@ -318,6 +319,23 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
             <label>PayID account</label>
             <input value={form.payidAccount} onChange={e => update('payidAccount', e.target.value)} />
           </div>
+        </div>
+      </section>
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Google review (POS)</h2>
+        <p className="ss-hint" style={{ marginBottom: 12 }}>
+          Shown on the POS success screen after payment (not on printed receipts). Paste your
+          Google review link from Google Business Profile.
+        </p>
+        <div className="ss-field">
+          <label>Google Review URL</label>
+          <input
+            type="url"
+            placeholder="https://g.page/r/.../review"
+            value={form.googleReviewUrl}
+            onChange={e => update('googleReviewUrl', e.target.value)}
+          />
         </div>
       </section>
 

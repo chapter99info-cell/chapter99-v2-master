@@ -11,6 +11,7 @@ import AlertDashboard from './components/alerts/AlertDashboard'
 import SuperAdminDashboard from './components/dashboard/SuperAdminDashboard'
 import BookingWizard from './components/booking/BookingWizard'
 import ShopSettings from './components/settings/ShopSettings'
+import RevenueSummary from './components/dashboard/RevenueSummary'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -143,7 +144,10 @@ export default function App() {
       )}
       <div className="app-content">
         {activeTab === 'queue' && (
-          <QueueBoard shopId={SHOP_ID} pinLevel={session.level as any} />
+          <>
+            {isOwner && <RevenueSummary shopId={SHOP_ID} />}
+            <QueueBoard shopId={SHOP_ID} pinLevel={session.level as any} />
+          </>
         )}
         {activeTab === 'pos' && <POSPage />}
         {activeTab === 'booking' && (

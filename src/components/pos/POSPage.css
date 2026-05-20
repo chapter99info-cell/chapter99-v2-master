@@ -365,15 +365,54 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   min-height: calc(100vh - 98px);
+  padding: 16px 12px 24px;
   gap: 12px;
+}
+.success-screen-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
 }
 .success-icon { font-size: 64px; }
 .success-title { font-size: 24px; font-weight: 500; color: var(--teal); }
 .success-amount { font-size: 32px; font-weight: 500; color: #1a1a1a; }
 .success-method { font-size: 13px; color: #999; }
+.success-note { font-size: 13px; color: #0f6e56; margin-top: 4px; text-align: center; }
 .success-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+
+.google-review-section {
+  width: 100%;
+  max-width: 280px;
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 0.5px solid #e0ddd5;
+  text-align: center;
+}
+.google-review-heading {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+.google-review-qr-wrap {
+  display: inline-flex;
+  padding: 10px;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid #e0ddd5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.google-review-caption {
+  font-size: 12px;
+  color: #888;
+  margin-top: 10px;
+  line-height: 1.4;
+}
 .s-btn {
   padding: 10px 20px;
   border-radius: var(--radius-sm);

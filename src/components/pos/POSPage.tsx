@@ -15,6 +15,7 @@ import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
 import { syncTransactionToSheet } from '../../lib/googleSheets'
 import { SHOP_ID, supabase } from '../../lib/supabase'
+import GoogleReviewQR from './GoogleReviewQR'
 
 const TIP_OPTIONS = [0, 10, 15, 20]
 
@@ -418,6 +419,7 @@ export default function POSPage() {
       ) : (
         /* Success Screen */
         <div className="success-screen">
+          <div className="success-screen-main">
           <div className="success-icon">✅</div>
           <div className="success-title">ชำระเงินสำเร็จ</div>
           <div className="success-amount">
@@ -426,9 +428,7 @@ export default function POSPage() {
           <div className="success-method">
             {currentTx?.paymentMethod.toUpperCase()} · {currentTx?.id}
           </div>
-          {receiptNote && (
-            <p style={{ fontSize: 13, color: '#0f6e56', marginTop: 8 }}>{receiptNote}</p>
-          )}
+          {receiptNote && <p className="success-note">{receiptNote}</p>}
           <div className="success-actions">
             <button
               className="s-btn primary"
@@ -450,6 +450,10 @@ export default function POSPage() {
             <button className="s-btn" onClick={handleHealthFund}>❤️ Health Fund PDF</button>
             <button className="s-btn" onClick={reset}>ปิดบิล</button>
           </div>
+          </div>
+          {shop?.googleReviewUrl?.trim() && (
+            <GoogleReviewQR url={shop.googleReviewUrl} />
+          )}
         </div>
       )}
     </div>
