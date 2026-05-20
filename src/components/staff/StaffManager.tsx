@@ -2,16 +2,29 @@
 // Staff Management (PIN 4444 = add/edit, PIN 9999 = delete)
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+import { supabase } from '../../lib/supabase'
+import './StaffManager.css'
 
 interface StaffManagerProps {
   shopId: string
   pinLevel: 'cashier' | 'owner'
+}
+
+interface StaffRow {
+  id: string
+  name_en: string
+  name_th: string | null
+  role: string
+  commission_rate: number
+  base_hourly: number | null
+  visa_type: string | null
+  visa_expiry: string | null
+  indemnity_expiry: string | null
+  liability_expiry: string | null
+  firstaid_expiry: string | null
+  employment_type: string | null
+  start_date: string | null
+  active: boolean
 }
 
 interface StaffForm {
@@ -31,43 +44,111 @@ interface StaffForm {
 }
 
 const EMPTY_FORM: StaffForm = {
-  nameEn: '', nameTh: '', role: 'therapist', pin: '',
-  commissionRate: 40, baseHourly: 25,
-  visaType: '', visaExpiry: '',
-  indemnityExpiry: '', liabilityExpiry: '', firstaidExpiry: '',
-  employmentType: 'casual', startDate: '',
+  nameEn: '',
+  nameTh: '',
+  role: 'therapist',
+  pin: '',
+  commissionRate: 40,
+  baseHourly: 25,
+  visaType: '',
+  visaExpiry: '',
+  indemnityExpiry: '',
+  liabilityExpiry: '',
+  firstaidExpiry: '',
+  employmentType: 'casual',
+  startDate: '',
+}
+
+function isFourDigitPin(pin: string): boolean {
+  return /^\d{4}$/.test(pin)
+}
+
+function validateStaffForm(form: StaffForm, isEdit: boolean): string | null {
+  if (!form.nameEn.trim()) {
+    return 'Name is required'
+  }
+  if (!isEdit) {
+    if (!isFourDigitPin(form.pin)) {
+      return 'PIN must be exactly 4 digits'
+    }
+  } else if (form.pin && !isFourDigitPin(form.pin)) {
+    return 'New PIN must be exactly 4 digits, or leave blank to keep the current PIN'
+  }
+  const commission = Number(form.commissionRate)
+  if (Number.isNaN(commission) || commission < 0 || commission > 100) {
+    return 'Commission must be between 0 and 100'
+  }
+  const hourly = Number(form.baseHourly)
+  if (Number.isNaN(hourly) || hourly < 0) {
+    return 'Base hourly rate must be zero or greater'
+  }
+  return null
 }
 
 export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
-  const [staffList, setStaffList] = useState<any[]>([])
+  const [staffList, setStaffList] = useState<StaffRow[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<StaffForm>(EMPTY_FORM)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadStaff() }, [shopId])
+  const isEdit = Boolean(editId)
+  const validationError = validateStaffForm(form, isEdit)
+
+  useEffect(() => {
+    loadStaff()
+  }, [shopId])
 
   async function loadStaff() {
-    const { data } = await supabase
+    if (!shopId) {
+      setLoadError('Shop ID is missing — check VITE_SHOP_ID in environment.')
+      setStaffList([])
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setLoadError('')
+    const { data, error } = await supabase
       .from('staff')
-      .select('*')
+      .select(
+        'id, name_en, name_th, role, commission_rate, base_hourly, visa_type, visa_expiry, indemnity_expiry, liability_expiry, firstaid_expiry, employment_type, start_date, active, shop_id, created_at'
+      )
       .eq('shop_id', shopId)
-      .order('created_at')
-    setStaffList(data ?? [])
+      .order('name_en', { ascending: true })
+
+    setLoading(false)
+
+    if (error) {
+      setLoadError(
+        error.message.includes('policy') || error.code === '42501'
+          ? `${error.message} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
+          : error.message
+      )
+      setStaffList([])
+      return
+    }
+    setStaffList((data as StaffRow[]) ?? [])
   }
 
   function startAdd() {
     setForm(EMPTY_FORM)
     setEditId(null)
+    setFormError('')
     setShowForm(true)
   }
 
-  function startEdit(s: any) {
+  function startEdit(s: StaffRow) {
     setForm({
-      nameEn: s.name_en, nameTh: s.name_th ?? '',
-      role: s.role, pin: '',
-      commissionRate: s.commission_rate * 100,
+      nameEn: s.name_en,
+      nameTh: s.name_th ?? '',
+      role: s.role,
+      pin: '',
+      commissionRate: Math.round(s.commission_rate * 100),
       baseHourly: s.base_hourly ?? 25,
       visaType: s.visa_type ?? '',
       visaExpiry: s.visa_expiry ?? '',
@@ -78,21 +159,38 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
       startDate: s.start_date ?? '',
     })
     setEditId(s.id)
+    setFormError('')
     setShowForm(true)
   }
 
-  async function saveStaff() {
-    if (!form.nameEn || !form.pin) return
-    setSaving(true)
+  function closeForm() {
+    setShowForm(false)
+    setFormError('')
+  }
 
-    const payload: any = {
+  function setPinDigits(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 4)
+    setForm(f => ({ ...f, pin: digits }))
+    if (formError) setFormError('')
+  }
+
+  async function saveStaff() {
+    const err = validateStaffForm(form, isEdit)
+    if (err) {
+      setFormError(err)
+      return
+    }
+
+    setSaving(true)
+    setFormError('')
+
+    const payload: Record<string, unknown> = {
       shop_id: shopId,
-      name_en: form.nameEn,
-      name_th: form.nameTh || null,
+      name_en: form.nameEn.trim(),
+      name_th: form.nameTh.trim() || null,
       role: form.role,
-      pin_hash: form.pin,  // triggers hash on DB
-      commission_rate: form.commissionRate / 100,
-      base_hourly: form.baseHourly,
+      commission_rate: Number(form.commissionRate) / 100,
+      base_hourly: Number(form.baseHourly),
       visa_type: form.visaType || null,
       visa_expiry: form.visaExpiry || null,
       indemnity_expiry: form.indemnityExpiry || null,
@@ -103,14 +201,34 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
       active: true,
     }
 
-    if (editId) {
-      await supabase.from('staff').update(payload).eq('id', editId)
+    if (!isEdit) {
+      payload.pin_hash = form.pin
+    } else if (isFourDigitPin(form.pin)) {
+      payload.pin_hash = form.pin
+    }
+
+    let error: { message: string } | null = null
+
+    if (isEdit && editId) {
+      const result = await supabase.from('staff').update(payload).eq('id', editId).eq('shop_id', shopId)
+      error = result.error
     } else {
-      await supabase.from('staff').insert(payload)
+      const result = await supabase
+        .from('staff')
+        .insert(payload)
+        .select('id')
+        .single()
+      error = result.error
     }
 
     setSaving(false)
-    setShowForm(false)
+
+    if (error) {
+      setFormError(error.message)
+      return
+    }
+
+    closeForm()
     loadStaff()
   }
 
@@ -120,7 +238,6 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
   }
 
   async function deleteStaff(id: string) {
-    // Soft delete — keep history for legal/tax
     await supabase.from('staff').update({ active: false, pin_hash: 'DELETED' }).eq('id', id)
     setConfirmDelete(null)
     loadStaff()
@@ -128,8 +245,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
 
   const daysUntil = (dateStr: string) => {
     if (!dateStr) return null
-    const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000)
-    return diff
+    return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000)
   }
 
   const alertColor = (days: number | null) => {
@@ -144,14 +260,25 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
     <div className="staff-manager">
       <div className="staff-header">
         <h2 className="staff-title">Staff Management</h2>
-        <button className="add-staff-btn" onClick={startAdd}>+ เพิ่มพนักงาน</button>
+        <button type="button" className="add-staff-btn" onClick={startAdd}>
+          + เพิ่มพนักงาน
+        </button>
       </div>
 
-      {/* Staff List */}
+      {loadError && <p className="form-field-error">{loadError}</p>}
+
+      {loading && <p className="form-hint">Loading staff…</p>}
+
+      {!loading && !loadError && staffList.length === 0 && (
+        <p className="form-hint">
+          No staff yet for shop <strong>{shopId}</strong>. Add your first team member below.
+        </p>
+      )}
+
       <div className="staff-list">
         {staffList.map(s => {
-          const indemnityDays = daysUntil(s.indemnity_expiry)
-          const visaDays = daysUntil(s.visa_expiry)
+          const indemnityDays = daysUntil(s.indemnity_expiry ?? '')
+          const visaDays = daysUntil(s.visa_expiry ?? '')
 
           return (
             <div key={s.id} className={`staff-card${!s.active ? ' inactive' : ''}`}>
@@ -161,10 +288,13 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
                 </div>
                 <div className="staff-info">
                   <div className="staff-name">{s.name_en}</div>
+                  {s.name_th && (
+                    <div className="staff-meta">Nickname: {s.name_th}</div>
+                  )}
                   <div className="staff-meta">
-                    {s.role} · {(s.commission_rate * 100).toFixed(0)}% commission · ${s.base_hourly}/hr
+                    {s.role} · {(s.commission_rate * 100).toFixed(0)}% commission · $
+                    {s.base_hourly ?? 0}/hr
                   </div>
-                  {/* Alerts */}
                   <div className="staff-alerts">
                     {indemnityDays !== null && indemnityDays <= 60 && (
                       <span className={`alert-tag ${alertColor(indemnityDays)}`}>
@@ -182,8 +312,11 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
                   <span className={`staff-status ${s.active ? 'active' : 'inactive'}`}>
                     {s.active ? 'Active' : 'Inactive'}
                   </span>
-                  <button className="staff-btn" onClick={() => startEdit(s)}>Edit</button>
+                  <button type="button" className="staff-btn" onClick={() => startEdit(s)}>
+                    Edit
+                  </button>
                   <button
+                    type="button"
                     className="staff-btn"
                     onClick={() => toggleActive(s.id, !s.active)}
                   >
@@ -191,6 +324,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
                   </button>
                   {pinLevel === 'owner' && (
                     <button
+                      type="button"
                       className="staff-btn danger"
                       onClick={() => setConfirmDelete(s.id)}
                     >
@@ -204,59 +338,126 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
         })}
       </div>
 
-      {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <div className="modal-title">{editId ? 'Edit Staff' : 'Add Staff'}</div>
+        <div className="modal-overlay" onClick={closeForm}>
+          <div
+            className="modal-box staff-modal"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="staff-form-title"
+          >
+            <div className="modal-title" id="staff-form-title">
+              {isEdit ? 'Edit Staff' : 'Add Staff'}
+            </div>
 
             <div className="form-section">Basic Info</div>
-            <input className="form-input" placeholder="Name (English) *"
-              value={form.nameEn} onChange={e => setForm(f => ({ ...f, nameEn: e.target.value }))} />
-            <input className="form-input" placeholder="ชื่อ (ไทย)"
-              value={form.nameTh} onChange={e => setForm(f => ({ ...f, nameTh: e.target.value }))} />
+            <input
+              className={`form-input${!form.nameEn.trim() && formError ? ' invalid' : ''}`}
+              placeholder="Name (English) *"
+              value={form.nameEn}
+              onChange={e => {
+                setForm(f => ({ ...f, nameEn: e.target.value }))
+                if (formError) setFormError('')
+              }}
+            />
+            <input
+              className="form-input"
+              placeholder="Nickname (optional)"
+              value={form.nameTh}
+              onChange={e => setForm(f => ({ ...f, nameTh: e.target.value }))}
+            />
 
-            <select className="form-input" value={form.role}
-              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+            <select
+              className="form-input"
+              value={form.role}
+              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+            >
               <option value="therapist">Therapist</option>
               <option value="cashier">Cashier</option>
               <option value="manager">Manager</option>
             </select>
 
-            <input className="form-input" placeholder="PIN (4 digits) *" maxLength={4}
-              type="password" value={form.pin}
-              onChange={e => setForm(f => ({ ...f, pin: e.target.value }))} />
+            <input
+              className={`form-input${form.pin && !isFourDigitPin(form.pin) ? ' invalid' : ''}`}
+              placeholder={isEdit ? 'New PIN (4 digits, optional)' : 'PIN (4 digits) *'}
+              maxLength={4}
+              inputMode="numeric"
+              autoComplete="off"
+              type="password"
+              value={form.pin}
+              onChange={e => setPinDigits(e.target.value)}
+            />
+            <p className="form-hint">
+              {isEdit
+                ? 'Leave PIN blank to keep the existing login PIN.'
+                : 'Staff use this 4-digit PIN to log in (e.g. 1111).'}
+            </p>
 
             <div className="form-section">Pay Structure</div>
             <div className="form-row">
               <div>
                 <label className="form-label">Commission %</label>
-                <input className="form-input" type="number" min={0} max={100}
+                <input
+                  className="form-input"
+                  type="number"
+                  min={0}
+                  max={100}
                   value={form.commissionRate}
-                  onChange={e => setForm(f => ({ ...f, commissionRate: +e.target.value }))} />
+                  onChange={e =>
+                    setForm(f => ({
+                      ...f,
+                      commissionRate: e.target.value === '' ? 0 : Number(e.target.value),
+                    }))
+                  }
+                />
               </div>
               <div>
                 <label className="form-label">Base $/hr</label>
-                <input className="form-input" type="number"
+                <input
+                  className="form-input"
+                  type="number"
+                  min={0}
+                  step={0.01}
                   value={form.baseHourly}
-                  onChange={e => setForm(f => ({ ...f, baseHourly: +e.target.value }))} />
+                  onChange={e =>
+                    setForm(f => ({
+                      ...f,
+                      baseHourly: e.target.value === '' ? 0 : Number(e.target.value),
+                    }))
+                  }
+                />
               </div>
             </div>
 
             <div className="form-section">Documents & Expiry Dates</div>
             <label className="form-label">Professional Indemnity Insurance</label>
-            <input className="form-input" type="date" value={form.indemnityExpiry}
-              onChange={e => setForm(f => ({ ...f, indemnityExpiry: e.target.value }))} />
+            <input
+              className="form-input"
+              type="date"
+              value={form.indemnityExpiry}
+              onChange={e => setForm(f => ({ ...f, indemnityExpiry: e.target.value }))}
+            />
             <label className="form-label">Public Liability Insurance</label>
-            <input className="form-input" type="date" value={form.liabilityExpiry}
-              onChange={e => setForm(f => ({ ...f, liabilityExpiry: e.target.value }))} />
+            <input
+              className="form-input"
+              type="date"
+              value={form.liabilityExpiry}
+              onChange={e => setForm(f => ({ ...f, liabilityExpiry: e.target.value }))}
+            />
             <label className="form-label">First Aid Certificate</label>
-            <input className="form-input" type="date" value={form.firstaidExpiry}
-              onChange={e => setForm(f => ({ ...f, firstaidExpiry: e.target.value }))} />
+            <input
+              className="form-input"
+              type="date"
+              value={form.firstaidExpiry}
+              onChange={e => setForm(f => ({ ...f, firstaidExpiry: e.target.value }))}
+            />
 
             <div className="form-section">Visa / Work Rights</div>
-            <select className="form-input" value={form.visaType}
-              onChange={e => setForm(f => ({ ...f, visaType: e.target.value }))}>
+            <select
+              className="form-input"
+              value={form.visaType}
+              onChange={e => setForm(f => ({ ...f, visaType: e.target.value }))}
+            >
               <option value="">Select visa type</option>
               <option value="citizen">Australian Citizen</option>
               <option value="pr">Permanent Resident</option>
@@ -267,48 +468,76 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
             {['work', 'student', 'other'].includes(form.visaType) && (
               <>
                 <label className="form-label">Visa Expiry</label>
-                <input className="form-input" type="date" value={form.visaExpiry}
-                  onChange={e => setForm(f => ({ ...f, visaExpiry: e.target.value }))} />
+                <input
+                  className="form-input"
+                  type="date"
+                  value={form.visaExpiry}
+                  onChange={e => setForm(f => ({ ...f, visaExpiry: e.target.value }))}
+                />
               </>
             )}
 
             <div className="form-section">Employment</div>
-            <select className="form-input" value={form.employmentType}
-              onChange={e => setForm(f => ({ ...f, employmentType: e.target.value }))}>
+            <select
+              className="form-input"
+              value={form.employmentType}
+              onChange={e => setForm(f => ({ ...f, employmentType: e.target.value }))}
+            >
               <option value="casual">Casual</option>
               <option value="part_time">Part-time</option>
               <option value="full_time">Full-time</option>
             </select>
             <label className="form-label">Start Date</label>
-            <input className="form-input" type="date" value={form.startDate}
-              onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+            <input
+              className="form-input"
+              type="date"
+              value={form.startDate}
+              onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+            />
+
+            {validationError && (
+              <p className="form-hint">{validationError}</p>
+            )}
+            {formError && <p className="form-field-error">{formError}</p>}
 
             <div className="modal-footer">
-              <button className="modal-btn secondary" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="button" className="modal-btn secondary" onClick={closeForm}>
+                Cancel
+              </button>
               <button
+                type="button"
                 className="modal-btn primary"
                 onClick={saveStaff}
-                disabled={!form.nameEn || !form.pin || saving}
+                disabled={saving}
               >
-                {saving ? 'Saving...' : editId ? 'Save Changes' : 'Add Staff'}
+                {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Staff'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Confirm Delete Modal */}
       {confirmDelete && (
         <div className="modal-overlay">
           <div className="modal-box" style={{ maxWidth: 400 }}>
             <div className="modal-title">⚠️ Delete Staff Member?</div>
-            <p style={{ fontSize: 13, color: '#555', margin: '12px 0' }}>
+            <p style={{ fontSize: 13, color: '#555', margin: '12px 0', padding: '0 20px' }}>
               Their booking history and financial records will be kept for legal purposes.
               Only their login access will be removed.
             </p>
             <div className="modal-footer">
-              <button className="modal-btn secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
-              <button className="modal-btn danger" onClick={() => deleteStaff(confirmDelete!)}>
+              <button
+                type="button"
+                className="modal-btn secondary"
+                onClick={() => setConfirmDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal-btn danger"
+                onClick={() => deleteStaff(confirmDelete)}
+              >
                 Confirm Delete
               </button>
             </div>

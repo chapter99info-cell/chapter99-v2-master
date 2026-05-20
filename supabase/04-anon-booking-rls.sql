@@ -4,11 +4,13 @@
 -- Existing policies use current_setting('app.shop_id') which the browser
 -- never sets. These policies allow the anon key when the app filters by shop_id.
 
--- ── staff (read for Booking Wizard, CRUD for Staff Manager) ─────────────
+-- ── staff (read for Booking Wizard + Staff Manager) ─────────────────────
+-- Prefer supabase/12-staff-manager-rls.sql (drops shop_isolation, all shop staff).
 drop policy if exists "anon_select_active_staff" on staff;
-create policy "anon_select_active_staff" on staff
+drop policy if exists "anon_select_staff" on staff;
+create policy "anon_select_staff" on staff
   for select to anon, authenticated
-  using (active = true);
+  using (shop_id is not null);
 
 drop policy if exists "anon_insert_staff" on staff;
 create policy "anon_insert_staff" on staff
