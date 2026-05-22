@@ -1,0 +1,124 @@
+/* Room Manager — matches Services / Staff owner tabs */
+
+.rooms-manager {
+  padding: 12px 0;
+  max-width: 900px;
+}
+
+.rooms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rooms-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.add-room-btn {
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 44px;
+  font-family: inherit;
+  box-shadow: var(--shadow-card);
+}
+
+.rooms-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+
+.rooms-error {
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-danger-border);
+}
+
+.rooms-loading,
+.rooms-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 16px 0;
+}
+
+.rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.room-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.room-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.room-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.room-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-btn {
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  min-height: 36px;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.room-btn.danger {
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+  border-color: var(--color-danger-border);
+}
+
+.room-btn.danger:hover {
+  background: var(--color-danger-border);
+}
+
+.rooms-modal {
+  padding: 20px;
+  gap: 8px;
+}
+
+.rooms-delete-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 12px 0;
+}

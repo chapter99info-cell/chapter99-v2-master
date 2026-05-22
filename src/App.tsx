@@ -13,6 +13,7 @@ import AlertDashboard from './components/alerts/AlertDashboard'
 import SuperAdminDashboard from './components/dashboard/SuperAdminDashboard'
 import BookingWizard from './components/booking/BookingWizard'
 import ShopSettings from './components/settings/ShopSettings'
+import RoomManager from './components/rooms/RoomManager'
 import RevenueSummary from './components/dashboard/RevenueSummary'
 import GiftVoucherList from './components/dashboard/GiftVoucherList'
 import OwnerReports from './components/dashboard/OwnerReports'
@@ -126,6 +127,7 @@ export default function App() {
   const ownerTabs = [
     { id: 'staff', label: '👥 Staff' },
     { id: 'services', label: '🛎 Services' },
+    { id: 'rooms', label: '🚪 Rooms' },
     { id: 'vouchers', label: '🎁 Vouchers' },
     { id: 'reports', label: '📊 Reports' },
     { id: 'settings', label: '⚙️ Settings' },
@@ -186,6 +188,9 @@ export default function App() {
         )}
         {activeTab === 'services' && isOwner && (
           <ServicesManager shopId={SHOP_ID} />
+        )}
+        {activeTab === 'rooms' && isOwner && (
+          <RoomManager shopId={SHOP_ID} />
         )}
         {activeTab === 'vouchers' && isOwner && (
           <GiftVoucherList shopId={SHOP_ID} />

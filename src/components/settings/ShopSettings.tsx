@@ -12,7 +12,6 @@ import { notifyShopUpdated } from '../../lib/shopLogo'
 import { SHOP_ID } from '../../lib/supabase'
 import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
-import RoomSettings from './RoomSettings'
 import './ShopSettings.css'
 
 interface ShopSettingsProps {
@@ -364,8 +363,6 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
           />
         </div>
       </section>
-
-      <RoomSettings shopId={shopId} />
 
       <section className="ss-section">
         <h2 className="ss-section-title">Google Sheets (tax reporting)</h2>
