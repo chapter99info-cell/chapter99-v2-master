@@ -65,6 +65,55 @@
   border: 1px solid #c5ddd6;
 }
 
+.count-badge.booking {
+  background: #e8f4fc;
+  color: #1a4d6e;
+  border: 1px solid #a8d4f0;
+}
+
+.alert-section {
+  margin-bottom: 20px;
+}
+
+.alert-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.booking-card.is-read {
+  opacity: 0.88;
+}
+
+.booking-details {
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.booking-detail-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.booking-detail-row dt {
+  margin: 0;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.booking-detail-row dd {
+  margin: 0;
+}
+
 .alert-empty {
   text-align: center;
   padding: 48px 24px;

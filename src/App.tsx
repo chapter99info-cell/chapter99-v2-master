@@ -17,6 +17,7 @@ import RoomManager from './components/rooms/RoomManager'
 import RevenueSummary from './components/dashboard/RevenueSummary'
 import GiftVoucherList from './components/dashboard/GiftVoucherList'
 import OwnerReports from './components/dashboard/OwnerReports'
+import { countUnreadNotifications } from './lib/notificationService'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -41,6 +42,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('queue')
   const [shopBranding, setShopBranding] = useState<{ name: string; logoUrl?: string } | null>(null)
+  const [unreadAlerts, setUnreadAlerts] = useState(0)
 
   const loadShopBranding = useCallback(async () => {
     const shop = await fetchShop(SHOP_ID)
@@ -54,6 +56,37 @@ export default function App() {
     window.addEventListener(SHOP_UPDATED_EVENT, onUpdated)
     return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
   }, [session.level, loadShopBranding])
+
+  const refreshUnreadAlerts = useCallback(async () => {
+    try {
+      setUnreadAlerts(await countUnreadNotifications(supabase, SHOP_ID))
+    } catch {
+      setUnreadAlerts(0)
+    }
+  }, [])
+
+  useEffect(() => {
+    const level = session.level
+    if (!level || level === 'staff' || level === 'super_admin') return
+
+    void refreshUnreadAlerts()
+
+    const channel = supabase
+      .channel(`notifications-${SHOP_ID}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `shop_id=eq.${SHOP_ID}`,
+        },
+        () => { void refreshUnreadAlerts() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [session.level, refreshUnreadAlerts])
 
   const verifyPIN = useCallback(async (pinToVerify: string) => {
     if (pinToVerify.length !== 4) return
@@ -146,14 +179,20 @@ export default function App() {
       />
       <div className="app-tabs">
         {mainTabs.map(t => (
-          <button
-            key={t.id}
-            type="button"
-            className={`app-tab${activeTab === t.id ? ' active' : ''}`}
-            onClick={() => setActiveTab(t.id)}
-          >
-            {t.label}
-          </button>
+          <div key={t.id} className="app-tab-wrap">
+            <button
+              type="button"
+              className={`app-tab${activeTab === t.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              {t.label}
+            </button>
+            {t.id === 'alerts' && unreadAlerts > 0 && (
+              <span className="app-tab-badge" aria-label={`${unreadAlerts} unread alerts`}>
+                {unreadAlerts > 99 ? '99+' : unreadAlerts}
+              </span>
+            )}
+          </div>
         ))}
       </div>
       {isOwner && (
@@ -182,7 +221,9 @@ export default function App() {
         {activeTab === 'booking' && (
           <BookingWizard shopId={SHOP_ID} bookedBy={session.staffName} />
         )}
-        {activeTab === 'alerts' && <AlertDashboard shopId={SHOP_ID} />}
+        {activeTab === 'alerts' && (
+          <AlertDashboard shopId={SHOP_ID} onMarkedRead={refreshUnreadAlerts} />
+        )}
         {activeTab === 'staff' && isOwner && (
           <StaffManager shopId={SHOP_ID} pinLevel="owner" />
         )}

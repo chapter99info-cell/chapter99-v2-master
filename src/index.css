@@ -150,6 +150,29 @@
   box-shadow: var(--shadow-card);
 }
 
+.app-tab-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.app-tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
 .app-content {
   padding: 16px;
   max-width: 1200px;
