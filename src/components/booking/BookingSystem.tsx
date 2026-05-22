@@ -4,6 +4,14 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import {
+  BOOKABLE_STAFF_ROLES,
+  fetchDayBookings,
+  fetchShopCapacity,
+  filterAvailableSlots,
+  type DayBooking,
+  type ShopCapacity,
+} from '../../lib/bookingAvailability'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -47,6 +55,8 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [lockedSlot, setLockedSlot] = useState<string | null>(null)
+  const [dayBookings, setDayBookings] = useState<DayBooking[]>([])
+  const [capacity, setCapacity] = useState<ShopCapacity | null>(null)
 
   const [form, setForm] = useState<BookingForm>({
     serviceId: '',
@@ -78,10 +88,12 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
   // Load staff when service selected
   useEffect(() => {
     if (!form.serviceId) return
-    supabase.from('staff')
+    supabase
+      .from('staff')
       .select('id, name_en, name_th')
       .eq('shop_id', shopId)
       .eq('active', true)
+      .in('role', [...BOOKABLE_STAFF_ROLES])
       .then(({ data }) => setStaff(data ?? []))
   }, [form.serviceId])
 
@@ -94,41 +106,24 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
   async function generateSlots() {
     setLoading(true)
     const svc = services.find(s => s.id === form.serviceId)
-    if (!svc) return
-
-    // Get existing bookings for selected staff + date
-    const dayStart = `${form.date}T00:00:00+10:00`
-    const dayEnd = `${form.date}T23:59:59+10:00`
-
-    const { data: existing } = await supabase
-      .from('bookings')
-      .select('start_time, end_time')
-      .eq('staff_id', form.staffId)
-      .gte('start_time', dayStart)
-      .lte('start_time', dayEnd)
-      .neq('status', 'cancelled')
-
-    // Build slots 10am-8pm every 30min
-    const slots: string[] = []
-    for (let h = 10; h <= 19; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        const slotTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-        const slotStart = new Date(`${form.date}T${slotTime}:00+10:00`)
-        const slotEnd = new Date(slotStart.getTime() + svc.duration * 60000)
-
-        // Check no conflict
-        const conflict = (existing ?? []).some(b => {
-          const bStart = new Date(b.start_time)
-          const bEnd = new Date(b.end_time)
-          return slotStart < bEnd && slotEnd > bStart
-        })
-
-        if (!conflict && slotEnd.getHours() <= 20) {
-          slots.push(slotTime)
-        }
-      }
+    if (!svc || !form.staffId) {
+      setLoading(false)
+      return
     }
-    setAvailableSlots(slots)
+
+    try {
+      const [cap, existing] = await Promise.all([
+        fetchShopCapacity(supabase, shopId),
+        fetchDayBookings(supabase, shopId, form.date),
+      ])
+      setCapacity(cap)
+      setDayBookings(existing)
+      setAvailableSlots(
+        filterAvailableSlots(form.date, svc.duration, existing, cap, form.staffId)
+      )
+    } catch {
+      setAvailableSlots([])
+    }
     setLoading(false)
   }
 
@@ -154,7 +149,7 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
       // Release lock after 5 min if not confirmed
       setTimeout(() => setLockedSlot(null), 5 * 60 * 1000)
     } else {
-      alert('This slot was just taken. Please choose another time.')
+      alert(data?.reason ?? 'This slot was just taken. Please choose another time.')
       generateSlots()
     }
   }
@@ -167,6 +162,22 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
     const svc = services.find(s => s.id === form.serviceId)
     const start = new Date(`${form.date}T${form.time}:00+10:00`).toISOString()
     const end = new Date(new Date(start).getTime() + svc.duration * 60000).toISOString()
+
+    const { data: slotCheck } = await supabase.rpc('check_booking_slot', {
+      p_shop_id: shopId,
+      p_start: start,
+      p_end: end,
+      p_staff_id: form.staffId,
+    })
+
+    if (!slotCheck?.available) {
+      setLoading(false)
+      alert(slotCheck?.reason ?? 'This time slot is no longer available.')
+      setLockedSlot(null)
+      setStep('datetime')
+      generateSlots()
+      return
+    }
 
     // Upsert client
     let clientId: string | null = null

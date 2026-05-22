@@ -4,6 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { fetchShop } from '../../lib/shopService'
 import { syncBookingToSheet } from '../../lib/googleSheets'
+import {
+  assertSlotAvailable,
+  evaluateSlotAvailability,
+  fetchDayBookings,
+  fetchShopCapacity,
+  filterAvailableSlots,
+  slotWindow,
+  type DayBooking,
+  type ShopCapacity,
+} from '../../lib/bookingAvailability'
 import './BookingWizard.css'
 
 const supabase = createClient(
@@ -52,7 +62,8 @@ function validateCustomTime(
   input: string,
   date: string,
   durationMin: number,
-  bookings: { start_time: string; end_time: string }[]
+  bookings: DayBooking[],
+  capacity: ShopCapacity
 ): string | null {
   const normalized = normalizeHHMM(input)
   if (!normalized) return 'Enter time as HH:MM (e.g. 14:30)'
@@ -68,14 +79,9 @@ function validateCustomTime(
     return `Service must finish by 20:00 (${durationMin} min from ${normalized})`
   }
 
-  const slotStart = new Date(`${date}T${normalized}:00+10:00`)
-  const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
-  const conflict = bookings.some(b => {
-    const bStart = new Date(b.start_time)
-    const bEnd = new Date(b.end_time)
-    return slotStart < bEnd && slotEnd > bStart
-  })
-  if (conflict) return 'This time conflicts with an existing booking'
+  const { slotStart, slotEnd } = slotWindow(date, normalized, durationMin)
+  const result = evaluateSlotAvailability(bookings, slotStart, slotEnd, capacity)
+  if (!result.available) return result.reason ?? 'This time slot is full'
 
   return null
 }
@@ -88,7 +94,8 @@ export default function BookingWizard({
   const [step, setStep] = useState<WizardStep>('service')
   const [services, setServices] = useState<ServiceRow[]>([])
   const [slots, setSlots] = useState<string[]>([])
-  const [dayBookings, setDayBookings] = useState<{ start_time: string; end_time: string }[]>([])
+  const [dayBookings, setDayBookings] = useState<DayBooking[]>([])
+  const [capacity, setCapacity] = useState<ShopCapacity | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -125,40 +132,18 @@ export default function BookingWizard({
     setLoading(true)
     setError('')
 
-    const dayStart = `${date}T00:00:00+10:00`
-    const dayEnd = `${date}T23:59:59+10:00`
-
-    const { data: existing } = await supabase
-      .from('bookings')
-      .select('start_time, end_time')
-      .eq('shop_id', shopId)
-      .gte('start_time', dayStart)
-      .lte('start_time', dayEnd)
-      .neq('status', 'cancelled')
-
-    const durationMs = selectedService.duration * 60_000
-    const available: string[] = []
-
-    for (let h = 10; h <= 19; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        const slotTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-        const slotStart = new Date(`${date}T${slotTime}:00+10:00`)
-        const slotEnd = new Date(slotStart.getTime() + durationMs)
-
-        const conflict = (existing ?? []).some(b => {
-          const bStart = new Date(b.start_time)
-          const bEnd = new Date(b.end_time)
-          return slotStart < bEnd && slotEnd > bStart
-        })
-
-        if (!conflict && slotEnd.getHours() <= 20) {
-          available.push(slotTime)
-        }
-      }
+    try {
+      const [cap, existing] = await Promise.all([
+        fetchShopCapacity(supabase, shopId),
+        fetchDayBookings(supabase, shopId, date),
+      ])
+      setCapacity(cap)
+      setDayBookings(existing)
+      setSlots(filterAvailableSlots(date, selectedService.duration, existing, cap))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load availability')
+      setSlots([])
     }
-
-    setDayBookings(existing ?? [])
-    setSlots(available)
     setLoading(false)
   }, [date, shopId, serviceId, selectedService])
 
@@ -179,7 +164,8 @@ export default function BookingWizard({
       setTime('')
       return
     }
-    const err = validateCustomTime(value, date, selectedService.duration, dayBookings)
+    if (!capacity) return
+    const err = validateCustomTime(value, date, selectedService.duration, dayBookings, capacity)
     setCustomTimeError(err ?? '')
     if (!err) {
       const normalized = normalizeHHMM(value)
@@ -194,12 +180,13 @@ export default function BookingWizard({
   }, [step, generateSlots])
 
   useEffect(() => {
-    if (!customTime.trim() || !selectedService) return
+    if (!customTime.trim() || !selectedService || !capacity) return
     const err = validateCustomTime(
       customTime,
       date,
       selectedService.duration,
-      dayBookings
+      dayBookings,
+      capacity
     )
     setCustomTimeError(err ?? '')
     if (!err) {
@@ -208,7 +195,7 @@ export default function BookingWizard({
     } else {
       setTime('')
     }
-  }, [dayBookings, date, selectedService, customTime])
+  }, [dayBookings, date, selectedService, customTime, capacity])
 
   async function saveBooking() {
     if (!selectedService || !time || !clientName.trim()) return
@@ -217,6 +204,36 @@ export default function BookingWizard({
 
     const start = new Date(`${date}T${time}:00+10:00`)
     const end = new Date(start.getTime() + selectedService.duration * 60_000)
+
+    const { data: slotCheck } = await supabase.rpc('check_booking_slot', {
+      p_shop_id: shopId,
+      p_start: start.toISOString(),
+      p_end: end.toISOString(),
+      p_staff_id: null,
+    })
+
+    if (!slotCheck?.available) {
+      setLoading(false)
+      setError(slotCheck?.reason ?? 'This time slot is full. Please choose another time.')
+      await generateSlots()
+      setStep('datetime')
+      return
+    }
+
+    const localCheck = await assertSlotAvailable(
+      supabase,
+      shopId,
+      date,
+      time,
+      selectedService.duration
+    )
+    if (!localCheck.available) {
+      setLoading(false)
+      setError(localCheck.reason ?? 'This time slot is full.')
+      await generateSlots()
+      setStep('datetime')
+      return
+    }
 
     let clientId: string | null = null
     const { data: clientRow, error: clientErr } = await supabase
@@ -365,7 +382,12 @@ export default function BookingWizard({
           {loading ? (
             <p className="bw-hint">Checking availability…</p>
           ) : slots.length === 0 ? (
-            <p className="bw-empty">No slots on this date — try another day.</p>
+            <p className="bw-empty">
+              No slots on this date — try another day.
+              {capacity && (
+                <> (capacity: {capacity.maxConcurrent} concurrent — {capacity.roomCount} rooms, {capacity.therapistCount} therapists)</>
+              )}
+            </p>
           ) : (
             <div className="bw-slots">
               {slots.map(slot => (
