@@ -29,6 +29,7 @@ import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
 import { syncTransactionToSheet } from '../../lib/googleSheets'
 import { SHOP_ID, supabase } from '../../lib/supabase'
+import { SHOP_UPDATED_EVENT } from '../../lib/shopLogo'
 import GoogleReviewQR from './GoogleReviewQR'
 
 type POSMode = 'pos' | 'walkin' | 'queue'
@@ -86,7 +87,11 @@ export default function POSPage() {
   const [therapistName, setTherapistName] = useState('')
 
   useEffect(() => {
-    fetchShop(SHOP_ID).then(setShop)
+    const load = () => fetchShop(SHOP_ID).then(setShop)
+    load()
+    const onUpdated = () => load()
+    window.addEventListener(SHOP_UPDATED_EVENT, onUpdated)
+    return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
   }, [])
 
   useEffect(() => {
@@ -96,7 +101,7 @@ export default function POSPage() {
         .select('id, name_en')
         .eq('shop_id', SHOP_ID)
         .eq('active', true)
-        .in('role', ['therapist', 'owner'])
+        .eq('role', 'therapist')
         .order('name_en')
       setTherapists(data ?? [])
     }
@@ -478,8 +483,7 @@ export default function POSPage() {
           {/* Left — Services + Client */}
           <div className="pos-left">
             {/* Client Info (Walk-in) */}
-            {(mode === 'walkin' || mode === 'pos') && (
-              <div className="pos-card">
+            <div className="pos-card">
                 <div className="card-label">ข้อมูลลูกค้า (optional)</div>
                 <input
                   className="pos-input"
@@ -518,7 +522,6 @@ export default function POSPage() {
                   </select>
                 )}
               </div>
-            )}
 
             {/* Services Grid */}
             <div className="pos-card">

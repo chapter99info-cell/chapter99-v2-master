@@ -48,6 +48,16 @@
   letter-spacing: 0.02em;
 }
 
+.app-header-logo {
+  height: 36px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2px 6px;
+}
+
 .app-badge {
   font-size: 11px;
   padding: 4px 10px;

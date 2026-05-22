@@ -1,8 +1,10 @@
 // Chapter99 V4 — Main App Entry
 // PIN-based routing to correct dashboard
 
-import { useState, useCallback, type Dispatch, type SetStateAction } from 'react'
+import { useState, useCallback, useEffect, type Dispatch, type SetStateAction } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { fetchShop } from './lib/shopService'
+import { SHOP_UPDATED_EVENT } from './lib/shopLogo'
 import QueueBoard from './components/queue/QueueBoard'
 import StaffManager from './components/staff/StaffManager'
 import ServicesManager from './components/services/ServicesManager'
@@ -37,6 +39,20 @@ export default function App() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('queue')
+  const [shopBranding, setShopBranding] = useState<{ name: string; logoUrl?: string } | null>(null)
+
+  const loadShopBranding = useCallback(async () => {
+    const shop = await fetchShop(SHOP_ID)
+    setShopBranding({ name: shop.name, logoUrl: shop.logoUrl })
+  }, [])
+
+  useEffect(() => {
+    if (!session.level || session.level === 'super_admin') return
+    void loadShopBranding()
+    const onUpdated = () => void loadShopBranding()
+    window.addEventListener(SHOP_UPDATED_EVENT, onUpdated)
+    return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
+  }, [session.level, loadShopBranding])
 
   const verifyPIN = useCallback(async (pinToVerify: string) => {
     if (pinToVerify.length !== 4) return
@@ -88,7 +104,12 @@ export default function App() {
   if (session.level === 'staff') {
     return (
       <div className="app-root">
-        <AppHeader title={`Good day, ${session.staffName ?? 'Staff'}!`} onLogout={logout} />
+        <AppHeader
+          title={`Good day, ${session.staffName ?? 'Staff'}!`}
+          shopName={shopBranding?.name}
+          logoUrl={shopBranding?.logoUrl}
+          onLogout={logout}
+        />
         <QueueBoard shopId={SHOP_ID} pinLevel="staff" staffId={session.staffId} />
       </div>
     )
@@ -115,7 +136,9 @@ export default function App() {
   return (
     <div className="app-root">
       <AppHeader
-        title="Chapter99 Dashboard"
+        title={shopBranding?.name ? `${shopBranding.name} Dashboard` : 'Chapter99 Dashboard'}
+        shopName={shopBranding?.name}
+        logoUrl={shopBranding?.logoUrl}
         badge={isOwner ? 'Owner' : 'Cashier'}
         onLogout={logout}
       />
@@ -238,13 +261,25 @@ function PINScreen({ pin, setPin, onVerify, error, loading }: {
   )
 }
 
-function AppHeader({ title, badge, onLogout }: {
-  title: string; badge?: string; onLogout: () => void
+function AppHeader({ title, badge, onLogout, logoUrl, shopName }: {
+  title: string
+  badge?: string
+  onLogout: () => void
+  logoUrl?: string
+  shopName?: string
 }) {
   return (
     <div className="app-header">
       <div className="app-header-left">
-        <span className="app-logo">Chapter99</span>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={shopName ?? 'Shop logo'}
+            className="app-header-logo"
+          />
+        ) : (
+          <span className="app-logo">Chapter99</span>
+        )}
         {badge && <span className="app-badge">{badge}</span>}
         <span className="app-title">{title}</span>
       </div>

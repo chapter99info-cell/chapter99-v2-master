@@ -8,6 +8,7 @@ import {
   uploadShopAsset,
   type ShopSettingsInput,
 } from '../../lib/shopService'
+import { notifyShopUpdated } from '../../lib/shopLogo'
 import { SHOP_ID } from '../../lib/supabase'
 import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
@@ -75,9 +76,22 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
       setToast({ message: uploadErr, type: 'error' })
       return
     }
-    if (kind === 'logo') update('logoUrl', url)
-    else update('signatureUrl', url)
-    setToast({ message: `${kind === 'logo' ? 'Logo' : 'Signature'} uploaded`, type: 'success' })
+    const nextForm: ShopSettingsInput =
+      kind === 'logo' ? { ...form, logoUrl: url } : { ...form, signatureUrl: url }
+    setForm(nextForm)
+
+    const saved = await saveShopSettings(shopId, nextForm)
+    if (!saved.ok) {
+      setToast({ message: saved.error ?? 'Uploaded but could not save URL to shop', type: 'error' })
+      e.target.value = ''
+      return
+    }
+
+    notifyShopUpdated()
+    setToast({
+      message: `${kind === 'logo' ? 'Logo' : 'Signature'} uploaded and saved`,
+      type: 'success',
+    })
     e.target.value = ''
   }
 
@@ -97,6 +111,7 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
       return
     }
     setToast({ message: 'Settings saved', type: 'success' })
+    notifyShopUpdated()
   }
 
   async function handleTestSheet() {
@@ -174,7 +189,17 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
                 type="button"
                 className="ss-btn secondary"
                 style={{ marginLeft: 8 }}
-                onClick={() => update('logoUrl', undefined)}
+                onClick={async () => {
+                  if (!form) return
+                  const nextForm = { ...form, logoUrl: undefined }
+                  setForm(nextForm)
+                  const saved = await saveShopSettings(shopId, nextForm)
+                  if (saved.ok) notifyShopUpdated()
+                  setToast({
+                    message: saved.ok ? 'Logo removed' : (saved.error ?? 'Remove failed'),
+                    type: saved.ok ? 'success' : 'error',
+                  })
+                }}
               >
                 Remove
               </button>

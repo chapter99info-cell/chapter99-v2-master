@@ -1,6 +1,9 @@
 /**
  * Daily cron — staff document expiry alerts → Supabase alerts table
- * Schedule: 22:00 UTC ≈ 8:00 AM Sydney (AEST)
+ * Wired in vercel.json: path /api/cron/alerts, schedule "0 22 * * *"
+ * (22:00 UTC ≈ 8:00 AM Sydney AEST / 9:00 AM AEDT)
+ *
+ * Requires env: CRON_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
@@ -21,7 +24,11 @@ function severityForDays(days: number): AlertSeverity | null {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    return res.status(500).json({ error: 'CRON_SECRET not configured' })
+  }
+  if (req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 

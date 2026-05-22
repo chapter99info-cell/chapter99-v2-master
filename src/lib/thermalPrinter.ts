@@ -126,6 +126,9 @@ export async function printViaUSB(text: string): Promise<boolean> {
 // Fallback: print via browser print dialog (formatted)
 export function printViaBrowser(tx: Transaction, shop: Shop): void {
   const text = buildReceiptText(tx, shop)
+  const logoHtml = shop.logoUrl
+    ? `<div style="text-align:center;margin-bottom:8px;"><img src="${shop.logoUrl}" alt="${shop.name}" style="max-width:120px;max-height:48px;object-fit:contain;" /></div>`
+    : ''
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(`
@@ -147,6 +150,7 @@ export function printViaBrowser(tx: Transaction, shop: Shop): void {
       </style>
     </head>
     <body>
+      ${logoHtml}
       <pre>${text}</pre>
       <script>window.onload = () => { window.print(); window.close(); }<\/script>
     </body>

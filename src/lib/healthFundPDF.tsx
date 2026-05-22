@@ -15,6 +15,7 @@ import {
 } from '@react-pdf/renderer'
 import type { Transaction, Shop } from '../types/pos'
 import { formatAUD } from './posCalc'
+import { loadShopLogoDataUrl } from './shopLogo'
 
 const styles = StyleSheet.create({
   page: {
@@ -31,6 +32,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   shopBlock: { flex: 1 },
+  shopLogo: { width: 48, height: 48, marginBottom: 8, objectFit: 'contain' },
   shopName: { fontSize: 16, fontFamily: 'Helvetica-Bold', marginBottom: 4 },
   shopDetail: { fontSize: 9, color: '#555', lineHeight: 1.5 },
   receiptTitle: { fontSize: 22, fontFamily: 'Helvetica-Bold' },
@@ -120,9 +122,10 @@ const styles = StyleSheet.create({
 interface HealthFundReceiptProps {
   tx: Transaction
   shop: Shop
+  logoDataUrl?: string | null
 }
 
-function HealthFundReceiptDoc({ tx, shop }: HealthFundReceiptProps) {
+function HealthFundReceiptDoc({ tx, shop, logoDataUrl }: HealthFundReceiptProps) {
   const accent = shop.themeColor || '#0F6E56'
   const date = new Date(tx.paidAt ?? tx.createdAt)
   const dateStr = date.toLocaleDateString('en-AU', {
@@ -139,6 +142,9 @@ function HealthFundReceiptDoc({ tx, shop }: HealthFundReceiptProps) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.shopBlock}>
+            {logoDataUrl ? (
+              <Image src={logoDataUrl} style={styles.shopLogo} />
+            ) : null}
             <Text style={styles.shopName}>{shop.name}</Text>
             <Text style={styles.shopDetail}>{shop.address}</Text>
             <Text style={styles.shopDetail}>Phone: {shop.phone}</Text>
@@ -257,7 +263,8 @@ export async function generateHealthFundPDF(
   tx: Transaction,
   shop: Shop
 ): Promise<Blob> {
-  const doc = <HealthFundReceiptDoc tx={tx} shop={shop} />
+  const logoDataUrl = shop.logoUrl ? await loadShopLogoDataUrl(shop.logoUrl) : null
+  const doc = <HealthFundReceiptDoc tx={tx} shop={shop} logoDataUrl={logoDataUrl} />
   return await pdf(doc).toBlob()
 }
 

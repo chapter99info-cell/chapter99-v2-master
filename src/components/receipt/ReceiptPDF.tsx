@@ -3,6 +3,7 @@
 import type { jsPDF } from 'jspdf'
 import type { Transaction, Shop } from '../../types/pos'
 import { formatAUD } from '../../lib/posCalc'
+import { loadShopLogoDataUrl } from '../../lib/shopLogo'
 
 export interface ReceiptPDFOptions {
   receiptNumber: string
@@ -24,27 +25,6 @@ function hexToRgb(hex: string): [number, number, number] {
     parseInt(h.slice(2, 4), 16),
     parseInt(h.slice(4, 6), 16),
   ]
-}
-
-async function loadImageDataUrl(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise(resolve => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = () => resolve(null)
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
-
-function detectImageFormat(dataUrl: string): 'PNG' | 'JPEG' {
-  if (dataUrl.startsWith('data:image/png')) return 'PNG'
-  return 'JPEG'
 }
 
 /** Build jsPDF document for a paid transaction */
@@ -73,15 +53,13 @@ export async function buildReceiptPDF(
   })
 
   // Logo
-  if (shop.logoUrl) {
-    const logoData = await loadImageDataUrl(shop.logoUrl)
-    if (logoData) {
-      try {
-        const fmt = detectImageFormat(logoData)
-        doc.addImage(logoData, fmt, margin, y, 28, 28)
-      } catch {
-        /* skip broken logo */
-      }
+  const logoData = shop.logoUrl ? await loadShopLogoDataUrl(shop.logoUrl) : null
+  const hasLogo = !!logoData
+  if (logoData) {
+    try {
+      doc.addImage(logoData, 'PNG', margin, y, 28, 28)
+    } catch {
+      /* skip broken logo */
     }
   }
 
@@ -89,13 +67,13 @@ export async function buildReceiptPDF(
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
   doc.setTextColor(theme[0], theme[1], theme[2])
-  doc.text(shop.name, shop.logoUrl ? margin + 32 : margin, y + 8)
+  doc.text(shop.name, hasLogo ? margin + 32 : margin, y + 8)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(80, 80, 80)
   let detailY = y + 14
-  const detailX = shop.logoUrl ? margin + 32 : margin
+  const detailX = hasLogo ? margin + 32 : margin
   if (shop.address) {
     doc.text(shop.address, detailX, detailY)
     detailY += 4

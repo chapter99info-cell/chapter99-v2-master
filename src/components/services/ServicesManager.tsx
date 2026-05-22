@@ -194,21 +194,25 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
     }
   }
 
+  /** Soft delete — keeps bookings/transactions that reference this service. */
   async function deleteService(id: string) {
     setError('')
-    const { error: deleteError } = await supabase
+    const { error: updateError } = await supabase
       .from('services')
-      .delete()
+      .update({ active: false })
       .eq('id', id)
       .eq('shop_id', shopId)
 
-    if (deleteError) {
-      setError(deleteError.message)
-      setToast({ message: deleteError.message, type: 'error' })
+    if (updateError) {
+      setError(updateError.message)
+      setToast({ message: updateError.message, type: 'error' })
     } else {
       setConfirmDelete(null)
       loadServices()
-      setToast({ message: 'Service deleted', type: 'success' })
+      setToast({
+        message: 'Service hidden from POS & booking (history kept)',
+        type: 'success',
+      })
     }
   }
 
@@ -436,10 +440,10 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       {confirmDelete && (
         <div className="modal-overlay">
           <div className="modal-box" style={{ maxWidth: 400 }}>
-            <div className="modal-title">Delete service?</div>
+            <div className="modal-title">Remove service from menu?</div>
             <p className="services-delete-msg">
-              This permanently removes the service from your menu. Past transactions
-              are not affected.
+              The service will be hidden from POS and online booking. Existing
+              bookings and transactions are kept. You can show it again with Show.
             </p>
             <div className="modal-footer">
               <button
