@@ -5,6 +5,7 @@ import { SHOP_ID } from '../lib/supabase'
 import { fetchShop } from '../lib/shopService'
 import type { Shop } from '../types/pos'
 import { formatAUD } from '../lib/posCalc'
+import { parseApiJson } from '../lib/parseApiResponse'
 import './PublicVoucherPage.css'
 
 export default function PublicVoucherPage() {
@@ -37,12 +38,18 @@ export default function PublicVoucherPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId }),
       })
-        .then(r => r.json())
-        .then(data => {
+        .then(async r => {
+          const data = await parseApiJson<{
+            voucherCode?: string
+            error?: string
+          }>(r)
+          if (!r.ok) throw new Error(data.error || 'Could not confirm payment')
           if (data.voucherCode) setSuccessCode(data.voucherCode)
           else if (data.error) setError(data.error)
         })
-        .catch(() => setError('Could not confirm payment'))
+        .catch(e =>
+          setError(e instanceof Error ? e.message : 'Could not confirm payment')
+        )
         .finally(() => setLoading(false))
     }
     if (searchParams.get('cancelled') === '1') {
@@ -75,10 +82,10 @@ export default function PublicVoucherPage() {
           shopId: SHOP_ID,
         }),
       })
-      const data = await res.json()
+      const data = await parseApiJson<{ url?: string; error?: string }>(res)
       if (!res.ok) throw new Error(data.error || 'Checkout failed')
       if (data.url) window.location.href = data.url
-      else throw new Error('No checkout URL')
+      else throw new Error('No checkout URL returned')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Checkout failed')
       setLoading(false)

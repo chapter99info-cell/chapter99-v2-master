@@ -32,6 +32,11 @@ interface ServiceRow {
   gst_free: boolean
 }
 
+interface TherapistOption {
+  id: string
+  name_en: string
+}
+
 interface BookingWizardProps {
   shopId: string
   bookedBy?: string
@@ -104,6 +109,9 @@ export default function BookingWizard({
   const [time, setTime] = useState('')
   const [customTime, setCustomTime] = useState('')
   const [customTimeError, setCustomTimeError] = useState('')
+  const [therapists, setTherapists] = useState<TherapistOption[]>([])
+  const [therapistId, setTherapistId] = useState('')
+  const [therapistName, setTherapistName] = useState('')
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
   const [clientEmail, setClientEmail] = useState('')
@@ -123,6 +131,18 @@ export default function BookingWizard({
         else setServices((data as ServiceRow[]) ?? [])
       })
   }, [shopId])
+
+  useEffect(() => {
+    if (step !== 'client' && step !== 'confirm') return
+    supabase
+      .from('staff')
+      .select('id, name_en')
+      .eq('shop_id', shopId)
+      .eq('active', true)
+      .eq('role', 'therapist')
+      .order('name_en')
+      .then(({ data }) => setTherapists((data as TherapistOption[]) ?? []))
+  }, [shopId, step])
 
   const generateSlots = useCallback(async () => {
     if (!date || !serviceId || !selectedService) {
@@ -205,11 +225,13 @@ export default function BookingWizard({
     const start = new Date(`${date}T${time}:00+10:00`)
     const end = new Date(start.getTime() + selectedService.duration * 60_000)
 
+    const staffId = therapistId || null
+
     const { data: slotCheck } = await supabase.rpc('check_booking_slot', {
       p_shop_id: shopId,
       p_start: start.toISOString(),
       p_end: end.toISOString(),
-      p_staff_id: null,
+      p_staff_id: staffId,
     })
 
     if (!slotCheck?.available) {
@@ -225,7 +247,8 @@ export default function BookingWizard({
       shopId,
       date,
       time,
-      selectedService.duration
+      selectedService.duration,
+      staffId
     )
     if (!localCheck.available) {
       setLoading(false)
@@ -255,6 +278,8 @@ export default function BookingWizard({
         shop_id: shopId,
         client_id: clientId,
         service_id: serviceId,
+        staff_id: staffId,
+        therapist_name: therapistName.trim() || null,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         status: 'confirmed',
@@ -295,6 +320,8 @@ export default function BookingWizard({
     setTime('')
     setCustomTime('')
     setCustomTimeError('')
+    setTherapistId('')
+    setTherapistName('')
     setClientName('')
     setClientPhone('')
     setClientEmail('')
@@ -446,6 +473,27 @@ export default function BookingWizard({
           <p className="bw-hint">
             {date} at {time} · {selectedService?.name_en}
           </p>
+          <label className="bw-label" htmlFor="bw-therapist">
+            Preferred therapist
+          </label>
+          <select
+            id="bw-therapist"
+            className="bw-input"
+            value={therapistId}
+            onChange={e => {
+              const id = e.target.value
+              setTherapistId(id)
+              const t = therapists.find(x => x.id === id)
+              setTherapistName(t?.name_en ?? '')
+            }}
+          >
+            <option value="">No preference</option>
+            {therapists.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name_en}
+              </option>
+            ))}
+          </select>
           <input
             className="bw-input"
             placeholder="Full name *"
@@ -506,6 +554,10 @@ export default function BookingWizard({
             <div className="bw-summary-row">
               <span>Client</span>
               <strong>{clientName}</strong>
+            </div>
+            <div className="bw-summary-row">
+              <span>Therapist</span>
+              <strong>{therapistName || 'No preference'}</strong>
             </div>
             {clientPhone && (
               <div className="bw-summary-row">
