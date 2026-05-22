@@ -7,10 +7,9 @@ import { createClient } from '@supabase/supabase-js'
 import {
   BOOKABLE_STAFF_ROLES,
   fetchDayBookings,
-  fetchShopCapacity,
+  fetchTherapistIds,
   filterAvailableSlots,
   type DayBooking,
-  type ShopCapacity,
 } from '../../lib/bookingAvailability'
 
 const supabase = createClient(
@@ -56,7 +55,7 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
   const [loading, setLoading] = useState(false)
   const [lockedSlot, setLockedSlot] = useState<string | null>(null)
   const [dayBookings, setDayBookings] = useState<DayBooking[]>([])
-  const [capacity, setCapacity] = useState<ShopCapacity | null>(null)
+  const [therapistIds, setTherapistIds] = useState<string[]>([])
 
   const [form, setForm] = useState<BookingForm>({
     serviceId: '',
@@ -103,6 +102,11 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
     generateSlots()
   }, [form.date, form.staffId, form.serviceId])
 
+  function resolveStaffIdForSlot(): string | null {
+    if (!form.staffId || form.staffId === 'any') return null
+    return form.staffId
+  }
+
   async function generateSlots() {
     setLoading(true)
     const svc = services.find(s => s.id === form.serviceId)
@@ -112,14 +116,22 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
     }
 
     try {
-      const [cap, existing] = await Promise.all([
-        fetchShopCapacity(supabase, shopId),
+      const [ids, existing] = await Promise.all([
+        therapistIds.length > 0
+          ? Promise.resolve(therapistIds)
+          : fetchTherapistIds(supabase, shopId),
         fetchDayBookings(supabase, shopId, form.date),
       ])
-      setCapacity(cap)
+      if (therapistIds.length === 0) setTherapistIds(ids)
       setDayBookings(existing)
       setAvailableSlots(
-        filterAvailableSlots(form.date, svc.duration, existing, cap, form.staffId)
+        filterAvailableSlots(
+          form.date,
+          svc.duration,
+          existing,
+          ids,
+          resolveStaffIdForSlot()
+        )
       )
     } catch {
       setAvailableSlots([])
@@ -137,7 +149,7 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
 
     const { data } = await supabase.rpc('lock_slot', {
       p_shop_id: shopId,
-      p_staff_id: form.staffId,
+      p_staff_id: resolveStaffIdForSlot(),
       p_start: start,
       p_end: end,
       p_session_id: sessionId,
@@ -167,7 +179,7 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
       p_shop_id: shopId,
       p_start: start,
       p_end: end,
-      p_staff_id: form.staffId,
+      p_staff_id: resolveStaffIdForSlot(),
     })
 
     if (!slotCheck?.available) {
@@ -204,7 +216,7 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
         shop_id: shopId,
         client_id: clientId,
         service_id: form.serviceId,
-        staff_id: form.staffId,
+        staff_id: resolveStaffIdForSlot(),
         start_time: start,
         end_time: end,
         status: 'confirmed',
@@ -277,7 +289,7 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
               <div className="staff-list">
                 <div
                   className={`staff-card${form.staffId === 'any' ? ' selected' : ''}`}
-                  onClick={() => set('staffId', staff[0]?.id ?? '')}
+                  onClick={() => set('staffId', 'any')}
                 >
                   Any available therapist
                 </div>

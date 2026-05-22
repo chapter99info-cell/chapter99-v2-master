@@ -4,15 +4,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { fetchShop } from '../../lib/shopService'
 import { syncBookingToSheet } from '../../lib/googleSheets'
+import { sendBookingConfirmationEmail } from '../../lib/notifyService'
+import { fetchRooms } from '../../lib/roomService'
+import type { Room } from '../../types/room'
 import {
   assertSlotAvailable,
   evaluateSlotAvailability,
   fetchDayBookings,
-  fetchShopCapacity,
+  fetchTherapistIds,
   filterAvailableSlots,
   slotWindow,
   type DayBooking,
-  type ShopCapacity,
 } from '../../lib/bookingAvailability'
 import './BookingWizard.css'
 
@@ -68,7 +70,7 @@ function validateCustomTime(
   date: string,
   durationMin: number,
   bookings: DayBooking[],
-  capacity: ShopCapacity
+  therapistIds: string[]
 ): string | null {
   const normalized = normalizeHHMM(input)
   if (!normalized) return 'Enter time as HH:MM (e.g. 14:30)'
@@ -85,7 +87,7 @@ function validateCustomTime(
   }
 
   const { slotStart, slotEnd } = slotWindow(date, normalized, durationMin)
-  const result = evaluateSlotAvailability(bookings, slotStart, slotEnd, capacity)
+  const result = evaluateSlotAvailability(bookings, slotStart, slotEnd, therapistIds)
   if (!result.available) return result.reason ?? 'This time slot is full'
 
   return null
@@ -100,7 +102,7 @@ export default function BookingWizard({
   const [services, setServices] = useState<ServiceRow[]>([])
   const [slots, setSlots] = useState<string[]>([])
   const [dayBookings, setDayBookings] = useState<DayBooking[]>([])
-  const [capacity, setCapacity] = useState<ShopCapacity | null>(null)
+  const [therapistIds, setTherapistIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -112,6 +114,8 @@ export default function BookingWizard({
   const [therapists, setTherapists] = useState<TherapistOption[]>([])
   const [therapistId, setTherapistId] = useState('')
   const [therapistName, setTherapistName] = useState('')
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [roomId, setRoomId] = useState('')
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
   const [clientEmail, setClientEmail] = useState('')
@@ -133,7 +137,6 @@ export default function BookingWizard({
   }, [shopId])
 
   useEffect(() => {
-    if (step !== 'client' && step !== 'confirm') return
     supabase
       .from('staff')
       .select('id, name_en')
@@ -141,8 +144,13 @@ export default function BookingWizard({
       .eq('active', true)
       .eq('role', 'therapist')
       .order('name_en')
-      .then(({ data }) => setTherapists((data as TherapistOption[]) ?? []))
-  }, [shopId, step])
+      .then(({ data }) => {
+        const list = (data as TherapistOption[]) ?? []
+        setTherapists(list)
+        setTherapistIds(list.map(t => t.id))
+      })
+    fetchRooms(supabase, shopId).then(setRooms).catch(() => setRooms([]))
+  }, [shopId])
 
   const generateSlots = useCallback(async () => {
     if (!date || !serviceId || !selectedService) {
@@ -153,19 +161,21 @@ export default function BookingWizard({
     setError('')
 
     try {
-      const [cap, existing] = await Promise.all([
-        fetchShopCapacity(supabase, shopId),
+      const [ids, existing] = await Promise.all([
+        therapistIds.length > 0
+          ? Promise.resolve(therapistIds)
+          : fetchTherapistIds(supabase, shopId),
         fetchDayBookings(supabase, shopId, date),
       ])
-      setCapacity(cap)
+      if (therapistIds.length === 0) setTherapistIds(ids)
       setDayBookings(existing)
-      setSlots(filterAvailableSlots(date, selectedService.duration, existing, cap))
+      setSlots(filterAvailableSlots(date, selectedService.duration, existing, ids))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load availability')
       setSlots([])
     }
     setLoading(false)
-  }, [date, shopId, serviceId, selectedService])
+  }, [date, shopId, serviceId, selectedService, therapistIds])
 
   function selectPresetSlot(slot: string) {
     setTime(slot)
@@ -184,8 +194,7 @@ export default function BookingWizard({
       setTime('')
       return
     }
-    if (!capacity) return
-    const err = validateCustomTime(value, date, selectedService.duration, dayBookings, capacity)
+    const err = validateCustomTime(value, date, selectedService.duration, dayBookings, therapistIds)
     setCustomTimeError(err ?? '')
     if (!err) {
       const normalized = normalizeHHMM(value)
@@ -200,13 +209,13 @@ export default function BookingWizard({
   }, [step, generateSlots])
 
   useEffect(() => {
-    if (!customTime.trim() || !selectedService || !capacity) return
+    if (!customTime.trim() || !selectedService) return
     const err = validateCustomTime(
       customTime,
       date,
       selectedService.duration,
       dayBookings,
-      capacity
+      therapistIds
     )
     setCustomTimeError(err ?? '')
     if (!err) {
@@ -215,7 +224,7 @@ export default function BookingWizard({
     } else {
       setTime('')
     }
-  }, [dayBookings, date, selectedService, customTime, capacity])
+  }, [dayBookings, date, selectedService, customTime, therapistIds])
 
   async function saveBooking() {
     if (!selectedService || !time || !clientName.trim()) return
@@ -280,6 +289,7 @@ export default function BookingWizard({
         service_id: serviceId,
         staff_id: staffId,
         therapist_name: therapistName.trim() || null,
+        room_id: roomId || null,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         status: 'confirmed',
@@ -309,6 +319,29 @@ export default function BookingWizard({
           status: 'confirmed',
         })
       }
+
+      const email = clientEmail.trim()
+      if (email) {
+        const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('en-AU', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+        void sendBookingConfirmationEmail({
+          to: email,
+          clientName: clientName.trim(),
+          serviceName: selectedService.name_en,
+          durationMin: selectedService.duration,
+          date: dateLabel,
+          time,
+          therapistLabel: therapistName.trim() || 'No preference',
+          shopName: shop.name,
+          shopAddress: shop.address,
+          shopPhone: shop.phone,
+        })
+      }
+
       onComplete?.(booking.id)
       setStep('done')
     }
@@ -322,6 +355,7 @@ export default function BookingWizard({
     setCustomTimeError('')
     setTherapistId('')
     setTherapistName('')
+    setRoomId('')
     setClientName('')
     setClientPhone('')
     setClientEmail('')
@@ -411,8 +445,8 @@ export default function BookingWizard({
           ) : slots.length === 0 ? (
             <p className="bw-empty">
               No slots on this date — try another day.
-              {capacity && (
-                <> (capacity: {capacity.maxConcurrent} concurrent — {capacity.roomCount} rooms, {capacity.therapistCount} therapists)</>
+              {therapistIds.length > 0 && (
+                <> ({therapistIds.length} therapist{therapistIds.length === 1 ? '' : 's'} — all may be booked at remaining times)</>
               )}
             </p>
           ) : (
@@ -532,6 +566,22 @@ export default function BookingWizard({
       {step === 'confirm' && (
         <div className="bw-step">
           <h2 className="bw-title">Confirm booking</h2>
+
+          <label className="bw-label" htmlFor="bw-room">
+            Room (optional)
+          </label>
+          <select
+            id="bw-room"
+            className="bw-input"
+            value={roomId}
+            onChange={e => setRoomId(e.target.value)}
+          >
+            <option value="">— Unassigned —</option>
+            {rooms.map(r => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+
           <div className="bw-summary">
             <div className="bw-summary-row">
               <span>Service</span>
@@ -558,6 +608,14 @@ export default function BookingWizard({
             <div className="bw-summary-row">
               <span>Therapist</span>
               <strong>{therapistName || 'No preference'}</strong>
+            </div>
+            <div className="bw-summary-row">
+              <span>Room</span>
+              <strong>
+                {roomId
+                  ? rooms.find(r => r.id === roomId)?.name ?? '— Unassigned —'
+                  : '— Unassigned —'}
+              </strong>
             </div>
             {clientPhone && (
               <div className="bw-summary-row">

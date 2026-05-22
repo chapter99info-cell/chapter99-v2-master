@@ -4,6 +4,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { fetchRooms } from '../../lib/roomService'
+import type { Room } from '../../types/room'
 import './QueueBoard.css'
 
 const supabase = createClient(
@@ -23,21 +25,25 @@ const STATUS_CONFIG: Record<string, { label: string }> = {
 interface QueueBoardProps {
   shopId: string
   pinLevel: 'staff' | 'cashier' | 'owner'
-  staffId?: string  // if PIN 1111, filter to this staff only
+  staffId?: string
 }
 
 export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProps) {
   const [bookings, setBookings] = useState<any[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])
   const [briefing, setBriefing] = useState<any>(null)
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split('T')[0]
   )
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const canAssignRoom = pinLevel !== 'staff'
 
-  // Real-time subscription
   useEffect(() => {
     loadBookings()
+    if (canAssignRoom) {
+      fetchRooms(supabase, shopId).then(setRooms).catch(() => setRooms([]))
+    }
 
     const channel = supabase
       .channel(`queue-${shopId}`)
@@ -50,7 +56,7 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [shopId, selectedDate, staffId])
+  }, [shopId, selectedDate, staffId, canAssignRoom])
 
   async function loadBookings() {
     setLoading(true)
@@ -61,10 +67,11 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
       .from('bookings')
       .select(`
         id, start_time, end_time, status, source,
-        pressure_pref, focus_areas, medical_notes, room_number,
+        pressure_pref, focus_areas, medical_notes, room_id,
         clients(id, name, phone, medical_flags, allergies, health_fund),
         services(id, name_en, duration, price, gst_free),
-        staff(id, name_en)
+        staff(id, name_en),
+        rooms(id, name)
       `)
       .eq('shop_id', shopId)
       .gte('start_time', dayStart)
@@ -72,7 +79,6 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
       .neq('status', 'cancelled')
       .order('start_time')
 
-    // Staff PIN: only see own bookings
     if (pinLevel === 'staff' && staffId) {
       query = query.eq('staff_id', staffId)
     }
@@ -80,7 +86,6 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
     const { data } = await query
     setBookings(data ?? [])
 
-    // Load briefing for staff view
     if (pinLevel === 'staff' && staffId) {
       const { data: briefData } = await supabase.rpc('build_staff_briefing', {
         p_shop_id: shopId,
@@ -94,17 +99,18 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
   }
 
   async function updateStatus(bookingId: string, status: string) {
-    await supabase
-      .from('bookings')
-      .update({ status })
-      .eq('id', bookingId)
+    await supabase.from('bookings').update({ status }).eq('id', bookingId)
   }
 
-  async function assignRoom(bookingId: string, room: string) {
-    await supabase
-      .from('bookings')
-      .update({ room_number: room })
-      .eq('id', bookingId)
+  async function assignRoom(bookingId: string, roomId: string | null) {
+    await supabase.from('bookings').update({ room_id: roomId }).eq('id', bookingId)
+    setBookings(prev =>
+      prev.map(b => {
+        if (b.id !== bookingId) return b
+        const room = roomId ? rooms.find(r => r.id === roomId) : null
+        return { ...b, room_id: roomId, rooms: room ? { id: room.id, name: room.name } : null }
+      })
+    )
   }
 
   const stats = {
@@ -119,7 +125,6 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
 
   return (
     <div className="queue-board">
-      {/* Header */}
       <div className="queue-header">
         <div className="queue-title">
           {pinLevel === 'staff' ? '📋 My Queue' : '📅 Queue Board'}
@@ -140,7 +145,6 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
         </div>
       </div>
 
-      {/* Staff Briefing (PIN 1111 only) */}
       {pinLevel === 'staff' && briefing?.bookings?.length > 0 && (
         <div className="briefing-banner">
           <div className="briefing-title">📢 Today's Briefing</div>
@@ -162,7 +166,6 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
         </div>
       )}
 
-      {/* Booking Cards */}
       {loading ? (
         <div className="queue-loading">Loading queue...</div>
       ) : bookings.length === 0 ? (
@@ -182,10 +185,10 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
             const client = booking.clients
             const svc = booking.services
             const therapist = booking.staff
+            const roomName = booking.rooms?.name
 
             return (
               <div key={booking.id} className="queue-card">
-                {/* Main Row */}
                 <div
                   className="queue-card-main"
                   onClick={() => setExpandedId(isExpanded ? null : booking.id)}
@@ -206,30 +209,45 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
                       {pinLevel !== 'staff' && ` · $${svc?.price}`}
                     </div>
                     {pinLevel !== 'staff' && (
-                      <div className="queue-therapist">👤 {therapist?.name_en}</div>
+                      <div className="queue-therapist">👤 {therapist?.name_en ?? '—'}</div>
+                    )}
+                    {roomName && (
+                      <div className="queue-room-badge">🚪 {roomName}</div>
                     )}
                   </div>
 
                   <div className="queue-right">
-                    {/* Medical flags */}
                     {(client?.medical_flags?.length > 0 || client?.allergies) && (
                       <span className="flag-medical" title={client.medical_flags?.join(', ')}>⚠️</span>
                     )}
                     {client?.health_fund && <span className="flag-hf" title="Health Fund">❤️</span>}
 
-                    {/* Status badge */}
-                    <div
-                      className={`status-badge status-badge--${booking.status}`}
-                    >
+                    {canAssignRoom && (
+                      <select
+                        className="queue-room-select"
+                        value={booking.room_id ?? ''}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => {
+                          const v = e.target.value
+                          assignRoom(booking.id, v || null)
+                        }}
+                        aria-label="Assign room"
+                      >
+                        <option value="">— Unassigned —</option>
+                        {rooms.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    )}
+
+                    <div className={`status-badge status-badge--${booking.status}`}>
                       {cfg.label}
                     </div>
                   </div>
                 </div>
 
-                {/* Expanded Details */}
                 {isExpanded && (
                   <div className="queue-card-expanded">
-                    {/* Preferences */}
                     <div className="expanded-section">
                       <div className="expanded-label">Preferences</div>
                       <div className="pref-row">
@@ -243,25 +261,6 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
                       )}
                     </div>
 
-                    {/* Room Assignment (cashier/owner only) */}
-                    {pinLevel !== 'staff' && (
-                      <div className="expanded-section">
-                        <div className="expanded-label">Room</div>
-                        <div className="room-selector">
-                          {['Room 1', 'Room 2', 'Room 3', 'Bed A', 'Bed B'].map(r => (
-                            <button
-                              key={r}
-                              className={`room-btn${booking.room_number === r ? ' active' : ''}`}
-                              onClick={() => assignRoom(booking.id, r)}
-                            >
-                              {r}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Status Actions */}
                     <div className="status-actions">
                       {booking.status === 'confirmed' && (
                         <button className="action-btn arrived" onClick={() => updateStatus(booking.id, 'arrived')}>
@@ -278,7 +277,7 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
                           ✅ Complete
                         </button>
                       )}
-                      {['confirmed', 'arrived'].includes(booking.status) && (
+                      {booking.status !== 'cancelled' && booking.status !== 'no_show' && (
                         <button className="action-btn noshow" onClick={() => updateStatus(booking.id, 'no_show')}>
                           ❌ No Show
                         </button>

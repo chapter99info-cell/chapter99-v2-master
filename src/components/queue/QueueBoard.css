@@ -376,6 +376,32 @@
   background: var(--color-danger-light);
 }
 
+.queue-room-badge {
+  font-size: 12px;
+  color: var(--color-accent-dark);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.queue-room-select {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-primary);
+  min-height: 36px;
+  max-width: 130px;
+  cursor: pointer;
+}
+
+.queue-room-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}
+
 @media (max-width: 640px) {
   .queue-card-main {
     grid-template-columns: 1fr;

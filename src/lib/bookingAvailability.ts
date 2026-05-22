@@ -1,21 +1,13 @@
-// Chapter99 — booking slot capacity: MIN(active rooms, available therapists)
+// Chapter99 — booking slot availability (per-therapist)
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const INACTIVE_BOOKING_STATUSES = ['cancelled', 'no_show'] as const
 
-/** Staff who can take appointments (excludes cashier-only) */
+/** Staff who can take appointments (online booking staff list) */
 export const BOOKABLE_STAFF_ROLES = ['therapist', 'owner', 'manager'] as const
 
-const DEFAULT_ROOM_COUNT = 3
-const DEFAULT_THERAPIST_COUNT = 1
 const SYDNEY_OFFSET = '+10:00'
-
-export interface ShopCapacity {
-  roomCount: number
-  therapistCount: number
-  maxConcurrent: number
-}
 
 export interface DayBooking {
   start_time: string
@@ -25,8 +17,8 @@ export interface DayBooking {
 
 export interface SlotAvailabilityResult {
   available: boolean
-  overlapCount: number
-  maxConcurrent: number
+  busyTherapists: number
+  totalTherapists: number
   reason?: string
 }
 
@@ -37,18 +29,6 @@ export function overlaps(
   bookingEnd: Date
 ): boolean {
   return slotStart < bookingEnd && slotEnd > bookingStart
-}
-
-export function countOverlappingBookings(
-  bookings: DayBooking[],
-  slotStart: Date,
-  slotEnd: Date
-): number {
-  return bookings.filter(b => {
-    const bStart = new Date(b.start_time)
-    const bEnd = new Date(b.end_time)
-    return overlaps(slotStart, slotEnd, bStart, bEnd)
-  }).length
 }
 
 export function isTherapistBusy(
@@ -64,35 +44,59 @@ export function isTherapistBusy(
   )
 }
 
+export function countBusyTherapists(
+  bookings: DayBooking[],
+  therapistIds: string[],
+  slotStart: Date,
+  slotEnd: Date
+): number {
+  return therapistIds.filter(id =>
+    isTherapistBusy(bookings, id, slotStart, slotEnd)
+  ).length
+}
+
+/** Per-therapist rules: specific staff OR at least one free therapist. */
 export function evaluateSlotAvailability(
   bookings: DayBooking[],
   slotStart: Date,
   slotEnd: Date,
-  capacity: ShopCapacity,
+  therapistIds: string[],
   staffId?: string | null
 ): SlotAvailabilityResult {
-  const overlapCount = countOverlappingBookings(bookings, slotStart, slotEnd)
-  const maxConcurrent = capacity.maxConcurrent
+  const total = therapistIds.length
 
-  if (overlapCount >= maxConcurrent) {
+  if (staffId) {
+    const busy = isTherapistBusy(bookings, staffId, slotStart, slotEnd)
+    if (busy) {
+      return {
+        available: false,
+        busyTherapists: 1,
+        totalTherapists: Math.max(total, 1),
+        reason: 'This therapist is not available at this time',
+      }
+    }
     return {
-      available: false,
-      overlapCount,
-      maxConcurrent,
-      reason: `This time slot is full (${overlapCount}/${maxConcurrent} booked)`,
+      available: true,
+      busyTherapists: 0,
+      totalTherapists: Math.max(total, 1),
     }
   }
 
-  if (staffId && isTherapistBusy(bookings, staffId, slotStart, slotEnd)) {
+  if (total === 0) {
+    return { available: true, busyTherapists: 0, totalTherapists: 0 }
+  }
+
+  const busy = countBusyTherapists(bookings, therapistIds, slotStart, slotEnd)
+  if (busy >= total) {
     return {
       available: false,
-      overlapCount,
-      maxConcurrent,
-      reason: 'This therapist is not available at this time',
+      busyTherapists: busy,
+      totalTherapists: total,
+      reason: 'All therapists are booked at this time',
     }
   }
 
-  return { available: true, overlapCount, maxConcurrent }
+  return { available: true, busyTherapists: busy, totalTherapists: total }
 }
 
 export function dayBoundsSydney(date: string): { dayStart: string; dayEnd: string } {
@@ -111,32 +115,19 @@ export function slotWindow(date: string, timeHHMM: string, durationMin: number):
   return { slotStart, slotEnd }
 }
 
-export async function fetchShopCapacity(
+export async function fetchTherapistIds(
   supabase: SupabaseClient,
   shopId: string
-): Promise<ShopCapacity> {
-  const [roomsRes, staffRes] = await Promise.all([
-    supabase
-      .from('rooms')
-      .select('id', { count: 'exact', head: true })
-      .eq('shop_id', shopId)
-      .eq('active', true),
-    supabase
-      .from('staff')
-      .select('id', { count: 'exact', head: true })
-      .eq('shop_id', shopId)
-      .eq('active', true)
-      .in('role', [...BOOKABLE_STAFF_ROLES]),
-  ])
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('staff')
+    .select('id')
+    .eq('shop_id', shopId)
+    .eq('active', true)
+    .eq('role', 'therapist')
 
-  const roomCount = Math.max(roomsRes.count ?? 0, 0)
-  const therapistCount = Math.max(staffRes.count ?? 0, 0)
-
-  const rooms = roomCount > 0 ? roomCount : DEFAULT_ROOM_COUNT
-  const therapists = therapistCount > 0 ? therapistCount : DEFAULT_THERAPIST_COUNT
-  const maxConcurrent = Math.max(1, Math.min(rooms, therapists))
-
-  return { roomCount: rooms, therapistCount: therapists, maxConcurrent }
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(row => row.id as string)
 }
 
 export async function fetchDayBookings(
@@ -166,12 +157,12 @@ export async function assertSlotAvailable(
   durationMin: number,
   staffId?: string | null
 ): Promise<SlotAvailabilityResult> {
-  const [capacity, bookings] = await Promise.all([
-    fetchShopCapacity(supabase, shopId),
+  const [therapistIds, bookings] = await Promise.all([
+    fetchTherapistIds(supabase, shopId),
     fetchDayBookings(supabase, shopId, date),
   ])
   const { slotStart, slotEnd } = slotWindow(date, timeHHMM, durationMin)
-  return evaluateSlotAvailability(bookings, slotStart, slotEnd, capacity, staffId)
+  return evaluateSlotAvailability(bookings, slotStart, slotEnd, therapistIds, staffId)
 }
 
 /** Preset slots 10:00–20:00 every 30 minutes */
@@ -189,7 +180,7 @@ export function filterAvailableSlots(
   date: string,
   durationMin: number,
   bookings: DayBooking[],
-  capacity: ShopCapacity,
+  therapistIds: string[],
   staffId?: string | null
 ): string[] {
   const available: string[] = []
@@ -197,15 +188,34 @@ export function filterAvailableSlots(
 
   for (const slotTime of generatePresetSlotTimes()) {
     const { slotStart, slotEnd } = slotWindow(date, slotTime, durationMin)
-    if (slotEnd.getHours() > businessCloseHour || (slotEnd.getHours() === businessCloseHour && slotEnd.getMinutes() > 0)) {
+    if (
+      slotEnd.getHours() > businessCloseHour ||
+      (slotEnd.getHours() === businessCloseHour && slotEnd.getMinutes() > 0)
+    ) {
       continue
     }
 
-    const result = evaluateSlotAvailability(bookings, slotStart, slotEnd, capacity, staffId)
+    const result = evaluateSlotAvailability(
+      bookings,
+      slotStart,
+      slotEnd,
+      therapistIds,
+      staffId
+    )
     if (result.available) {
       available.push(slotTime)
     }
   }
 
   return available
+}
+
+/** @deprecated use fetchTherapistIds — kept for any legacy imports */
+export async function fetchShopCapacity(
+  supabase: SupabaseClient,
+  shopId: string
+): Promise<{ therapistCount: number; maxConcurrent: number; roomCount: number }> {
+  const ids = await fetchTherapistIds(supabase, shopId)
+  const n = Math.max(ids.length, 1)
+  return { roomCount: n, therapistCount: n, maxConcurrent: n }
 }

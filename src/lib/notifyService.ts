@@ -50,6 +50,43 @@ export async function sendReceiptEmail(
   return res.ok
 }
 
+export interface BookingConfirmationEmailRequest {
+  to: string
+  clientName: string
+  serviceName: string
+  durationMin: number
+  date: string
+  time: string
+  therapistLabel: string
+  shopName: string
+  shopAddress?: string
+  shopPhone?: string
+}
+
+/** Send booking confirmation email after staff wizard confirms a booking. */
+export async function sendBookingConfirmationEmail(
+  payload: BookingConfirmationEmailRequest
+): Promise<{ ok: boolean; error?: string }> {
+  if (!payload.to?.trim()) {
+    return { ok: false, error: 'No email address' }
+  }
+
+  try {
+    const res = await fetch('/api/booking-confirmation-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    if (!res.ok) {
+      return { ok: false, error: data.error ?? 'Confirmation email could not be sent' }
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Email service unavailable' }
+  }
+}
+
 export interface GiftVoucherEmailRequest {
   to: string
   buyerName: string
