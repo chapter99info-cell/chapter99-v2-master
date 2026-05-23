@@ -1,9 +1,9 @@
 // Chapter99 V4 — 4-step booking wizard (staff dashboard)
 
 import { useState, useEffect, useCallback } from 'react'
-import { fetchShop } from '../../lib/shopService'
+import { fetchShop, resolveShopNotificationEmail } from '../../lib/shopService'
 import { syncBookingToSheet } from '../../lib/googleSheets'
-import { sendBookingConfirmationEmail } from '../../lib/notifyService'
+import { sendBookingConfirmationEmail, sendOwnerBookingNotificationEmail } from '../../lib/notifyService'
 import { fetchRooms } from '../../lib/roomService'
 import { supabase } from '../../lib/supabase'
 import type { Room } from '../../types/room'
@@ -56,6 +56,8 @@ interface BookingWizardProps {
   shopId: string
   bookedBy?: string
   onComplete?: (bookingId: string) => void
+  /** `public` = customer online booking at /book (no staff UI). */
+  variant?: 'staff' | 'public'
 }
 
 const STEPS: { id: WizardStep; label: string }[] = [
@@ -113,7 +115,10 @@ export default function BookingWizard({
   shopId,
   bookedBy,
   onComplete,
+  variant = 'staff',
 }: BookingWizardProps) {
+  const isPublic = variant === 'public'
+  const bookingSource = isPublic ? 'online' : 'walkin'
   const [step, setStep] = useState<WizardStep>('service')
   const [services, setServices] = useState<ServiceRow[]>([])
   const [slots, setSlots] = useState<string[]>([])
@@ -121,6 +126,7 @@ export default function BookingWizard({
   const [therapistIds, setTherapistIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [lastBookingId, setLastBookingId] = useState<string | null>(null)
 
   const [bookingMode, setBookingMode] = useState<BookingMode>('solo')
   const [differentServiceP2, setDifferentServiceP2] = useState(false)
@@ -154,7 +160,7 @@ export default function BookingWizard({
   const selectedService2 = services.find(
     s => s.id === (differentServiceP2 ? serviceId2 : serviceId)
   )
-  const isCouple = bookingMode === 'couple'
+  const isCouple = !isPublic && bookingMode === 'couple'
   const slotDurationMin = isCouple
     ? Math.max(selectedService?.duration ?? 0, selectedService2?.duration ?? 0)
     : (selectedService?.duration ?? 0)
@@ -219,12 +225,13 @@ export default function BookingWizard({
   }, [shopId])
 
   useEffect(() => {
+    if (isPublic) return
     void loadRooms()
-  }, [loadRooms])
+  }, [loadRooms, isPublic])
 
   useEffect(() => {
-    if (step === 'confirm') void loadRooms()
-  }, [step, loadRooms])
+    if (step === 'confirm' && !isPublic) void loadRooms()
+  }, [step, loadRooms, isPublic])
 
   const generateSlots = useCallback(async () => {
     if (!date || !serviceId || !selectedService || (isCouple && differentServiceP2 && !serviceId2)) {
@@ -367,13 +374,32 @@ export default function BookingWizard({
     }
 
     const email = client.email.trim()
-    if (email) {
-      const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('en-AU', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+    const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('en-AU', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+
+    const ownerEmail = resolveShopNotificationEmail(shop)
+    if (ownerEmail) {
+      void sendOwnerBookingNotificationEmail({
+        to: ownerEmail,
+        clientName: client.name.trim(),
+        clientPhone: client.phone.trim() || undefined,
+        clientEmail: email || undefined,
+        serviceName: svc.name_en,
+        durationMin: svc.duration,
+        date: dateLabel,
+        time,
+        therapistLabel: client.therapistName.trim() || undefined,
+        shopName: shop.name,
+        source: isPublic ? 'online' : 'staff',
+        bookingId,
       })
+    }
+
+    if (email) {
       void sendBookingConfirmationEmail({
         to: email,
         clientName: client.name.trim(),
@@ -448,8 +474,8 @@ export default function BookingWizard({
           start_time: start.toISOString(),
           end_time: end.toISOString(),
           status: 'confirmed',
-          source: 'walkin',
-          booked_by: bookedBy,
+          source: bookingSource,
+          booked_by: isPublic ? undefined : bookedBy,
         })
         .select('id')
         .single()
@@ -462,6 +488,7 @@ export default function BookingWizard({
       }
 
       if (booking) {
+        setLastBookingId(booking.id)
         await afterBookingSaved(
           booking.id,
           selectedService,
@@ -551,8 +578,8 @@ export default function BookingWizard({
           start_time: start.toISOString(),
           end_time: end1.toISOString(),
           status: 'confirmed',
-          source: 'walkin',
-          booked_by: bookedBy,
+          source: bookingSource,
+          booked_by: isPublic ? undefined : bookedBy,
         },
         {
           shop_id: shopId,
@@ -564,8 +591,8 @@ export default function BookingWizard({
           start_time: start.toISOString(),
           end_time: end2.toISOString(),
           status: 'confirmed',
-          source: 'walkin',
-          booked_by: bookedBy,
+          source: bookingSource,
+          booked_by: isPublic ? undefined : bookedBy,
         },
       ])
       .select('id')
@@ -579,6 +606,7 @@ export default function BookingWizard({
 
     const rows = bookings ?? []
     if (rows.length >= 2) {
+      setLastBookingId(rows[0].id)
       await afterBookingSaved(rows[0].id, selectedService, {
         ...person1,
         therapistName: p1TherapistName,
@@ -618,6 +646,7 @@ export default function BookingWizard({
       roomId: '',
     })
     setError('')
+    setLastBookingId(null)
   }
 
   function canProceedFromService(): boolean {
@@ -629,7 +658,7 @@ export default function BookingWizard({
   const stepIndex = STEPS.findIndex(s => s.id === step)
 
   return (
-    <div className="booking-wizard">
+    <div className={`booking-wizard${isPublic ? ' booking-wizard--public' : ''}`}>
       <div className="bw-progress">
         {STEPS.map((s, i) => (
           <div
@@ -650,6 +679,7 @@ export default function BookingWizard({
         <div className="bw-step">
           <h2 className="bw-title">Select service</h2>
 
+          {!isPublic && (
           <div className="bw-mode-toggle" role="group" aria-label="Booking type">
             <button
               type="button"
@@ -674,6 +704,7 @@ export default function BookingWizard({
               For a couple
             </button>
           </div>
+          )}
 
           {isCouple && therapists.length < 2 && (
             <p className="bw-field-error">
@@ -682,7 +713,11 @@ export default function BookingWizard({
           )}
 
           {services.length === 0 ? (
-            <p className="bw-empty">No active services — add them in Services (Owner).</p>
+            <p className="bw-empty">
+              {isPublic
+                ? 'No services are available to book online right now. Please call us.'
+                : 'No active services — add them in Services (Owner).'}
+            </p>
           ) : (
             <>
               <p className="bw-label">
@@ -872,7 +907,7 @@ export default function BookingWizard({
 
       {step === 'client' && (
         <div className="bw-step">
-          <h2 className="bw-title">Client information</h2>
+          <h2 className="bw-title">{isPublic ? 'Your details' : 'Client information'}</h2>
           <p className="bw-hint">
             {date} at {time}
             {isCouple
@@ -922,7 +957,7 @@ export default function BookingWizard({
             />
             <input
               className="bw-input"
-              placeholder="Email"
+              placeholder={isPublic ? 'Email (for confirmation) *' : 'Email'}
               type="email"
               value={person1.email}
               onChange={e => updatePerson1({ email: e.target.value })}
@@ -987,7 +1022,11 @@ export default function BookingWizard({
             <button
               type="button"
               className="bw-btn primary"
-              disabled={!person1.name.trim() || (isCouple && !person2.name.trim())}
+              disabled={
+                !person1.name.trim() ||
+                (isCouple && !person2.name.trim()) ||
+                (isPublic && !person1.email.trim())
+              }
               onClick={() => setStep('confirm')}
             >
               Review →
@@ -999,7 +1038,7 @@ export default function BookingWizard({
       {step === 'confirm' && (
         <div className="bw-step">
           <h2 className="bw-title">
-            {isCouple ? 'Confirm couple booking' : 'Confirm booking'}
+            {isCouple ? 'Confirm couple booking' : isPublic ? 'Confirm your booking' : 'Confirm booking'}
           </h2>
 
           <div className="bw-summary bw-summary-when">
@@ -1013,6 +1052,8 @@ export default function BookingWizard({
 
           <div className="bw-person-block">
             <h3 className="bw-person-title">{isCouple ? 'Person 1' : 'Guest'}</h3>
+            {!isPublic && (
+            <>
             <label className="bw-label" htmlFor="bw-room-1">
               Room (optional)
             </label>
@@ -1028,6 +1069,8 @@ export default function BookingWizard({
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
+            </>
+            )}
             <div className="bw-summary">
               <div className="bw-summary-row">
                 <span>Service</span>
@@ -1049,6 +1092,7 @@ export default function BookingWizard({
                 <span>Therapist</span>
                 <strong>{person1.therapistName || 'No preference'}</strong>
               </div>
+              {!isPublic && (
               <div className="bw-summary-row">
                 <span>Room</span>
                 <strong>
@@ -1057,6 +1101,7 @@ export default function BookingWizard({
                     : '— Unassigned —'}
                 </strong>
               </div>
+              )}
               {person1.phone && (
                 <div className="bw-summary-row">
                   <span>Phone</span>
@@ -1123,10 +1168,10 @@ export default function BookingWizard({
             </div>
           )}
 
-          {roomsLoading && (
+          {roomsLoading && !isPublic && (
             <p className="bw-hint">Loading rooms…</p>
           )}
-          {!roomsLoading && rooms.length === 0 && (
+          {!isPublic && !roomsLoading && rooms.length === 0 && (
             <p className="bw-hint">No rooms yet — add them in Owner → Rooms.</p>
           )}
 
@@ -1172,8 +1217,18 @@ export default function BookingWizard({
             {person1.name}
             {isCouple && ` & ${person2.name}`} — {date} at {time}
           </p>
+          {lastBookingId && (
+            <p className="bw-booking-ref">
+              Booking reference: <strong>{lastBookingId}</strong>
+            </p>
+          )}
+          {isPublic && person1.email.trim() && (
+            <p className="bw-hint">
+              A confirmation email has been sent to {person1.email.trim()}.
+            </p>
+          )}
           <button type="button" className="bw-btn primary" onClick={resetWizard}>
-            Book another
+            {isPublic ? 'Book another appointment' : 'Book another'}
           </button>
         </div>
       )}

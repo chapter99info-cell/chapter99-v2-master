@@ -55,21 +55,27 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#0F6E56',
-    padding: '6px 10px',
+    padding: '8px 10px',
     borderRadius: 3,
+    marginBottom: 8,
   },
   tableHeaderText: {
     color: '#fff',
     fontSize: 9,
     fontFamily: 'Helvetica-Bold',
   },
+  tableBody: {
+    paddingTop: 4,
+  },
   tableRow: {
     flexDirection: 'row',
-    padding: '8px 10px',
+    paddingHorizontal: 10,
     borderBottom: '0.5px solid #eee',
   },
-  col1: { flex: 3 },
-  col2: { flex: 1, textAlign: 'right' },
+  tableHeaderCol1: { flex: 3 },
+  tableHeaderCol2: { flex: 1, textAlign: 'right' },
+  tableCellCol1: { flex: 3, paddingTop: 8, paddingBottom: 8 },
+  tableCellCol2: { flex: 1, textAlign: 'right', paddingTop: 8, paddingBottom: 8 },
   itemName: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
   itemSub: { fontSize: 8, color: '#777' },
   amountPaid: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#0F6E56' },
@@ -173,12 +179,13 @@ function HealthFundReceiptDoc({ tx, shop, logoDataUrl }: HealthFundReceiptProps)
         <View style={styles.section}>
           <View style={styles.table}>
             <View style={[styles.tableHeader, { backgroundColor: accent }]}>
-              <Text style={[styles.tableHeaderText, styles.col1]}>Description</Text>
-              <Text style={[styles.tableHeaderText, styles.col2]}>Amount</Text>
+              <Text style={[styles.tableHeaderText, styles.tableHeaderCol1]}>Description</Text>
+              <Text style={[styles.tableHeaderText, styles.tableHeaderCol2]}>Amount</Text>
             </View>
+            <View style={styles.tableBody}>
             {tx.items.map((item, i) => (
               <View key={i} style={styles.tableRow}>
-                <View style={styles.col1}>
+                <View style={styles.tableCellCol1}>
                   <Text style={styles.itemName}>{item.serviceName}</Text>
                   <Text style={styles.itemSub}>Duration: {item.duration} minutes</Text>
                   {item.itemNo && (
@@ -188,7 +195,7 @@ function HealthFundReceiptDoc({ tx, shop, logoDataUrl }: HealthFundReceiptProps)
                     <Text style={styles.itemSub}>GST-free service</Text>
                   )}
                 </View>
-                <View style={styles.col2}>
+                <View style={styles.tableCellCol2}>
                   <Text style={styles.amountPaid}>Amount Paid</Text>
                   <Text style={[styles.itemName, { fontSize: 13 }]}>
                     {formatAUD(item.price)}
@@ -196,6 +203,7 @@ function HealthFundReceiptDoc({ tx, shop, logoDataUrl }: HealthFundReceiptProps)
                 </View>
               </View>
             ))}
+            </View>
           </View>
         </View>
 

@@ -25,6 +25,7 @@ function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsIn
     address: shop.address,
     phone: shop.phone,
     email: shop.email,
+    notificationEmail: shop.notificationEmail ?? '',
     gstRegistered: shop.gstRegistered,
     logoUrl: shop.logoUrl,
     themeColor: shop.themeColor,
@@ -262,6 +263,19 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
             value={form.email}
             onChange={e => update('email', e.target.value)}
           />
+        </div>
+        <div className="ss-field">
+          <label>Notification email</label>
+          <input
+            type="email"
+            placeholder="owner@example.com"
+            value={form.notificationEmail}
+            onChange={e => update('notificationEmail', e.target.value)}
+          />
+          <p className="ss-hint">
+            Receives an email when a new booking is confirmed (online or staff). Leave blank to use
+            the shop email above.
+          </p>
         </div>
         <label className="ss-checkbox">
           <input

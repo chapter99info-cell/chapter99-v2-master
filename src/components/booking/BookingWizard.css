@@ -322,3 +322,92 @@
   color: #1a3d2b;
   text-align: right;
 }
+
+/* Public /book — dark green + gold, mobile-first */
+.booking-wizard--public {
+  padding: 0;
+}
+
+.booking-wizard--public .bw-progress-step.active {
+  background: rgba(201, 162, 39, 0.12);
+  border-color: #c9a227;
+}
+
+.booking-wizard--public .bw-progress-step.active .bw-progress-num {
+  color: #1a3d2b;
+}
+
+.booking-wizard--public .bw-progress-step.done {
+  border-color: #1a3d2b;
+}
+
+.booking-wizard--public .bw-title {
+  color: #1a3d2b;
+}
+
+.booking-wizard--public .bw-service-card.selected {
+  border-color: #c9a227;
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.booking-wizard--public .bw-slot.selected {
+  background: #1a3d2b;
+  border-color: #c9a227;
+  color: #fff;
+}
+
+.booking-wizard--public .bw-btn.primary {
+  background: #1a3d2b;
+  border-color: #c9a227;
+  color: #fff;
+}
+
+.booking-wizard--public .bw-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.booking-wizard--public .bw-btn.secondary {
+  border-color: #1a3d2b;
+  color: #1a3d2b;
+}
+
+.booking-wizard--public .bw-done {
+  text-align: center;
+  padding: 24px 12px;
+}
+
+.booking-wizard--public .bw-done-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #1a3d2b;
+  color: #c9a227;
+  font-size: 28px;
+  line-height: 56px;
+}
+
+.booking-wizard--public .bw-booking-ref {
+  margin: 16px 0 8px;
+  padding: 12px 16px;
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: #1a3d2b;
+}
+
+.booking-wizard--public .bw-booking-ref strong {
+  color: #1a3d2b;
+  word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .booking-wizard--public .bw-progress-label {
+    font-size: 10px;
+  }
+
+  .booking-wizard--public .bw-service-grid {
+    grid-template-columns: 1fr;
+  }
+}

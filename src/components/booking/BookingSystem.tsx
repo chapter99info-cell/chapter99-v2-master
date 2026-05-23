@@ -11,6 +11,8 @@ import {
   filterAvailableSlots,
   type DayBooking,
 } from '../../lib/bookingAvailability'
+import { fetchShop, resolveShopNotificationEmail } from '../../lib/shopService'
+import { sendOwnerBookingNotificationEmail } from '../../lib/notifyService'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -243,6 +245,35 @@ export default function BookingSystem({ shopId, mode = 'online', onComplete }: B
           }),
         })
       }
+
+      const shop = await fetchShop(shopId)
+      const ownerEmail = resolveShopNotificationEmail(shop)
+      if (ownerEmail) {
+        const dateLabel = new Date(`${form.date}T12:00:00`).toLocaleDateString('en-AU', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+        void sendOwnerBookingNotificationEmail({
+          to: ownerEmail,
+          clientName: form.clientName.trim(),
+          clientPhone: form.clientPhone.trim() || undefined,
+          clientEmail: form.clientEmail.trim() || undefined,
+          serviceName: selectedService?.name_en ?? 'Service',
+          durationMin: selectedService?.duration ?? 0,
+          date: dateLabel,
+          time: form.time,
+          therapistLabel:
+            form.staffId === 'any'
+              ? 'Any available therapist'
+              : selectedStaff?.name_en ?? undefined,
+          shopName: shop.name,
+          source: form.source,
+          bookingId: booking.id,
+        })
+      }
+
       setStep('done')
       onComplete?.(booking.id)
     }

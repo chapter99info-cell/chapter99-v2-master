@@ -83,6 +83,7 @@ export interface Shop {
   address: string
   phone: string
   email: string
+  notificationEmail?: string
   gstRegistered: boolean
   currency: 'AUD'
   timezone: string

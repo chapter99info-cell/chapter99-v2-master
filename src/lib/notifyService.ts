@@ -50,6 +50,45 @@ export async function sendReceiptEmail(
   return res.ok
 }
 
+export interface OwnerBookingNotificationRequest {
+  to: string
+  clientName: string
+  clientPhone?: string
+  clientEmail?: string
+  serviceName: string
+  durationMin: number
+  date: string
+  time: string
+  therapistLabel?: string
+  shopName: string
+  source?: string
+  bookingId?: string
+}
+
+/** Notify shop owner when a new booking is confirmed. */
+export async function sendOwnerBookingNotificationEmail(
+  payload: OwnerBookingNotificationRequest
+): Promise<{ ok: boolean; error?: string }> {
+  if (!payload.to?.trim()) {
+    return { ok: false, error: 'No notification email configured' }
+  }
+
+  try {
+    const res = await fetch('/api/booking-owner-notification-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    if (!res.ok) {
+      return { ok: false, error: data.error ?? 'Owner notification email could not be sent' }
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Email service unavailable' }
+  }
+}
+
 export interface BookingConfirmationEmailRequest {
   to: string
   clientName: string

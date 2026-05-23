@@ -10,6 +10,7 @@ export interface ShopRow {
   address: string | null
   phone: string | null
   email: string | null
+  notification_email: string | null
   gst_registered: boolean | null
   currency: string | null
   timezone: string | null
@@ -34,6 +35,7 @@ export interface ShopSettingsInput {
   address: string
   phone: string
   email: string
+  notificationEmail: string
   gstRegistered: boolean
   logoUrl?: string
   themeColor: string
@@ -74,6 +76,7 @@ export function mapRowToShop(row: ShopRow): Shop {
     address: row.address ?? '',
     phone: row.phone ?? '',
     email: row.email ?? '',
+    notificationEmail: row.notification_email ?? '',
     gstRegistered: row.gst_registered ?? true,
     currency: 'AUD',
     timezone: row.timezone ?? 'Australia/Sydney',
@@ -100,6 +103,7 @@ export function shopToUpdatePayload(input: ShopSettingsInput) {
     address: input.address || null,
     phone: input.phone || null,
     email: input.email || null,
+    notification_email: input.notificationEmail || null,
     gst_registered: input.gstRegistered,
     logo_url: input.logoUrl || null,
     theme_color: input.themeColor,
@@ -152,6 +156,11 @@ export async function saveShopSettings(
   })
   if (error) return { ok: false, error: error.message }
   return { ok: true }
+}
+
+/** Email that receives new-booking alerts; falls back to shop contact email. */
+export function resolveShopNotificationEmail(shop: Shop): string {
+  return (shop.notificationEmail?.trim() || shop.email?.trim() || '')
 }
 
 export async function uploadShopAsset(
