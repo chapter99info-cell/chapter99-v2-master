@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 const DEFAULT_PUBLIC_ORIGIN = 'https://chapter99-v4-complete.vercel.app'
 
 /** Parse POST JSON body (Vercel may pass object or raw string). */
-export function parseJsonBody<T extends Record<string, unknown>>(
+export function parseJsonBody<T extends object = Record<string, unknown>>(
   req: VercelRequest
 ): T {
   const raw = req.body
