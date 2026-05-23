@@ -159,9 +159,9 @@ function OverviewTab({ mrr, shops, history }: {
         <div className="section-title">MRR by Plan</div>
         <div className="plan-bars">
           {[
-            { label: 'Pro', amount: mrr.byPlan.pro, color: '#0F6E56', price: '$110' },
-            { label: 'Growth', amount: mrr.byPlan.growth, color: '#BA7517', price: '$69' },
-            { label: 'Starter', amount: mrr.byPlan.starter, color: '#3B6D11', price: '$29' },
+            { label: 'Pro', amount: mrr.byPlan.pro, color: '#0F6E56', price: '$199' },
+            { label: 'Growth', amount: mrr.byPlan.growth, color: '#BA7517', price: '$129' },
+            { label: 'Starter', amount: mrr.byPlan.starter, color: '#3B6D11', price: '$69' },
           ].map(p => (
             <div key={p.label} className="plan-bar-row">
               <div className="plan-bar-label">

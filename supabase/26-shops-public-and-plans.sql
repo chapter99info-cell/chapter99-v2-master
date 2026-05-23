@@ -21,7 +21,7 @@ alter table shops
 
 -- Legacy plan names → new tiers
 update shops set plan = 'growth' where plan = 'professional';
-update shops set plan = 'pro' where plan = 'business';
+update shops set plan = 'pro' where plan in ('business', 'business_plus');
 
 alter table shops alter column plan set default 'starter';
 

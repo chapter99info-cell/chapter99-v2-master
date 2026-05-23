@@ -7,15 +7,15 @@ import { formatAUD } from '../../lib/posCalc'
 
 // ── Locked Pricing (from system prompt PIN 3501) ──────────────
 const TIERS = {
-  starter: { setup: 199, monthly: 29, label: 'Starter', prop: 'Digital Kickstart with AI' },
-  professional: { setup: 499, monthly: 69, label: 'Professional', prop: 'Full Experience & Engagement' },
-  business: { setup: 899, monthly: 110, label: 'Business Plus', prop: 'Market Leader & AU Compliance' },
+  starter: { setup: 199, monthly: 69, label: 'Starter', prop: 'Digital Kickstart with AI' },
+  growth: { setup: 499, monthly: 129, label: 'Growth', prop: 'Full Experience & Engagement' },
+  pro: { setup: 899, monthly: 199, label: 'Pro', prop: 'Market Leader & AU Compliance' },
 }
 
 const BUNDLES = {
-  starter: { name: 'Digital Quickstart Bundle', total: 78, items: 'Starter $29 + AI Content $49' },
-  professional: { name: 'Pro Engagement Bundle', total: 137, items: 'Professional $69 + SMS $19 + Google $49' },
-  business: { name: 'Market Leader Bundle', total: 347, items: 'Business Plus $110 + Social $149 + SMS Unlimited $69' },
+  starter: { name: 'Digital Quickstart Bundle', total: 118, items: 'Starter $69 + AI Content $49' },
+  growth: { name: 'Growth Engagement Bundle', total: 197, items: 'Growth $129 + SMS $19 + Google $49' },
+  pro: { name: 'Pro Market Leader Bundle', total: 417, items: 'Pro $199 + Social $149 + SMS Unlimited $69' },
 }
 
 const ADDONS = [
@@ -41,7 +41,7 @@ interface ProposalBuilderProps {
 export default function ProposalBuilder({ onClose }: ProposalBuilderProps) {
   const [shopName, setShopName] = useState('')
   const [location, setLocation] = useState('')
-  const [tier, setTier] = useState<keyof typeof TIERS>('professional')
+  const [tier, setTier] = useState<keyof typeof TIERS>('growth')
   const [selectedAddons, setSelectedAddons] = useState<string[]>([])
   const [notes, setNotes] = useState('')
   const [view, setView] = useState<'build' | 'preview'>('build')

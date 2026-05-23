@@ -9,6 +9,25 @@ export const PLAN_LABELS: Record<ShopPlan, string> = {
   pro: 'Pro',
 }
 
+/** Setup + monthly subscription (Super Admin / Add Shop wizard). */
+export interface PlanPricing {
+  setup: number
+  monthly: number
+  label: string
+}
+
+export const PLAN_PRICING: Record<ShopPlan, PlanPricing> = {
+  starter: { setup: 199, monthly: 69, label: 'Starter' },
+  growth: { setup: 499, monthly: 129, label: 'Growth' },
+  pro: { setup: 899, monthly: 199, label: 'Pro' },
+}
+
+export const PLAN_MONTHLY_FEES: Record<ShopPlan, number> = {
+  starter: PLAN_PRICING.starter.monthly,
+  growth: PLAN_PRICING.growth.monthly,
+  pro: PLAN_PRICING.pro.monthly,
+}
+
 /** Feature keys checked via usePlan().can('…') */
 export type PlanFeature =
   | 'booking'
@@ -73,7 +92,7 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, ShopPlan> = {
 export function normalizeShopPlan(value: string | null | undefined): ShopPlan {
   const p = (value ?? 'starter').toLowerCase()
   if (p === 'growth' || p === 'professional') return 'growth'
-  if (p === 'pro' || p === 'business') return 'pro'
+  if (p === 'pro' || p === 'business' || p === 'business_plus') return 'pro'
   if (p === 'starter') return 'starter'
   return 'starter'
 }

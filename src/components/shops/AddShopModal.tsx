@@ -4,12 +4,7 @@
 
 import { useState } from 'react'
 import { createShop } from '../../lib/adminService'
-
-const PLAN_CONFIG = {
-  starter: { setup: 199, monthly: 29, label: 'Starter' },
-  professional: { setup: 499, monthly: 69, label: 'Professional' },
-  business: { setup: 899, monthly: 110, label: 'Business Plus' },
-}
+import { PLAN_PRICING, SHOP_PLANS, type ShopPlan } from '../../types/plan'
 
 interface AddShopModalProps {
   onClose: () => void
@@ -25,7 +20,7 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
     phone: '',
     address: '',
     abn: '',
-    plan: 'professional' as keyof typeof PLAN_CONFIG,
+    plan: 'growth' as ShopPlan,
     domain: '',
     ownerPin: '9999',
     providerName: '',
@@ -57,7 +52,7 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
     if (ok) onSaved()
   }
 
-  const plan = PLAN_CONFIG[form.plan]
+  const plan = PLAN_PRICING[form.plan]
 
   return (
     <div className="modal-overlay">
@@ -104,17 +99,20 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
           <div className="modal-body">
             <div className="modal-section">เลือก Plan</div>
             <div className="plan-selector">
-              {(Object.entries(PLAN_CONFIG) as any[]).map(([key, cfg]) => (
-                <div
-                  key={key}
-                  className={`plan-option${form.plan === key ? ' selected' : ''}`}
-                  onClick={() => set('plan', key)}
-                >
-                  <div className="plan-option-name">{cfg.label}</div>
-                  <div className="plan-option-price">${cfg.setup} setup</div>
-                  <div className="plan-option-mo">${cfg.monthly}/mo</div>
-                </div>
-              ))}
+              {SHOP_PLANS.map(key => {
+                const cfg = PLAN_PRICING[key]
+                return (
+                  <div
+                    key={key}
+                    className={`plan-option${form.plan === key ? ' selected' : ''}`}
+                    onClick={() => setForm(prev => ({ ...prev, plan: key }))}
+                  >
+                    <div className="plan-option-name">{cfg.label}</div>
+                    <div className="plan-option-price">${cfg.setup} setup</div>
+                    <div className="plan-option-mo">${cfg.monthly}/mo</div>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="modal-section">Health Fund (HICAPS)</div>
@@ -161,6 +159,9 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
                 shopId,
                 name: form.name,
                 plan: form.plan,
+                planLabel: plan.label,
+                setupFee: plan.setup,
+                monthlyFee: plan.monthly,
                 domain: form.domain,
                 theme: form.theme,
                 abn: form.abn,

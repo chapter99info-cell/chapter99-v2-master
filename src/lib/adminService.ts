@@ -4,19 +4,13 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { ShopOverview, MRRSummary, SuperAdminStats } from '../types/admin'
-import { normalizeShopPlan, type ShopPlan } from '../types/plan'
+import { normalizeShopPlan, PLAN_MONTHLY_FEES } from '../types/plan'
 
 // Service role client — full access to all shops
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL ?? '',
   import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 )
-
-const PLAN_PRICES: Record<ShopPlan, number> = {
-  starter: 29,
-  growth: 69,
-  pro: 110,
-}
 
 // ── Fetch all shops with stats ────────────────────────────────
 export async function fetchAllShops(): Promise<ShopOverview[]> {
@@ -55,7 +49,7 @@ export async function fetchAllShops(): Promise<ShopOverview[]> {
       slug: (shop.slug as string) || undefined,
       plan: normalizeShopPlan(shop.plan as string),
       status: shop.active ? 'active' : 'suspended',
-      mrr: PLAN_PRICES[normalizeShopPlan(shop.plan as string)],
+      mrr: PLAN_MONTHLY_FEES[normalizeShopPlan(shop.plan as string)],
       setupFee: 0,
       joinedAt: shop.created_at,
       lastActivity: monthTx[0]?.paid_at ?? shop.created_at,
@@ -137,6 +131,7 @@ export async function createShop(data: {
 }): Promise<boolean> {
   const { error } = await supabase.from('shops').insert({
     ...data,
+    plan: normalizeShopPlan(data.plan),
     active: true,
     currency: 'AUD',
     timezone: 'Australia/Sydney',
