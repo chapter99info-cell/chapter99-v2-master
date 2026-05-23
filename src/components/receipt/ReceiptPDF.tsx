@@ -1,5 +1,6 @@
 // Chapter99 V4 — Receipt PDF (jsPDF)
 
+import { jsPDF as JsPDFCtor } from 'jspdf'
 import type { jsPDF } from 'jspdf'
 import type { Transaction, Shop } from '../../types/pos'
 import { formatAUD } from '../../lib/posCalc'
@@ -33,8 +34,7 @@ export async function buildReceiptPDF(
   shop: Shop,
   options: ReceiptPDFOptions
 ): Promise<jsPDF> {
-  const { jsPDF: JsPDF } = await import('jspdf')
-  const doc = new JsPDF({ unit: 'mm', format: 'a4' })
+  const doc = new JsPDFCtor({ unit: 'mm', format: 'a4' })
   const theme = hexToRgb(shop.themeColor)
   const margin = 18
   let y = margin

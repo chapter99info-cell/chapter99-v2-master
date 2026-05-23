@@ -1,11 +1,12 @@
 import { QRCodeSVG } from 'qrcode.react'
+import { normalizeGoogleReviewUrl } from '../../lib/reviewUrl'
 
 interface GoogleReviewQRProps {
   url: string
 }
 
 export default function GoogleReviewQR({ url }: GoogleReviewQRProps) {
-  const reviewUrl = url.trim()
+  const reviewUrl = normalizeGoogleReviewUrl(url)
   if (!reviewUrl) return null
 
   return (

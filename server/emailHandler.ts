@@ -9,6 +9,7 @@ export async function POST_email(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
 
   if (!process.env.RESEND_API_KEY) {
+    console.error('[api/email] RESEND_API_KEY is not configured')
     return res.status(500).json({ error: 'RESEND_API_KEY is not configured' })
   }
 
@@ -29,17 +30,37 @@ export async function POST_email(req: VercelRequest, res: VercelResponse) {
       ]
     : []
 
+  if (!to?.trim()) {
+    console.warn('[api/email] missing recipient')
+    return res.status(400).json({ error: 'Recipient email is required' })
+  }
+
   try {
     const result = await resend.emails.send({
       from: `${shopName || 'Chapter99'} <receipts@chapter99solutions.com.au>`,
-      to,
+      to: to.trim(),
       subject,
       html: buildEmailHTML(tx, shopName),
       attachments,
     })
+    if (result.error) {
+      console.error('[api/email] Resend error', {
+        to: to.trim(),
+        transactionId: tx?.id,
+        error: result.error,
+      })
+      return res.status(500).json({ error: result.error.message })
+    }
+    console.info('[api/email] sent', {
+      to: to.trim(),
+      transactionId: tx?.id,
+      resendId: result.data?.id,
+      hasPdf: Boolean(pdfBase64),
+    })
     return res.json({ success: true, id: result.data?.id })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Email failed'
+    console.error('[api/email] exception', { to: to.trim(), transactionId: tx?.id, message })
     return res.status(500).json({ error: message })
   }
 }

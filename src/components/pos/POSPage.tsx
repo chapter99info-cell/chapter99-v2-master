@@ -433,6 +433,21 @@ export default function POSPage() {
         )
       }
 
+      if (clientEmail.trim()) {
+        const emailResult = await emailReceipt(tx, shop)
+        if (emailResult.ok) {
+          setReceiptNote(
+            emailResult.receiptNumber
+              ? `Receipt ${emailResult.receiptNumber} emailed to ${clientEmail.trim()}`
+              : 'Receipt emailed to customer'
+          )
+          setCurrentTx({ ...tx, receiptSent: true })
+        } else {
+          console.warn('[pos] auto receipt email failed', emailResult.error)
+          setReceiptNote(emailResult.error ?? 'Receipt email could not be sent')
+        }
+      }
+
       if (shop.reviewRequestEnabled && shop.googleReviewUrl?.trim()) {
         void sendReviewRequestAfterCheckout({
           shopId: shop.id,

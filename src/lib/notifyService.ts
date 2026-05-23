@@ -34,20 +34,51 @@ export async function sendReceiptEmail(
   shopName: string,
   pdfBase64: string
 ): Promise<boolean> {
-  if (!tx.clientEmail) return false
+  const to = tx.clientEmail?.trim()
+  if (!to) {
+    console.warn('[receipt-email] skipped: no client email on transaction', tx.id)
+    return false
+  }
 
-  const res = await fetch('/api/email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      to: tx.clientEmail,
-      subject: `Your receipt from ${shopName}`,
-      shopName,
-      transaction: tx,
-      pdfBase64,
-    }),
-  })
-  return res.ok
+  try {
+    const res = await fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to,
+        subject: `Your receipt from ${shopName}`,
+        shopName,
+        transaction: tx,
+        pdfBase64,
+      }),
+    })
+
+    const body = (await res.json().catch(() => ({}))) as {
+      success?: boolean
+      id?: string
+      error?: string
+    }
+
+    if (res.ok && body.success) {
+      console.info('[receipt-email] sent', { to, transactionId: tx.id, resendId: body.id })
+      return true
+    }
+
+    console.error('[receipt-email] failed', {
+      to,
+      transactionId: tx.id,
+      status: res.status,
+      error: body.error ?? res.statusText,
+    })
+    return false
+  } catch (err) {
+    console.error('[receipt-email] network error', {
+      to,
+      transactionId: tx.id,
+      message: err instanceof Error ? err.message : String(err),
+    })
+    return false
+  }
 }
 
 export interface OwnerBookingNotificationRequest {

@@ -10,11 +10,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return
           if (id.includes('chart.js')) return 'charts'
-          if (
-            id.includes('jspdf') ||
-            id.includes('html2canvas') ||
-            id.includes('@react-pdf')
-          ) {
+          if (id.includes('html2canvas') || id.includes('@react-pdf')) {
             return 'pdf'
           }
           if (
