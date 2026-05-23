@@ -7,6 +7,16 @@
   box-shadow: var(--shadow-card);
 }
 
+.spb-panel-embedded {
+  margin-top: 0;
+  padding: 16px 0 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
 .spb-header {
   display: flex;
   align-items: center;

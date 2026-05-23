@@ -26,10 +26,10 @@ type PageToggleKey =
   | 'pageAboutEnabled'
 
 const PAGE_TOGGLES: { key: PageToggleKey; label: string }[] = [
-  { key: 'pageHomeEnabled', label: 'Home' },
-  { key: 'pageServicesEnabled', label: 'Services' },
+  { key: 'pageHomeEnabled', label: 'Home page' },
+  { key: 'pageServicesEnabled', label: 'Services page' },
   { key: 'pageVouchersEnabled', label: 'Gift Vouchers' },
-  { key: 'pageAboutEnabled', label: 'About' },
+  { key: 'pageAboutEnabled', label: 'About page' },
 ]
 
 export default function ShopWebsiteSettingsPanel({
@@ -173,12 +173,6 @@ export default function ShopWebsiteSettingsPanel({
     return <p className="sws-muted">Loading website settings…</p>
   }
 
-  const anyPageDisabled =
-    !settings.pageHomeEnabled ||
-    !settings.pageServicesEnabled ||
-    !settings.pageVouchersEnabled ||
-    !settings.pageAboutEnabled
-
   const publicPreview = settings.slug
     ? `${window.location.origin}/?shop=${encodeURIComponent(settings.slug)}`
     : `${window.location.origin}/book`
@@ -285,7 +279,7 @@ export default function ShopWebsiteSettingsPanel({
 
       {/* ── Page visibility ── */}
       <div className="sws-block">
-        <h4 className="sws-block-title">หน้าที่แสดงบนเว็บ</h4>
+        <h4 className="sws-block-title">Page visibility</h4>
         <div className="sws-toggles">
           {PAGE_TOGGLES.map(({ key, label }) => (
             <label key={key} className="sws-toggle-row">
@@ -299,27 +293,26 @@ export default function ShopWebsiteSettingsPanel({
             </label>
           ))}
         </div>
-        {anyPageDisabled && (
-          <div className="sws-field sws-redirect">
-            <label htmlFor="sws-redirect">Redirect path เมื่อปิดหน้า</label>
-            <select
-              id="sws-redirect"
-              value={settings.disabledRedirectPath}
-              onChange={e => update('disabledRedirectPath', e.target.value)}
-            >
-              {REDIRECT_PATH_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="sws-field sws-redirect">
+          <label htmlFor="sws-redirect">Redirect path when page is OFF</label>
+          <select
+            id="sws-redirect"
+            value={settings.disabledRedirectPath}
+            onChange={e => update('disabledRedirectPath', e.target.value)}
+          >
+            {REDIRECT_PATH_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* ── Hero copy ── */}
+      {/* ── Website content ── */}
       <div className="sws-block">
-        <h4 className="sws-block-title">ข้อความหน้าแรก (Hero)</h4>
+        <h4 className="sws-block-title">Website content</h4>
+        <p className="sws-muted sws-block-hint">Auto-saves when you leave a field.</p>
         <div className="sws-row-2">
           <div className="sws-field">
             <label htmlFor="sws-hero-title">Hero title</label>
@@ -343,13 +336,8 @@ export default function ShopWebsiteSettingsPanel({
             />
           </div>
         </div>
-      </div>
-
-      {/* ── About / shop info on public site ── */}
-      <div className="sws-block">
-        <h4 className="sws-block-title">ข้อมูลร้าน (หน้า About)</h4>
         <div className="sws-field">
-          <label htmlFor="sws-about-text">About</label>
+          <label htmlFor="sws-about-text">About text</label>
           <textarea
             id="sws-about-text"
             rows={4}
@@ -361,7 +349,7 @@ export default function ShopWebsiteSettingsPanel({
         </div>
         <div className="sws-row-2">
           <div className="sws-field">
-            <label htmlFor="sws-about-phone">เบอร์โทร (แสดงบนเว็บ)</label>
+            <label htmlFor="sws-about-phone">Phone</label>
             <input
               id="sws-about-phone"
               value={settings.aboutPhone}
@@ -371,7 +359,7 @@ export default function ShopWebsiteSettingsPanel({
             />
           </div>
           <div className="sws-field">
-            <label htmlFor="sws-about-address">ที่อยู่ (แสดงบนเว็บ)</label>
+            <label htmlFor="sws-about-address">Address</label>
             <input
               id="sws-about-address"
               value={settings.aboutAddress}

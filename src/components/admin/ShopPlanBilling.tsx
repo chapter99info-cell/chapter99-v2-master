@@ -11,6 +11,8 @@ import './ShopPlanBilling.css'
 interface ShopPlanBillingProps {
   shopId: string
   shopName: string
+  /** Nested inside Website section — compact layout */
+  embedded?: boolean
 }
 
 const ADDON_TOGGLES = [
@@ -20,7 +22,7 @@ const ADDON_TOGGLES = [
   { key: 'addonReports' as const, label: 'Reports' },
 ]
 
-export default function ShopPlanBilling({ shopId, shopName }: ShopPlanBillingProps) {
+export default function ShopPlanBilling({ shopId, shopName, embedded }: ShopPlanBillingProps) {
   const [settings, setSettings] = useState<ShopPlanSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -63,7 +65,7 @@ export default function ShopPlanBilling({ shopId, shopName }: ShopPlanBillingPro
   }
 
   return (
-    <section className="spb-panel">
+    <section className={`spb-panel${embedded ? ' spb-panel-embedded' : ''}`}>
       <div className="spb-header">
         <span className={`spb-plan-badge spb-plan-${settings.plan}`}>
           {PLAN_LABELS[settings.plan]}
@@ -75,9 +77,11 @@ export default function ShopPlanBilling({ shopId, shopName }: ShopPlanBillingPro
           {saveState === 'idle' && 'Auto-save'}
         </span>
       </div>
-      <p className="spb-muted">
-        Subscription for <strong>{shopName}</strong> — controls feature access in the staff app.
-      </p>
+      {!embedded && (
+        <p className="spb-muted">
+          Subscription for <strong>{shopName}</strong> — controls feature access in the staff app.
+        </p>
+      )}
       {saveError && <p className="spb-error">{saveError}</p>}
 
       <div className="spb-block">

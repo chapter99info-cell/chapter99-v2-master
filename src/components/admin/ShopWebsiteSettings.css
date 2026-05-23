@@ -88,6 +88,11 @@
   border-top: none;
 }
 
+.sws-block-hint {
+  margin: -4px 0 12px;
+  font-size: 12px;
+}
+
 .sws-block-title {
   margin: 0 0 14px;
   font-size: 14px;

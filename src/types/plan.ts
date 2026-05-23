@@ -28,6 +28,15 @@ export const PLAN_MONTHLY_FEES: Record<ShopPlan, number> = {
   pro: PLAN_PRICING.pro.monthly,
 }
 
+/** Super Admin MRR breakdown (highest tier first). */
+export const MRR_PLAN_DISPLAY_ORDER: ShopPlan[] = ['pro', 'growth', 'starter']
+
+export const MRR_PLAN_COLORS: Record<ShopPlan, string> = {
+  starter: '#3B6D11',
+  growth: '#BA7517',
+  pro: '#0F6E56',
+}
+
 /** Feature keys checked via usePlan().can('…') */
 export type PlanFeature =
   | 'booking'

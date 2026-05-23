@@ -2,7 +2,7 @@
 // Super Admin Dashboard (PIN 3501)
 // Full overview of all shops, MRR, alerts, proposals
 
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react'
 import type { ShopOverview, MRRSummary } from '../../types/admin'
 import {
   fetchAllShops,
@@ -15,7 +15,12 @@ import AddShopModal from '../shops/AddShopModal'
 import ProposalBuilder from '../proposals/ProposalBuilder'
 import ShopWebsiteSettingsPanel from '../admin/ShopWebsiteSettings'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
-import { PLAN_LABELS } from '../../types/plan'
+import {
+  PLAN_LABELS,
+  PLAN_MONTHLY_FEES,
+  MRR_PLAN_COLORS,
+  MRR_PLAN_DISPLAY_ORDER,
+} from '../../types/plan'
 
 const OwnerReports = lazy(() => import('./OwnerReports'))
 
@@ -31,6 +36,7 @@ export default function SuperAdminDashboard() {
   const [showProposal, setShowProposal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
+  const [shopDetailFocus, setShopDetailFocus] = useState<'website' | null>(null)
 
   useEffect(() => {
     loadData()
@@ -101,7 +107,11 @@ export default function SuperAdminDashboard() {
           selectedShopId ? (
             <ShopDetailView
               shop={shops.find(s => s.id === selectedShopId)!}
-              onBack={() => setSelectedShopId(null)}
+              focusWebsite={shopDetailFocus === 'website'}
+              onBack={() => {
+                setSelectedShopId(null)
+                setShopDetailFocus(null)
+              }}
               onToggle={async (id, active) => {
                 await toggleShopStatus(id, active)
                 loadData()
@@ -113,7 +123,14 @@ export default function SuperAdminDashboard() {
               searchQuery={searchQuery}
               onSearch={setSearchQuery}
               onAddShop={() => setShowAddShop(true)}
-              onSelectShop={setSelectedShopId}
+              onSelectShop={id => {
+                setSelectedShopId(id)
+                setShopDetailFocus(null)
+              }}
+              onSelectShopWebsite={id => {
+                setSelectedShopId(id)
+                setShopDetailFocus('website')
+              }}
               onToggle={async (id, active) => {
                 await toggleShopStatus(id, active)
                 loadData()
@@ -160,26 +177,22 @@ function OverviewTab({ mrr, shops, history }: {
       <div className="section-card">
         <div className="section-title">MRR by Plan</div>
         <div className="plan-bars">
-          {[
-            { label: 'Pro', amount: mrr.byPlan.pro, color: '#0F6E56', price: '$199' },
-            { label: 'Growth', amount: mrr.byPlan.growth, color: '#BA7517', price: '$129' },
-            { label: 'Starter', amount: mrr.byPlan.starter, color: '#3B6D11', price: '$69' },
-          ].map(p => (
-            <div key={p.label} className="plan-bar-row">
+          {MRR_PLAN_DISPLAY_ORDER.map(planKey => (
+            <div key={planKey} className="plan-bar-row">
               <div className="plan-bar-label">
-                <span>{p.label}</span>
-                <span className="plan-bar-price">{p.price}/mo</span>
+                <span>{PLAN_LABELS[planKey]}</span>
+                <span className="plan-bar-price">${PLAN_MONTHLY_FEES[planKey]}/mo</span>
               </div>
               <div className="plan-bar-track">
                 <div
                   className="plan-bar-fill"
                   style={{
-                    width: `${mrr.total > 0 ? (p.amount / mrr.total) * 100 : 0}%`,
-                    background: p.color,
+                    width: `${mrr.total > 0 ? (mrr.byPlan[planKey] / mrr.total) * 100 : 0}%`,
+                    background: MRR_PLAN_COLORS[planKey],
                   }}
                 />
               </div>
-              <div className="plan-bar-amount">{formatAUD(p.amount)}</div>
+              <div className="plan-bar-amount">{formatAUD(mrr.byPlan[planKey])}</div>
             </div>
           ))}
         </div>
@@ -209,19 +222,24 @@ function OverviewTab({ mrr, shops, history }: {
   )
 }
 
-type ShopDetailTab = 'overview' | 'website' | 'plan' | 'reports'
-
-// ── Shop detail (Overview + Website tab) ───────────────────────
+// ── Shop detail (collapsible sections) ─────────────────────────
 function ShopDetailView({
   shop,
+  focusWebsite,
   onBack,
   onToggle,
 }: {
   shop: ShopOverview | undefined
+  focusWebsite?: boolean
   onBack: () => void
   onToggle: (id: string, active: boolean) => void
 }) {
-  const [detailTab, setDetailTab] = useState<ShopDetailTab>('website')
+  const [websiteOpen, setWebsiteOpen] = useState(true)
+  const [reportsOpen, setReportsOpen] = useState(false)
+
+  useEffect(() => {
+    if (focusWebsite) setWebsiteOpen(true)
+  }, [focusWebsite, shop?.id])
 
   if (!shop) {
     return (
@@ -272,85 +290,93 @@ function ShopDetailView({
         </div>
       </div>
 
-      <div className="shop-detail-tabs">
-        <button
-          type="button"
-          className={`shop-detail-tab${detailTab === 'overview' ? ' active' : ''}`}
-          onClick={() => setDetailTab('overview')}
-        >
-          📊 Overview
-        </button>
-        <button
-          type="button"
-          className={`shop-detail-tab${detailTab === 'website' ? ' active' : ''}`}
-          onClick={() => setDetailTab('website')}
-        >
-          🌐 Website
-        </button>
-        <button
-          type="button"
-          className={`shop-detail-tab${detailTab === 'plan' ? ' active' : ''}`}
-          onClick={() => setDetailTab('plan')}
-        >
-          💳 Plan & Billing
-        </button>
-        <button
-          type="button"
-          className={`shop-detail-tab${detailTab === 'reports' ? ' active' : ''}`}
-          onClick={() => setDetailTab('reports')}
-        >
-          📈 Reports
-        </button>
+      <div className="section-card shop-detail-stats">
+        <div className="shop-stat">
+          <span className="shop-stat-label">MRR</span>
+          <span className="shop-stat-value">{formatAUD(shop.mrr)}</span>
+        </div>
+        <div className="shop-stat">
+          <span className="shop-stat-label">Bookings (month)</span>
+          <span className="shop-stat-value">{shop.bookingsThisMonth}</span>
+        </div>
+        <div className="shop-stat">
+          <span className="shop-stat-label">Revenue (month)</span>
+          <span className="shop-stat-value">{formatAUD(shop.revenueThisMonth)}</span>
+        </div>
+        <div className="shop-stat">
+          <span className="shop-stat-label">Contact</span>
+          <span className="shop-stat-value shop-stat-contact">
+            {shop.ownerEmail || '—'}
+            {shop.ownerPhone ? ` · ${shop.ownerPhone}` : ''}
+          </span>
+        </div>
       </div>
 
-      {detailTab === 'overview' && (
-        <div className="section-card shop-detail-stats">
-          <div className="shop-stat">
-            <span className="shop-stat-label">MRR</span>
-            <span className="shop-stat-value">{formatAUD(shop.mrr)}</span>
-          </div>
-          <div className="shop-stat">
-            <span className="shop-stat-label">Bookings (month)</span>
-            <span className="shop-stat-value">{shop.bookingsThisMonth}</span>
-          </div>
-          <div className="shop-stat">
-            <span className="shop-stat-label">Revenue (month)</span>
-            <span className="shop-stat-value">{formatAUD(shop.revenueThisMonth)}</span>
-          </div>
-          <div className="shop-stat">
-            <span className="shop-stat-label">Contact</span>
-            <span className="shop-stat-value shop-stat-contact">
-              {shop.ownerEmail || '—'}
-              {shop.ownerPhone ? ` · ${shop.ownerPhone}` : ''}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {detailTab === 'website' && (
+      <CollapsibleSection
+        title="🌐 Website"
+        open={websiteOpen}
+        onToggle={() => setWebsiteOpen(o => !o)}
+      >
         <ShopWebsiteSettingsPanel shopId={shop.id} shopName={shop.name} />
-      )}
+        <div className="shop-detail-plan-block">
+          <h4 className="shop-detail-subtitle">Plan & add-ons</h4>
+          <ShopPlanBilling shopId={shop.id} shopName={shop.name} embedded />
+        </div>
+      </CollapsibleSection>
 
-      {detailTab === 'plan' && (
-        <ShopPlanBilling shopId={shop.id} shopName={shop.name} />
-      )}
-
-      {detailTab === 'reports' && (
+      <CollapsibleSection
+        title="📈 Reports"
+        open={reportsOpen}
+        onToggle={() => setReportsOpen(o => !o)}
+      >
         <Suspense fallback={<p className="sws-muted">Loading reports…</p>}>
           <OwnerReports shopId={shop.id} />
         </Suspense>
-      )}
+      </CollapsibleSection>
     </div>
   )
 }
 
+function CollapsibleSection({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <section className={`shop-collapse${open ? ' open' : ''}`}>
+      <button type="button" className="shop-collapse-head" onClick={onToggle}>
+        <span>{title}</span>
+        <span className="shop-collapse-chevron" aria-hidden>
+          {open ? '▼' : '▶'}
+        </span>
+      </button>
+      {open && <div className="shop-collapse-body">{children}</div>}
+    </section>
+  )
+}
+
 // ── Shops Tab ─────────────────────────────────────────────────
-function ShopsTab({ shops, searchQuery, onSearch, onAddShop, onSelectShop, onToggle }: {
+function ShopsTab({
+  shops,
+  searchQuery,
+  onSearch,
+  onAddShop,
+  onSelectShop,
+  onSelectShopWebsite,
+  onToggle,
+}: {
   shops: ShopOverview[]
   searchQuery: string
   onSearch: (q: string) => void
   onAddShop: () => void
   onSelectShop: (id: string) => void
+  onSelectShopWebsite: (id: string) => void
   onToggle: (id: string, active: boolean) => void
 }) {
   return (
@@ -404,7 +430,7 @@ function ShopsTab({ shops, searchQuery, onSearch, onAddShop, onSelectShop, onTog
               <button
                 type="button"
                 className="action-btn"
-                onClick={() => onSelectShop(shop.id)}
+                onClick={() => onSelectShopWebsite(shop.id)}
               >
                 🌐 Website
               </button>
