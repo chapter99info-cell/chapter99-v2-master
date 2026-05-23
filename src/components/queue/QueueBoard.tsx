@@ -24,6 +24,8 @@ const STATUS_CONFIG: Record<string, { label: string }> = {
   cancelled:   { label: 'Cancelled' },
 }
 
+type BookingStatus = keyof typeof STATUS_CONFIG
+
 interface QueueBoardProps {
   shopId: string
   pinLevel: 'staff' | 'cashier' | 'owner'
@@ -41,6 +43,8 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [readOnlyOffline, setReadOnlyOffline] = useState(false)
   const [cacheLabel, setCacheLabel] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState('')
   const online = useOnlineStatus()
   const canAssignRoom = pinLevel !== 'staff' && online && !readOnlyOffline
 
@@ -159,9 +163,33 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
     return () => { supabase.removeChannel(channel) }
   }, [shopId, selectedDate, staffId, pinLevel, online, loadBookings])
 
-  async function updateStatus(bookingId: string, status: string) {
+  async function updateStatus(bookingId: string, status: BookingStatus) {
     if (!online || readOnlyOffline) return
-    await supabase.from('bookings').update({ status }).eq('id', bookingId)
+
+    setStatusError('')
+    setUpdatingId(bookingId)
+    const previous = bookings
+    const nextBookings = bookings.map(b =>
+      b.id === bookingId ? { ...b, status } : b
+    )
+    setBookings(nextBookings)
+
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status })
+      .eq('id', bookingId)
+      .eq('shop_id', shopId)
+
+    setUpdatingId(null)
+
+    if (error) {
+      setBookings(previous)
+      setStatusError(error.message)
+      return
+    }
+
+    const staffKey = pinLevel === 'staff' ? staffId : undefined
+    saveQueueCache(shopId, selectedDate, nextBookings, briefing, staffKey)
   }
 
   async function assignRoom(bookingId: string, roomId: string | null) {
@@ -212,6 +240,10 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
           )}
         </div>
       </div>
+
+      {statusError && (
+        <p className="queue-status-error" role="alert">{statusError}</p>
+      )}
 
       {pinLevel === 'staff' && briefing?.bookings?.length > 0 && (
         <div className="briefing-banner">
@@ -334,23 +366,55 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
                         <p className="queue-readonly-note">Read-only while offline</p>
                       )}
                       {!readOnlyOffline && booking.status === 'confirmed' && (
-                        <button className="action-btn arrived" onClick={() => updateStatus(booking.id, 'arrived')}>
-                          ✅ Mark Arrived
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="action-btn arrived"
+                            disabled={updatingId === booking.id}
+                            onClick={e => {
+                              e.stopPropagation()
+                              void updateStatus(booking.id, 'arrived')
+                            }}
+                          >
+                            ✅ Mark Arrived
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn noshow"
+                            disabled={updatingId === booking.id}
+                            onClick={e => {
+                              e.stopPropagation()
+                              void updateStatus(booking.id, 'no_show')
+                            }}
+                          >
+                            ❌ No Show
+                          </button>
+                        </>
                       )}
                       {!readOnlyOffline && booking.status === 'arrived' && (
-                        <button className="action-btn start" onClick={() => updateStatus(booking.id, 'in_progress')}>
+                        <button
+                          type="button"
+                          className="action-btn start"
+                          disabled={updatingId === booking.id}
+                          onClick={e => {
+                            e.stopPropagation()
+                            void updateStatus(booking.id, 'in_progress')
+                          }}
+                        >
                           ▶️ Start Session
                         </button>
                       )}
                       {!readOnlyOffline && booking.status === 'in_progress' && (
-                        <button className="action-btn complete" onClick={() => updateStatus(booking.id, 'completed')}>
+                        <button
+                          type="button"
+                          className="action-btn complete"
+                          disabled={updatingId === booking.id}
+                          onClick={e => {
+                            e.stopPropagation()
+                            void updateStatus(booking.id, 'completed')
+                          }}
+                        >
                           ✅ Complete
-                        </button>
-                      )}
-                      {!readOnlyOffline && booking.status !== 'cancelled' && booking.status !== 'no_show' && (
-                        <button className="action-btn noshow" onClick={() => updateStatus(booking.id, 'no_show')}>
-                          ❌ No Show
                         </button>
                       )}
                     </div>

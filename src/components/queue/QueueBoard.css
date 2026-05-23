@@ -402,6 +402,15 @@
   box-shadow: var(--focus-ring);
 }
 
+.queue-status-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+  font-size: 13px;
+}
+
 .queue-cache-hint {
   margin: 0 0 12px;
   padding: 8px 12px;
