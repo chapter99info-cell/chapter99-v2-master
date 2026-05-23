@@ -55,6 +55,191 @@ export function countBusyTherapists(
   ).length
 }
 
+export function countFreeTherapists(
+  bookings: DayBooking[],
+  therapistIds: string[],
+  slotStart: Date,
+  slotEnd: Date
+): number {
+  if (therapistIds.length === 0) return 0
+  return therapistIds.length - countBusyTherapists(bookings, therapistIds, slotStart, slotEnd)
+}
+
+/** Couple booking: at least two distinct therapists free for the same slot. */
+export function evaluateCoupleSlotAvailability(
+  bookings: DayBooking[],
+  slotStart: Date,
+  slotEnd: Date,
+  therapistIds: string[]
+): SlotAvailabilityResult {
+  const total = therapistIds.length
+  const free = countFreeTherapists(bookings, therapistIds, slotStart, slotEnd)
+
+  if (total < 2) {
+    return {
+      available: false,
+      busyTherapists: total - free,
+      totalTherapists: total,
+      reason: 'Couple booking requires at least 2 therapists on staff',
+    }
+  }
+
+  if (free < 2) {
+    return {
+      available: false,
+      busyTherapists: total - free,
+      totalTherapists: total,
+      reason:
+        free === 1
+          ? 'Only 1 therapist available at this time — cannot book a couple'
+          : 'All therapists are booked at this time',
+    }
+  }
+
+  return {
+    available: true,
+    busyTherapists: total - free,
+    totalTherapists: total,
+  }
+}
+
+export function filterAvailableCoupleSlots(
+  date: string,
+  durationMin: number,
+  bookings: DayBooking[],
+  therapistIds: string[]
+): string[] {
+  const available: string[] = []
+  const businessCloseHour = 20
+
+  for (const slotTime of generatePresetSlotTimes()) {
+    const { slotStart, slotEnd } = slotWindow(date, slotTime, durationMin)
+    if (
+      slotEnd.getHours() > businessCloseHour ||
+      (slotEnd.getHours() === businessCloseHour && slotEnd.getMinutes() > 0)
+    ) {
+      continue
+    }
+
+    const result = evaluateCoupleSlotAvailability(
+      bookings,
+      slotStart,
+      slotEnd,
+      therapistIds
+    )
+    if (result.available) available.push(slotTime)
+  }
+
+  return available
+}
+
+export interface CoupleTherapistAssignment {
+  staff1: string | null
+  staff2: string | null
+  name1: string
+  name2: string
+  error?: string
+}
+
+/** Assign two different therapists; honours preferences when free. */
+export function assignCoupleTherapists(
+  bookings: DayBooking[],
+  therapistOptions: { id: string; name_en: string }[],
+  slotStart: Date,
+  slotEnd: Date,
+  preferred1?: string | null,
+  preferred2?: string | null
+): CoupleTherapistAssignment {
+  const therapistIds = therapistOptions.map(t => t.id)
+  const freeIds = therapistIds.filter(
+    id => !isTherapistBusy(bookings, id, slotStart, slotEnd)
+  )
+  const nameById = (id: string) =>
+    therapistOptions.find(t => t.id === id)?.name_en ?? ''
+
+  if (therapistIds.length < 2) {
+    return {
+      staff1: null,
+      staff2: null,
+      name1: '',
+      name2: '',
+      error: 'Couple booking requires at least 2 therapists on staff',
+    }
+  }
+
+  if (freeIds.length < 2) {
+    return {
+      staff1: null,
+      staff2: null,
+      name1: '',
+      name2: '',
+      error:
+        freeIds.length === 1
+          ? 'Only 1 therapist available at this time'
+          : 'No therapists available at this time',
+    }
+  }
+
+  if (preferred1 && preferred2 && preferred1 === preferred2) {
+    return {
+      staff1: null,
+      staff2: null,
+      name1: '',
+      name2: '',
+      error: 'Each person must have a different therapist',
+    }
+  }
+
+  if (preferred1 && !freeIds.includes(preferred1)) {
+    return {
+      staff1: null,
+      staff2: null,
+      name1: '',
+      name2: '',
+      error: 'Person 1’s therapist is not available at this time',
+    }
+  }
+
+  if (preferred2 && !freeIds.includes(preferred2)) {
+    return {
+      staff1: null,
+      staff2: null,
+      name1: '',
+      name2: '',
+      error: 'Person 2’s therapist is not available at this time',
+    }
+  }
+
+  let staff1: string | null =
+    preferred1 && freeIds.includes(preferred1) ? preferred1 : null
+  let staff2: string | null =
+    preferred2 && freeIds.includes(preferred2) ? preferred2 : null
+
+  if (!staff1) {
+    staff1 = freeIds.find(id => id !== staff2) ?? freeIds[0]
+  }
+  if (!staff2) {
+    staff2 = freeIds.find(id => id !== staff1) ?? null
+  }
+
+  if (!staff1 || !staff2 || staff1 === staff2) {
+    return {
+      staff1: null,
+      staff2: null,
+      name1: '',
+      name2: '',
+      error: 'Could not assign two different therapists',
+    }
+  }
+
+  return {
+    staff1,
+    staff2,
+    name1: preferred1 ? nameById(preferred1) : nameById(staff1),
+    name2: preferred2 ? nameById(preferred2) : nameById(staff2),
+  }
+}
+
 /** Per-therapist rules: specific staff OR at least one free therapist. */
 export function evaluateSlotAvailability(
   bookings: DayBooking[],

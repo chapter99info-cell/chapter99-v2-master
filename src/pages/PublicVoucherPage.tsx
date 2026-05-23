@@ -94,26 +94,21 @@ export default function PublicVoucherPage() {
 
   if (successCode) {
     return (
-      <div className="voucher-public">
-        <div className="voucher-public-card voucher-public-success">
-          <h1>Gift voucher sent!</h1>
-          <p className="voucher-public-code">{successCode}</p>
-          <p>We emailed the voucher to {recipientEmail || 'your recipient'}.</p>
-          <a href="/voucher" className="voucher-public-btn">
-            Buy another
-          </a>
-        </div>
+      <div className="voucher-public-card voucher-public-success">
+        <h1>Gift voucher sent!</h1>
+        <p className="voucher-public-code">{successCode}</p>
+        <p>We emailed the voucher to {recipientEmail || 'your recipient'}.</p>
+        <a href="/voucher" className="voucher-public-btn">
+          Buy another
+        </a>
       </div>
     )
   }
 
   return (
-    <div className="voucher-public">
-      <header className="voucher-public-header">
-        <span className="voucher-public-logo">Chapter99</span>
-        <h1>Gift Voucher</h1>
-        <p>{shop?.name ?? 'Spa & Wellness'}</p>
-      </header>
+    <div className="public-page">
+      <h1 className="public-page-title">Gift vouchers</h1>
+      <p className="public-page-lead">{shop?.name ?? 'Mira Thai Massage'}</p>
 
       <div className="voucher-public-card">
         <h2>Select amount</h2>
