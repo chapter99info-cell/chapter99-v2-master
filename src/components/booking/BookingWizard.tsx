@@ -1,11 +1,11 @@
 // Chapter99 V4 — 4-step booking wizard (staff dashboard)
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { fetchShop } from '../../lib/shopService'
 import { syncBookingToSheet } from '../../lib/googleSheets'
 import { sendBookingConfirmationEmail } from '../../lib/notifyService'
 import { fetchRooms } from '../../lib/roomService'
+import { supabase } from '../../lib/supabase'
 import type { Room } from '../../types/room'
 import {
   assertSlotAvailable,
@@ -18,10 +18,10 @@ import {
 } from '../../lib/bookingAvailability'
 import './BookingWizard.css'
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-)
+/** Rooms available for assignment (active or legacy rows with null active). */
+function bookableRooms(rooms: Room[]): Room[] {
+  return rooms.filter(r => r.active !== false)
+}
 
 type WizardStep = 'service' | 'datetime' | 'client' | 'confirm' | 'done'
 
@@ -115,6 +115,7 @@ export default function BookingWizard({
   const [therapistId, setTherapistId] = useState('')
   const [therapistName, setTherapistName] = useState('')
   const [rooms, setRooms] = useState<Room[]>([])
+  const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomId, setRoomId] = useState('')
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
@@ -149,8 +150,27 @@ export default function BookingWizard({
         setTherapists(list)
         setTherapistIds(list.map(t => t.id))
       })
-    fetchRooms(supabase, shopId).then(setRooms).catch(() => setRooms([]))
   }, [shopId])
+
+  const loadRooms = useCallback(async () => {
+    setRoomsLoading(true)
+    try {
+      const list = await fetchRooms(supabase, shopId, { activeOnly: false })
+      setRooms(bookableRooms(list))
+    } catch (e) {
+      setRooms([])
+      console.error('BookingWizard: could not load rooms', e)
+    }
+    setRoomsLoading(false)
+  }, [shopId])
+
+  useEffect(() => {
+    void loadRooms()
+  }, [loadRooms])
+
+  useEffect(() => {
+    if (step === 'confirm') void loadRooms()
+  }, [step, loadRooms])
 
   const generateSlots = useCallback(async () => {
     if (!date || !serviceId || !selectedService) {
@@ -574,6 +594,7 @@ export default function BookingWizard({
             id="bw-room"
             className="bw-input"
             value={roomId}
+            disabled={roomsLoading}
             onChange={e => setRoomId(e.target.value)}
           >
             <option value="">— Unassigned —</option>
@@ -581,6 +602,12 @@ export default function BookingWizard({
               <option key={r.id} value={r.id}>{r.name}</option>
             ))}
           </select>
+          {roomsLoading && (
+            <p className="bw-hint">Loading rooms…</p>
+          )}
+          {!roomsLoading && rooms.length === 0 && (
+            <p className="bw-hint">No rooms yet — add them in Owner → Rooms.</p>
+          )}
 
           <div className="bw-summary">
             <div className="bw-summary-row">
