@@ -30,7 +30,8 @@ import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
 import { syncTransactionToSheet } from '../../lib/googleSheets'
 import { fetchLastCustomerVisit } from '../../lib/customerHistory'
-import { SHOP_ID, supabase } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
+import { useStaffShopId } from '../../hooks/useStaffShopId'
 import { SHOP_UPDATED_EVENT } from '../../lib/shopLogo'
 import GoogleReviewQR from './GoogleReviewQR'
 import { usePlan } from '../../hooks/usePlan'
@@ -56,6 +57,7 @@ const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
 }
 
 export default function POSPage() {
+  const { shopId } = useStaffShopId()
   const { can, plan, requiredPlan } = usePlan()
   const [upgradeFeature, setUpgradeFeature] = useState<PlanFeature | null>(null)
 
@@ -120,26 +122,26 @@ export default function POSPage() {
   const [lastVisitHint, setLastVisitHint] = useState<string | null>(null)
 
   useEffect(() => {
-    const load = () => fetchShop(SHOP_ID).then(setShop)
+    const load = () => fetchShop(shopId).then(setShop)
     load()
     const onUpdated = () => load()
     window.addEventListener(SHOP_UPDATED_EVENT, onUpdated)
     return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
-  }, [])
+  }, [shopId])
 
   useEffect(() => {
     async function loadTherapists() {
       const { data } = await supabase
         .from('staff')
         .select('id, name_en')
-        .eq('shop_id', SHOP_ID)
+        .eq('shop_id', shopId)
         .eq('active', true)
         .eq('role', 'therapist')
         .order('name_en')
       setTherapists(data ?? [])
     }
     loadTherapists()
-  }, [])
+  }, [shopId])
 
   useEffect(() => {
     async function loadServices() {
@@ -147,7 +149,7 @@ export default function POSPage() {
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('shop_id', SHOP_ID)
+        .eq('shop_id', shopId)
         .eq('active', true)
         .order('sort_order', { ascending: true })
         .order('name_en', { ascending: true })
@@ -160,7 +162,7 @@ export default function POSPage() {
       setServicesLoading(false)
     }
     loadServices()
-  }, [])
+  }, [shopId])
 
   // Update sync status
   useEffect(() => {
@@ -182,7 +184,7 @@ export default function POSPage() {
     }
     let cancelled = false
     const timer = setTimeout(() => {
-      fetchLastCustomerVisit(SHOP_ID, email).then(visit => {
+      fetchLastCustomerVisit(shopId, email).then(visit => {
         if (cancelled) return
         if (!visit) {
           setLastVisitHint(null)

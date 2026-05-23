@@ -30,6 +30,7 @@ import { countUnreadNotifications } from './lib/notificationService'
 import { PlanProvider, usePlan } from './contexts/PlanContext'
 import { PlanGatedTab, PlanGate } from './components/plan/PlanGatedTab'
 import type { PlanFeature } from './types/plan'
+import { useStaffShopId } from './hooks/useStaffShopId'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -48,6 +49,7 @@ interface Session {
 }
 
 export default function App() {
+  const { shopId, resolving: shopResolving, resolveError: shopResolveError } = useStaffShopId()
   const [session, setSession] = useState<Session>({ level: null })
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
@@ -57,9 +59,9 @@ export default function App() {
   const [unreadAlerts, setUnreadAlerts] = useState(0)
 
   const loadShopBranding = useCallback(async () => {
-    const shop = await fetchShop(SHOP_ID)
+    const shop = await fetchShop(shopId)
     setShopBranding({ name: shop.name, logoUrl: shop.logoUrl })
-  }, [])
+  }, [shopId])
 
   useEffect(() => {
     if (!session.level || session.level === 'super_admin') return
@@ -71,11 +73,11 @@ export default function App() {
 
   const refreshUnreadAlerts = useCallback(async () => {
     try {
-      setUnreadAlerts(await countUnreadNotifications(supabase, SHOP_ID))
+      setUnreadAlerts(await countUnreadNotifications(supabase, shopId))
     } catch {
       setUnreadAlerts(0)
     }
-  }, [])
+  }, [shopId])
 
   useEffect(() => {
     const level = session.level
@@ -84,21 +86,21 @@ export default function App() {
     void refreshUnreadAlerts()
 
     const channel = supabase
-      .channel(`notifications-${SHOP_ID}`)
+      .channel(`notifications-${shopId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `shop_id=eq.${SHOP_ID}`,
+          filter: `shop_id=eq.${shopId}`,
         },
         () => { void refreshUnreadAlerts() }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [session.level, refreshUnreadAlerts])
+  }, [session.level, refreshUnreadAlerts, shopId])
 
   const verifyPIN = useCallback(async (pinToVerify: string) => {
     if (pinToVerify.length !== 4) return
@@ -106,7 +108,7 @@ export default function App() {
     setError('')
 
     const { data } = await supabase.rpc('verify_pin', {
-      p_shop_id: SHOP_ID,
+      p_shop_id: shopId,
       p_pin: pinToVerify,
     })
 
@@ -123,7 +125,7 @@ export default function App() {
       setError('Invalid PIN. Please try again.')
       setPin('')
     }
-  }, [])
+  }, [shopId])
 
   function logout() {
     setSession({ level: null })
@@ -133,7 +135,15 @@ export default function App() {
 
   // PIN Entry Screen
   if (!session.level) {
-    return <PINScreen pin={pin} setPin={setPin} onVerify={verifyPIN} error={error} loading={loading} />
+    return (
+      <PINScreen
+        pin={pin}
+        setPin={setPin}
+        onVerify={verifyPIN}
+        error={shopResolveError ?? error}
+        loading={loading || shopResolving}
+      />
+    )
   }
 
   // Super Admin (PIN 3501)
@@ -156,14 +166,15 @@ export default function App() {
           logoUrl={shopBranding?.logoUrl}
           onLogout={logout}
         />
-        <QueueBoard shopId={SHOP_ID} pinLevel="staff" staffId={session.staffId} />
+        <QueueBoard shopId={shopId} pinLevel="staff" staffId={session.staffId} />
       </div>
     )
   }
 
   return (
-    <PlanProvider shopId={SHOP_ID}>
+    <PlanProvider shopId={shopId}>
       <StaffDashboard
+        shopId={shopId}
         session={session}
         shopBranding={shopBranding}
         activeTab={activeTab}
@@ -179,6 +190,7 @@ export default function App() {
 type OwnerTabDef = { id: string; label: string; feature?: PlanFeature }
 
 function StaffDashboard({
+  shopId,
   session,
   shopBranding,
   activeTab,
@@ -187,6 +199,7 @@ function StaffDashboard({
   refreshUnreadAlerts,
   onLogout,
 }: {
+  shopId: string
   session: Session
   shopBranding: { name: string; logoUrl?: string } | null
   activeTab: string
@@ -279,35 +292,35 @@ function StaffDashboard({
       <div className="app-content">
         {activeTab === 'queue' && (
           <>
-            {isOwner && <RevenueSummary shopId={SHOP_ID} />}
-            <QueueBoard shopId={SHOP_ID} pinLevel={session.level as any} />
+            {isOwner && <RevenueSummary shopId={shopId} />}
+            <QueueBoard shopId={shopId} pinLevel={session.level as any} />
           </>
         )}
         {activeTab === 'pos' && <POSPage />}
         {activeTab === 'booking' && (
-          <BookingWizard shopId={SHOP_ID} bookedBy={session.staffName} />
+          <BookingWizard shopId={shopId} bookedBy={session.staffName} />
         )}
         {activeTab === 'alerts' && (
-          <AlertDashboard shopId={SHOP_ID} onMarkedRead={refreshUnreadAlerts} />
+          <AlertDashboard shopId={shopId} onMarkedRead={refreshUnreadAlerts} />
         )}
         {activeTab === 'staff' && isOwner && (
-          <StaffManager shopId={SHOP_ID} pinLevel="owner" />
+          <StaffManager shopId={shopId} pinLevel="owner" />
         )}
         {activeTab === 'services' && isOwner && (
-          <ServicesManager shopId={SHOP_ID} />
+          <ServicesManager shopId={shopId} />
         )}
         {activeTab === 'rooms' && isOwner && (
-          <RoomManager shopId={SHOP_ID} />
+          <RoomManager shopId={shopId} />
         )}
         {activeTab === 'vouchers' && isOwner && (
           <PlanGate feature="gift_vouchers">
-            <GiftVoucherList shopId={SHOP_ID} />
+            <GiftVoucherList shopId={shopId} />
           </PlanGate>
         )}
         {activeTab === 'reports' && isOwner && (
           <PlanGate feature="reports">
             <Suspense fallback={<p className="reports-muted">Loading reports…</p>}>
-              <OwnerReports shopId={SHOP_ID} />
+              <OwnerReports shopId={shopId} />
             </Suspense>
           </PlanGate>
         )}
@@ -322,7 +335,7 @@ function StaffDashboard({
             </div>
           </PlanGate>
         )}
-        {activeTab === 'settings' && isOwner && <ShopSettings shopId={SHOP_ID} />}
+        {activeTab === 'settings' && isOwner && <ShopSettings shopId={shopId} />}
       </div>
     </div>
   )

@@ -15,6 +15,8 @@ import AddShopModal from '../shops/AddShopModal'
 import ProposalBuilder from '../proposals/ProposalBuilder'
 import ShopWebsiteSettingsPanel from '../admin/ShopWebsiteSettings'
 import StaffLoginQrSection from '../admin/StaffLoginQrSection'
+import ShopCustomDomain from '../admin/ShopCustomDomain'
+import { buildOriginForCustomDomain } from '../../lib/shopDomain'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
 import {
   PLAN_LABELS,
@@ -273,9 +275,13 @@ function ShopDetailView({
             type="button"
             className="action-btn"
             onClick={() => {
+              const origin =
+                buildOriginForCustomDomain(shop.domain) ?? window.location.origin
               const url = shop.slug
-                ? `${window.location.origin}/?shop=${encodeURIComponent(shop.slug)}`
-                : `${window.location.origin}/book`
+                ? shop.domain
+                  ? `${origin}/`
+                  : `${origin}/?shop=${encodeURIComponent(shop.slug)}`
+                : `${origin}/book`
               window.open(url, '_blank')
             }}
           >
@@ -326,7 +332,12 @@ function ShopDetailView({
       </CollapsibleSection>
 
       <div className="section-card shop-detail-staff-login">
-        <StaffLoginQrSection shopSlug={shop.slug} shopName={shop.name} />
+        <ShopCustomDomain shopId={shop.id} shopSlug={shop.slug} />
+        <StaffLoginQrSection
+          shopSlug={shop.slug}
+          shopName={shop.name}
+          customDomain={shop.domain}
+        />
       </div>
 
       <CollapsibleSection

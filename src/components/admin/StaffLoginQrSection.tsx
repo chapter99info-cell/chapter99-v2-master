@@ -7,17 +7,19 @@ import Toast, { type ToastType } from '../ui/Toast'
 interface StaffLoginQrSectionProps {
   shopSlug: string | null | undefined
   shopName: string
+  customDomain?: string
 }
 
 export default function StaffLoginQrSection({
   shopSlug,
   shopName,
+  customDomain,
 }: StaffLoginQrSectionProps) {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [downloading, setDownloading] = useState(false)
 
   const slug = shopSlug?.trim().toLowerCase() || ''
-  const staffUrl = slug ? buildStaffLoginUrl(slug) : null
+  const staffUrl = slug ? buildStaffLoginUrl(slug, customDomain) : null
 
   const copyLink = useCallback(async () => {
     if (!staffUrl) return

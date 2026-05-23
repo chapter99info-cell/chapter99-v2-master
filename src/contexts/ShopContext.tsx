@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom'
 import { fetchShop, fetchShopBySlug } from '../lib/shopService'
 import { SHOP_UPDATED_EVENT } from '../lib/shopLogo'
 import { SHOP_ID } from '../lib/supabase'
+import { isOnCustomShopDomain, resolveEffectiveShopSlug } from '../lib/shopDomain'
 import type { Shop } from '../types/pos'
 import type { BusinessType } from '../types/shop'
 
@@ -30,7 +31,7 @@ export interface ShopContextValue {
 const ShopContext = createContext<ShopContextValue | null>(null)
 
 function appendShopQuery(path: string, slug: string | null): string {
-  if (!slug) return path
+  if (!slug || isOnCustomShopDomain()) return path
   const [pathname, search = ''] = path.split('?')
   const params = new URLSearchParams(search)
   params.set(SHOP_QUERY_KEY, slug)
@@ -41,6 +42,7 @@ function appendShopQuery(path: string, slug: string | null): string {
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [searchParams] = useSearchParams()
   const urlSlug = searchParams.get(SHOP_QUERY_KEY)?.trim().toLowerCase() || null
+  const effectiveSlug = resolveEffectiveShopSlug(urlSlug)
 
   const [shop, setShop] = useState<Shop | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,18 +50,20 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const reloadShop = useCallback(async () => {
     setError(null)
-    if (urlSlug) {
-      const resolved = await fetchShopBySlug(urlSlug)
+    if (effectiveSlug) {
+      const resolved = await fetchShopBySlug(effectiveSlug)
       if (!resolved) {
         setShop(null)
-        setError(`Shop "${urlSlug}" was not found. Check the booking link from the store website.`)
+        setError(
+          `Shop "${effectiveSlug}" was not found. Check the booking link from the store website.`
+        )
         return
       }
       setShop(resolved)
       return
     }
     setShop(await fetchShop(SHOP_ID))
-  }, [urlSlug])
+  }, [effectiveSlug])
 
   useEffect(() => {
     let cancelled = false
@@ -82,7 +86,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
   }, [reloadShop])
 
-  const shopSlug = urlSlug ?? shop?.slug ?? null
+  const shopSlug = effectiveSlug ?? shop?.slug ?? null
   const shopId = shop?.id ?? null
   const businessType = shop?.businessType ?? null
 
@@ -118,7 +122,8 @@ export function useShopContext(): ShopContextValue {
 /** Read ?shop= without requiring full shop resolution (e.g. link builders). */
 export function useShopQueryParam(): string | null {
   const [searchParams] = useSearchParams()
-  return searchParams.get(SHOP_QUERY_KEY)?.trim().toLowerCase() || null
+  const urlSlug = searchParams.get(SHOP_QUERY_KEY)?.trim().toLowerCase() || null
+  return resolveEffectiveShopSlug(urlSlug)
 }
 
 export { useShopPages } from '../hooks/useShopPages'

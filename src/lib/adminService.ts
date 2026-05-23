@@ -20,7 +20,7 @@ export async function fetchAllShops(): Promise<ShopOverview[]> {
   const { data: shops } = await supabase
     .from('shops')
     .select(`
-      id, name, slug, plan, active, created_at, phone, email,
+      id, name, slug, domain, plan, active, created_at, phone, email,
       staff(id, active),
       bookings(id, created_at),
       transactions(id, paid_at, payment),
@@ -61,7 +61,7 @@ export async function fetchAllShops(): Promise<ShopOverview[]> {
       ownerName: shop.name,
       ownerPhone: shop.phone ?? '',
       ownerEmail: shop.email ?? '',
-      domain: `${shop.id}.chapter99.com.au`,
+      domain: (shop.domain as string)?.trim() || '',
     }
   })
 }
@@ -138,6 +138,22 @@ export async function createShop(data: {
     card_surcharge: 0.015,
     amex_surcharge: 0.02,
   })
+  return !error
+}
+
+export async function fetchShopCustomDomain(shopId: string): Promise<string> {
+  const { data } = await supabase.from('shops').select('domain').eq('id', shopId).maybeSingle()
+  return (data?.domain as string)?.trim() ?? ''
+}
+
+export async function updateShopCustomDomain(
+  shopId: string,
+  domain: string | null
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ domain: domain || null })
+    .eq('id', shopId)
   return !error
 }
 
