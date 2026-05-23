@@ -5,7 +5,7 @@ import {
   saveServiceImageUrl,
   saveShopWebsiteSettings,
 } from '../../lib/shopWebsiteService'
-import { uploadServiceImage, uploadShopAsset } from '../../lib/shopService'
+import { fetchShop, uploadServiceImage, uploadShopAsset } from '../../lib/shopService'
 import { notifyShopUpdated } from '../../lib/shopLogo'
 import {
   REDIRECT_PATH_OPTIONS,
@@ -42,6 +42,7 @@ export default function ShopWebsiteSettingsPanel({
   const [saveError, setSaveError] = useState('')
   const [services, setServices] = useState<ServiceImageRow[]>([])
   const [uploading, setUploading] = useState<string | null>(null)
+  const [reviewRequestEnabled, setReviewRequestEnabled] = useState<boolean | null>(null)
   const settingsRef = useRef<ShopWebsiteSettings | null>(null)
 
   const loadServices = useCallback(async () => {
@@ -52,16 +53,19 @@ export default function ShopWebsiteSettingsPanel({
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    Promise.all([fetchShopWebsiteSettings(shopId), fetchServiceImages(shopId)]).then(
-      ([data, svc]) => {
-        if (!cancelled) {
-          setSettings(data)
-          settingsRef.current = data
-          setServices(svc)
-          setLoading(false)
-        }
+    Promise.all([
+      fetchShopWebsiteSettings(shopId),
+      fetchServiceImages(shopId),
+      fetchShop(shopId),
+    ]).then(([data, svc, shop]) => {
+      if (!cancelled) {
+        setSettings(data)
+        settingsRef.current = data
+        setServices(svc)
+        setReviewRequestEnabled(shop.reviewRequestEnabled === true)
+        setLoading(false)
       }
-    )
+    })
     return () => {
       cancelled = true
     }
@@ -212,6 +216,14 @@ export default function ShopWebsiteSettingsPanel({
         </span>
       </div>
       {saveError && <p className="sws-error">{saveError}</p>}
+
+      {reviewRequestEnabled !== null && (
+        <p className="sws-review-status">
+          Google review requests after POS:{' '}
+          <strong>{reviewRequestEnabled ? 'Enabled' : 'Disabled'}</strong>
+          <span className="sws-muted"> (owner configures in Shop Settings)</span>
+        </p>
+      )}
 
       <div className="sws-preview">
         <span className="sws-preview-label">Preview</span>

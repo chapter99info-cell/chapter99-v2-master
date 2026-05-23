@@ -32,6 +32,8 @@ export interface ShopRow {
   google_sheet_url: string | null
   google_sheet_sync_enabled: boolean | null
   google_review_url: string | null
+  review_request_enabled: boolean | null
+  review_request_channel: string | null
   page_home_enabled: boolean | null
   page_services_enabled: boolean | null
   page_vouchers_enabled: boolean | null
@@ -71,6 +73,8 @@ export interface ShopSettingsInput {
   googleSheetUrl: string
   googleSheetSyncEnabled: boolean
   googleReviewUrl: string
+  reviewRequestEnabled: boolean
+  reviewRequestChannel: 'email' | 'sms' | 'both'
 }
 
 const DEFAULT_SHOP: Shop = {
@@ -129,6 +133,8 @@ export function mapRowToShop(row: ShopRow): Shop {
     googleSheetUrl: row.google_sheet_url ?? undefined,
     googleSheetSyncEnabled: row.google_sheet_sync_enabled ?? false,
     googleReviewUrl: row.google_review_url ?? undefined,
+    reviewRequestEnabled: row.review_request_enabled === true,
+    reviewRequestChannel: normalizeReviewChannel(row.review_request_channel),
     pageHomeEnabled: row.page_home_enabled ?? DEFAULT_SHOP_PAGE_VISIBILITY.pageHomeEnabled,
     pageServicesEnabled:
       row.page_services_enabled ?? DEFAULT_SHOP_PAGE_VISIBILITY.pageServicesEnabled,
@@ -146,6 +152,13 @@ export function mapRowToShop(row: ShopRow): Shop {
     aboutAddress: row.about_address ?? undefined,
     googleMapsUrl: row.google_maps_url ?? undefined,
   }
+}
+
+function normalizeReviewChannel(
+  value: string | null | undefined
+): 'email' | 'sms' | 'both' {
+  if (value === 'sms' || value === 'both') return value
+  return 'email'
 }
 
 export function shopToUpdatePayload(input: ShopSettingsInput) {
@@ -169,6 +182,8 @@ export function shopToUpdatePayload(input: ShopSettingsInput) {
     google_sheet_url: input.googleSheetUrl || null,
     google_sheet_sync_enabled: input.googleSheetSyncEnabled,
     google_review_url: input.googleReviewUrl || null,
+    review_request_enabled: input.reviewRequestEnabled,
+    review_request_channel: input.reviewRequestChannel,
   }
 }
 

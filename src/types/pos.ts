@@ -112,6 +112,8 @@ export interface Shop {
   googleSheetUrl?: string
   googleSheetSyncEnabled?: boolean
   googleReviewUrl?: string
+  reviewRequestEnabled?: boolean
+  reviewRequestChannel?: 'email' | 'sms' | 'both'
   // Public storefront page visibility
   pageHomeEnabled: boolean
   pageServicesEnabled: boolean

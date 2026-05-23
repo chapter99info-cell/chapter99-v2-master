@@ -24,6 +24,7 @@ import type { GiftVoucher, ValidatedVoucher } from '../../types/giftVoucher'
 import { printReceipt } from '../../lib/thermalPrinter'
 import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
 import { sendSMS, SMS, sendGiftVoucherEmail } from '../../lib/notifyService'
+import { sendReviewRequestAfterCheckout } from '../../lib/reviewRequestService'
 import { getSyncStatus } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
@@ -430,6 +431,15 @@ export default function POSPage() {
           clientPhone,
           SMS.receiptConfirm(shop.name, formatAUD(payment.total))
         )
+      }
+
+      if (shop.reviewRequestEnabled && shop.googleReviewUrl?.trim()) {
+        void sendReviewRequestAfterCheckout({
+          shopId: shop.id,
+          clientName: clientName || undefined,
+          clientEmail: clientEmail || undefined,
+          clientPhone: clientPhone || undefined,
+        })
       }
     } finally {
       setIsLoading(false)

@@ -14,6 +14,7 @@ import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/g
 import Toast, { type ToastType } from '../ui/Toast'
 import { PlanGate } from '../plan/PlanGatedTab'
 import MenuQrSection from './MenuQrSection'
+import { sendReviewRequestPreview, type ReviewRequestChannel } from '../../lib/reviewRequestService'
 import './ShopSettings.css'
 
 interface ShopSettingsProps {
@@ -41,6 +42,8 @@ function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsIn
     googleSheetUrl: shop.googleSheetUrl ?? '',
     googleSheetSyncEnabled: shop.googleSheetSyncEnabled ?? false,
     googleReviewUrl: shop.googleReviewUrl ?? '',
+    reviewRequestEnabled: shop.reviewRequestEnabled ?? false,
+    reviewRequestChannel: shop.reviewRequestChannel ?? 'email',
   }
 }
 
@@ -53,6 +56,7 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [sheetTesting, setSheetTesting] = useState(false)
   const [shopSlug, setShopSlug] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   useEffect(() => {
     load()
@@ -382,11 +386,19 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
       </section>
 
       <section className="ss-section">
-        <h2 className="ss-section-title">Google review (POS)</h2>
+        <h2 className="ss-section-title">Review request</h2>
         <p className="ss-hint" style={{ marginBottom: 12 }}>
-          Shown on the POS success screen after payment (not on printed receipts). Paste your
-          Google review link from Google Business Profile.
+          After a successful POS payment, automatically ask customers to leave a Google review.
+          Same email or phone is limited to one request every 30 days.
         </p>
+        <label className="ss-checkbox">
+          <input
+            type="checkbox"
+            checked={form.reviewRequestEnabled}
+            onChange={e => update('reviewRequestEnabled', e.target.checked)}
+          />
+          Enable review requests after checkout
+        </label>
         <div className="ss-field">
           <label>Google Review URL</label>
           <input
@@ -395,6 +407,60 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
             value={form.googleReviewUrl}
             onChange={e => update('googleReviewUrl', e.target.value)}
           />
+          <p className="ss-hint">Paste your link from Google Business Profile.</p>
+        </div>
+        <div className="ss-field">
+          <label>Send via</label>
+          <select
+            value={form.reviewRequestChannel}
+            onChange={e =>
+              update('reviewRequestChannel', e.target.value as ReviewRequestChannel)
+            }
+          >
+            <option value="email">Email</option>
+            <option value="sms">SMS</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        {(form.reviewRequestChannel === 'sms' || form.reviewRequestChannel === 'both') && (
+          <p className="ss-hint">SMS uses your Twilio add-on (Growth plan or SMS add-on).</p>
+        )}
+        <div className="ss-actions" style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            className="ss-btn secondary"
+            disabled={
+              previewLoading ||
+              !form.googleReviewUrl.trim() ||
+              (form.reviewRequestChannel === 'email' && !form.email.trim()) ||
+              (form.reviewRequestChannel === 'sms' && !form.phone.trim()) ||
+              (form.reviewRequestChannel === 'both' &&
+                !form.email.trim() &&
+                !form.phone.trim())
+            }
+            onClick={async () => {
+              if (!form.googleReviewUrl.trim()) {
+                setToast({ message: 'Add Google Review URL first', type: 'error' })
+                return
+              }
+              setPreviewLoading(true)
+              const result = await sendReviewRequestPreview(
+                shopId,
+                form.reviewRequestChannel,
+                form.email.trim() || 'preview@example.com',
+                form.phone.trim() || undefined
+              )
+              setPreviewLoading(false)
+              setToast({
+                message: result.ok
+                  ? `Preview sent (${form.reviewRequestChannel})`
+                  : (result.error ?? 'Preview failed'),
+                type: result.ok ? 'success' : 'error',
+              })
+            }}
+          >
+            {previewLoading ? 'Sending preview…' : 'Send preview'}
+          </button>
         </div>
       </section>
 
