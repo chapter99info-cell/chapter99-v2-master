@@ -8,7 +8,7 @@ import {
   buildBookingConfirmationSubject,
   buildBookingConfirmationText,
   type BookingConfirmationEmailPayload,
-} from './bookingConfirmationEmailTemplate'
+} from '../server/bookingConfirmationEmailTemplate'
 
 const FROM = 'Chapter99 Bookings <onboarding@resend.dev>'
 

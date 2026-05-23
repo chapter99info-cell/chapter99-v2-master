@@ -8,7 +8,7 @@ import {
   buildOwnerBookingNotificationSubject,
   buildOwnerBookingNotificationText,
   type OwnerBookingNotificationPayload,
-} from './bookingOwnerNotificationEmailTemplate'
+} from '../server/bookingOwnerNotificationEmailTemplate'
 
 const FROM = 'Chapter99 Bookings <onboarding@resend.dev>'
 

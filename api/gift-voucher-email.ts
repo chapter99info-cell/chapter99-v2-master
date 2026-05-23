@@ -5,9 +5,9 @@ import {
   buildGiftVoucherEmailSubject,
   buildGiftVoucherEmailText,
   type GiftVoucherEmailPayload,
-} from './giftVoucherEmailTemplate'
+} from '../server/giftVoucherEmailTemplate'
 
-import { VOUCHERS_FROM } from './emailConstants'
+import { VOUCHERS_FROM } from '../server/emailConstants'
 
 export async function POST_giftVoucherEmail(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')

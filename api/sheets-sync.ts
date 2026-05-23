@@ -22,7 +22,7 @@ import {
   refreshDailySummaryFromTransactions,
   testSpreadsheetConnection,
   type BookingSheetRow,
-} from './sheetsSyncCore'
+} from '../server/sheetsSyncCore'
 
 type SheetsSyncAction =
   | 'test'

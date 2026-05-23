@@ -6,7 +6,7 @@ import {
   buildGiftVoucherEmailHTML,
   buildGiftVoucherEmailSubject,
   buildGiftVoucherEmailText,
-} from './giftVoucherEmailTemplate'
+} from '../server/giftVoucherEmailTemplate'
 
 function oneYearFromToday(): string {
   const d = new Date()

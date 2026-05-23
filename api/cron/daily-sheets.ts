@@ -8,7 +8,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { refreshDailySummaryFromTransactions } from '../sheetsSyncCore'
+import { refreshDailySummaryFromTransactions } from '../../server/sheetsSyncCore'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {

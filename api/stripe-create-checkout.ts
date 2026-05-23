@@ -6,8 +6,8 @@ import {
   parseJsonBody,
   sendJsonError,
   stripeErrorMessage,
-} from './apiUtils'
-import { withJsonApi } from './jsonApi'
+} from '../server/apiUtils'
+import { withJsonApi } from '../server/jsonApi'
 
 const ROUTE = 'stripe-create-checkout'
 const SHOP_ID = process.env.VITE_SHOP_ID ?? process.env.SHOP_ID ?? 'shop-001'

@@ -10,15 +10,15 @@ import {
   parseJsonBody,
   sendJsonError,
   stripeErrorMessage,
-} from './apiUtils'
+} from '../server/apiUtils'
 import { Resend } from 'resend'
 import {
   buildGiftVoucherEmailHTML,
   buildGiftVoucherEmailSubject,
   buildGiftVoucherEmailText,
-} from './giftVoucherEmailTemplate'
-import { VOUCHERS_FROM } from './emailConstants'
-import { withJsonApi } from './jsonApi'
+} from '../server/giftVoucherEmailTemplate'
+import { VOUCHERS_FROM } from '../server/emailConstants'
+import { withJsonApi } from '../server/jsonApi'
 
 function oneYearFromToday(): string {
   const d = new Date()
