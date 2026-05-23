@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Chart } from 'chart.js'
 import { getChartConstructor } from '../../lib/chartLoader'
 import { formatAUD } from '../../lib/posCalc'
+import { fetchShop } from '../../lib/shopService'
 import {
   type ReportPeriod,
   type ReportsDashboardData,
@@ -20,9 +21,11 @@ const PERIOD_OPTIONS: { id: ReportPeriod; label: string }[] = [
 
 interface ReportsDashboardProps {
   shopId: string
-  shopName: string
-  period: ReportPeriod
-  onPeriodChange: (period: ReportPeriod) => void
+  /** Optional — fetched from Supabase when omitted */
+  shopName?: string
+  /** Optional — defaults to "today"; use with onPeriodChange to sync legacy tables */
+  period?: ReportPeriod
+  onPeriodChange?: (period: ReportPeriod) => void
 }
 
 function formatChangePct(pct: number | null): string {
@@ -39,13 +42,39 @@ function changeClass(pct: number | null): string {
 
 export default function ReportsDashboard({
   shopId,
-  shopName,
-  period,
+  shopName: shopNameProp,
+  period: periodProp,
   onPeriodChange,
 }: ReportsDashboardProps) {
+  const [shopName, setShopName] = useState(shopNameProp ?? 'ร้าน')
+  const [period, setPeriod] = useState<ReportPeriod>(periodProp ?? 'today')
   const [data, setData] = useState<ReportsDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (shopNameProp) setShopName(shopNameProp)
+  }, [shopNameProp])
+
+  useEffect(() => {
+    if (periodProp !== undefined) setPeriod(periodProp)
+  }, [periodProp])
+
+  useEffect(() => {
+    if (shopNameProp) return
+    let cancelled = false
+    fetchShop(shopId).then(shop => {
+      if (!cancelled) setShopName(shop.name || 'ร้าน')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [shopId, shopNameProp])
+
+  function handlePeriodChange(next: ReportPeriod) {
+    setPeriod(next)
+    onPeriodChange?.(next)
+  }
 
   const barCanvasRef = useRef<HTMLCanvasElement>(null)
   const donutCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -218,7 +247,7 @@ export default function ReportsDashboard({
               role="tab"
               aria-selected={period === opt.id}
               className={`rd-period-btn${period === opt.id ? ' active' : ''}`}
-              onClick={() => onPeriodChange(opt.id)}
+              onClick={() => handlePeriodChange(opt.id)}
             >
               {opt.label}
             </button>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { formatAUD } from '../../lib/posCalc'
-import { fetchShop } from '../../lib/shopService'
 import {
   type ReportPeriod,
   fetchTherapistPerformance,
@@ -19,7 +18,6 @@ interface OwnerReportsProps {
 }
 
 export default function OwnerReports({ shopId }: OwnerReportsProps) {
-  const [shopName, setShopName] = useState('ร้าน')
   const [period, setPeriod] = useState<ReportPeriod>('today')
   const [performance, setPerformance] = useState<Awaited<ReturnType<typeof fetchTherapistPerformance>>>([])
   const [perfLoading, setPerfLoading] = useState(true)
@@ -39,10 +37,6 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
   })
   const [commission, setCommission] = useState<Awaited<ReturnType<typeof fetchCommissionReport>>>([])
   const [commissionLoading, setCommissionLoading] = useState(true)
-
-  useEffect(() => {
-    fetchShop(shopId).then(shop => setShopName(shop.name || 'ร้าน'))
-  }, [shopId])
 
   useEffect(() => {
     let cancelled = false
@@ -115,12 +109,8 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
 
   return (
     <div className="owner-reports">
-      <ReportsDashboard
-        shopId={shopId}
-        shopName={shopName}
-        period={period}
-        onPeriodChange={setPeriod}
-      />
+      {/* Analytics dashboard — real Supabase data for this shop */}
+      <ReportsDashboard shopId={shopId} period={period} onPeriodChange={setPeriod} />
 
       <div className="reports-legacy">
         <h3 className="reports-legacy-title">Export & detailed tables</h3>

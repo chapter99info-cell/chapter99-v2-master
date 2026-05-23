@@ -2,7 +2,7 @@
 // Super Admin Dashboard (PIN 3501)
 // Full overview of all shops, MRR, alerts, proposals
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import type { ShopOverview, MRRSummary } from '../../types/admin'
 import {
   fetchAllShops,
@@ -16,6 +16,8 @@ import ProposalBuilder from '../proposals/ProposalBuilder'
 import ShopWebsiteSettingsPanel from '../admin/ShopWebsiteSettings'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
 import { PLAN_LABELS } from '../../types/plan'
+
+const OwnerReports = lazy(() => import('./OwnerReports'))
 
 type AdminTab = 'overview' | 'shops' | 'proposals' | 'settings'
 
@@ -207,7 +209,7 @@ function OverviewTab({ mrr, shops, history }: {
   )
 }
 
-type ShopDetailTab = 'overview' | 'website' | 'plan'
+type ShopDetailTab = 'overview' | 'website' | 'plan' | 'reports'
 
 // ── Shop detail (Overview + Website tab) ───────────────────────
 function ShopDetailView({
@@ -292,6 +294,13 @@ function ShopDetailView({
         >
           💳 Plan & Billing
         </button>
+        <button
+          type="button"
+          className={`shop-detail-tab${detailTab === 'reports' ? ' active' : ''}`}
+          onClick={() => setDetailTab('reports')}
+        >
+          📈 Reports
+        </button>
       </div>
 
       {detailTab === 'overview' && (
@@ -324,6 +333,12 @@ function ShopDetailView({
 
       {detailTab === 'plan' && (
         <ShopPlanBilling shopId={shop.id} shopName={shop.name} />
+      )}
+
+      {detailTab === 'reports' && (
+        <Suspense fallback={<p className="sws-muted">Loading reports…</p>}>
+          <OwnerReports shopId={shop.id} />
+        </Suspense>
       )}
     </div>
   )
