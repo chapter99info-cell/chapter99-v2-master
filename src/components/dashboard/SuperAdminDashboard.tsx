@@ -14,6 +14,7 @@ import { formatAUD } from '../../lib/posCalc'
 import AddShopModal from '../shops/AddShopModal'
 import ProposalBuilder from '../proposals/ProposalBuilder'
 import ShopWebsiteSettingsPanel from '../admin/ShopWebsiteSettings'
+import StaffLoginQrSection from '../admin/StaffLoginQrSection'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
 import {
   PLAN_LABELS,
@@ -323,6 +324,10 @@ function ShopDetailView({
           <ShopPlanBilling shopId={shop.id} shopName={shop.name} embedded />
         </div>
       </CollapsibleSection>
+
+      <div className="section-card shop-detail-staff-login">
+        <StaffLoginQrSection shopSlug={shop.slug} shopName={shop.name} />
+      </div>
 
       <CollapsibleSection
         title="📈 Reports"
