@@ -61,7 +61,9 @@ export default function UpgradeModal({
         <div className="upgrade-modal-actions">
           <a
             className="upgrade-contact-btn"
-            href="mailto:hello@chapter99solutions.com.au?subject=Chapter99%20plan%20upgrade"
+            href="https://chapter99info.com/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             Contact Chapter99 to upgrade
           </a>
