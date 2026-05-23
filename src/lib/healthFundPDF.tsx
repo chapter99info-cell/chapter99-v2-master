@@ -16,6 +16,7 @@ import {
 import type { Transaction, Shop } from '../types/pos'
 import { formatAUD } from './posCalc'
 import { loadShopLogoDataUrl } from './shopLogo'
+import { downloadBlob } from './downloadBlob'
 
 const styles = StyleSheet.create({
   page: {
@@ -282,16 +283,12 @@ export async function generateHealthFundBase64(
   })
 }
 
-// Download PDF directly in browser
+// Download PDF directly in browser (no popup — anchor download)
 export async function downloadHealthFundPDF(
   tx: Transaction,
   shop: Shop
 ): Promise<void> {
   const blob = await generateHealthFundPDF(tx, shop)
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `HealthFund-${tx.id}.pdf`
-  a.click()
-  URL.revokeObjectURL(url)
+  const safeId = tx.id.replace(/[^\w.-]+/g, '_')
+  await downloadBlob(blob, `HealthFund-${safeId}.pdf`)
 }

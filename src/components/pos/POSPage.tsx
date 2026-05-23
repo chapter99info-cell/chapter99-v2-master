@@ -53,6 +53,8 @@ export default function POSPage() {
   const [receiptNote, setReceiptNote] = useState('')
   const [receiptLoading, setReceiptLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
+  const [healthFundLoading, setHealthFundLoading] = useState(false)
+  const [healthFundNote, setHealthFundNote] = useState('')
 
   // Gift voucher — sell
   const [showSellVoucher, setShowSellVoucher] = useState(false)
@@ -384,8 +386,40 @@ export default function POSPage() {
     setClientPhone('')
     setCurrentTx(null)
     setReceiptNote('')
+    setHealthFundNote('')
     clearAppliedVoucher()
     setStep('bill')
+  }
+
+  const buildHealthFundTransaction = (): Transaction | null => {
+    if (currentTx) return currentTx
+    if (!shop || !bill.length || !payment) return null
+
+    const shopCode = shop.id.replace(/[^A-Z0-9]/gi, '').slice(0, 3).toUpperCase() || 'RCP'
+    const finalPayment =
+      splitMode && paymentSplits.length > 0
+        ? calcPaymentWithSplits(bill, paymentSplits)
+        : payment
+
+    return {
+      id: generateReceiptId(shopCode),
+      shopId: shop.id,
+      clientName: clientName || undefined,
+      clientEmail: clientEmail || undefined,
+      therapistId: therapistId || undefined,
+      therapistName: therapistName || undefined,
+      items: bill,
+      payment: finalPayment,
+      paymentMethod: splitMode ? 'split' : ((payMethod || 'cash') as PaymentMethod),
+      paymentSplits: splitMode ? paymentSplits : undefined,
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      paidAt: new Date().toISOString(),
+      receiptSent: false,
+      healthFundIssued: false,
+      voucherCode: appliedVoucher?.code,
+      voucherAmount: voucherDeduction > 0 ? voucherDeduction : undefined,
+    }
   }
 
   const handleDownloadReceipt = async () => {
@@ -426,8 +460,30 @@ export default function POSPage() {
   }
 
   const handleHealthFund = async () => {
-    if (!currentTx || !shop) return
-    await downloadHealthFundPDF(currentTx, shop)
+    if (!shop) return
+    const tx = buildHealthFundTransaction()
+    if (!tx) {
+      const msg = 'Add services to the bill before generating a health fund receipt'
+      setHealthFundNote(msg)
+      setReceiptNote(msg)
+      return
+    }
+    setHealthFundLoading(true)
+    setHealthFundNote('')
+    setReceiptNote('')
+    try {
+      await downloadHealthFundPDF(tx, shop)
+      const msg = 'Health fund receipt downloaded'
+      setHealthFundNote(msg)
+      setReceiptNote(msg)
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      const msg = err instanceof Error ? err.message : 'Could not generate health fund PDF'
+      setHealthFundNote(msg)
+      setReceiptNote(msg)
+    } finally {
+      setHealthFundLoading(false)
+    }
   }
 
   const shopName = shop?.name ?? 'Loading…'
@@ -793,14 +849,22 @@ export default function POSPage() {
 
               {/* Health Fund button if HICAPS selected */}
               {(payMethod === 'hicaps' || paymentSplits.some(s => s.method === 'hicaps')) && (
-                <button className="hf-btn" onClick={handleHealthFund}>
-                  ❤️ ออก Health Fund Receipt
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="hf-btn"
+                    disabled={healthFundLoading || !bill.length || !shop}
+                    onClick={handleHealthFund}
+                  >
+                    {healthFundLoading ? 'Generating PDF…' : '❤️ ออก Health Fund Receipt'}
+                  </button>
+                  {healthFundNote && <p className="success-note">{healthFundNote}</p>}
+                </>
               )}
 
               {/* Void */}
               {bill.length > 0 && (
-                <button className="void-btn" onClick={reset}>
+                <button type="button" className="void-btn" onClick={reset}>
                   🗑 Void / Clear Bill
                 </button>
               )}
@@ -844,7 +908,14 @@ export default function POSPage() {
               </button>
             )}
             <button className="s-btn" onClick={handlePrint}>🖨 Print Receipt</button>
-            <button className="s-btn" onClick={handleHealthFund}>❤️ Health Fund PDF</button>
+            <button
+              type="button"
+              className="s-btn"
+              disabled={healthFundLoading || !shop}
+              onClick={handleHealthFund}
+            >
+              {healthFundLoading ? 'Generating…' : '❤️ Health Fund PDF'}
+            </button>
             <button className="s-btn" onClick={reset}>ปิดบิล</button>
           </div>
           </div>
