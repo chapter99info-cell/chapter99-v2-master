@@ -89,19 +89,39 @@ export default function ShopWebsiteSettingsPanel({
   ) {
     setUploading(kind)
     setSaveError('')
+    console.log('[ShopWebsiteSettings] hero/logo upload start', {
+      shopId,
+      kind,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+    })
     const { url, error } = await uploadShopAsset(shopId, file, kind)
-    setUploading(null)
     if (error || !url) {
+      console.error('[ShopWebsiteSettings] upload failed', { shopId, kind, error })
+      setUploading(null)
       setSaveError(error ?? 'Upload failed')
       return
     }
     const base = settingsRef.current
-    if (!base) return
+    if (!base) {
+      console.error('[ShopWebsiteSettings] settings ref empty after upload', { shopId, kind })
+      setUploading(null)
+      setSaveError('Settings not loaded — refresh and try again')
+      return
+    }
     const next =
       kind === 'hero'
         ? { ...base, heroImageUrl: url }
         : { ...base, logoUrl: url }
+    console.log('[ShopWebsiteSettings] saving to shops table', {
+      shopId,
+      kind,
+      column: kind === 'hero' ? 'hero_image_url' : 'logo_url',
+      url,
+    })
     await persist(next)
+    setUploading(null)
   }
 
   async function handleRemoveShopImage(kind: 'hero' | 'logo') {

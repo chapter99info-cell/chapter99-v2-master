@@ -245,28 +245,78 @@ export function resolveShopNotificationEmail(shop: Shop): string {
 
 export type ShopAssetKind = 'logo' | 'signature' | 'hero'
 
+const SHOP_ASSETS_BUCKET = 'shop-assets'
+
+function assetExtension(file: File): string {
+  const fromName = file.name.split('.').pop()?.toLowerCase()
+  if (fromName && /^[a-z0-9]+$/.test(fromName)) return fromName
+  if (file.type === 'image/jpeg') return 'jpg'
+  if (file.type === 'image/png') return 'png'
+  if (file.type === 'image/webp') return 'webp'
+  if (file.type === 'image/gif') return 'gif'
+  if (file.type === 'image/svg+xml') return 'svg'
+  return 'png'
+}
+
+function assetContentType(file: File, ext: string): string {
+  if (file.type && file.type.startsWith('image/')) return file.type
+  const map: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+  }
+  return map[ext] ?? 'image/png'
+}
+
+/** Stable public paths: shops/{shopId}/hero.{ext}, logo.{ext}, signature.{ext} */
+export function shopAssetStoragePath(shopId: string, kind: ShopAssetKind, ext: string): string {
+  return `shops/${shopId}/${kind}.${ext}`
+}
+
+function formatStorageError(message: string): string {
+  if (message.includes('Bucket not found')) {
+    return 'Storage bucket missing — run supabase/05-receipt-system.sql and supabase/11-storage-logo-policy.sql'
+  }
+  if (message.includes('row-level security') || message.includes('RLS')) {
+    return `${message} — run supabase/11-storage-logo-policy.sql (shop-assets RLS)`
+  }
+  if (message.includes('mime') || message.includes('MIME')) {
+    return `${message} — use JPEG, PNG, WebP, GIF, or SVG (max 5 MB)`
+  }
+  return message
+}
+
 export async function uploadShopAsset(
   shopId: string,
   file: File,
   kind: ShopAssetKind
 ): Promise<{ url?: string; error?: string }> {
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
-  const path = `${shopId}/${kind}-${Date.now()}.${ext}`
+  const ext = assetExtension(file)
+  const path = shopAssetStoragePath(shopId, kind, ext)
+  const contentType = assetContentType(file, ext)
+
+  console.log('[uploadShopAsset] start', { shopId, kind, path, contentType, size: file.size })
 
   const { error: uploadError } = await supabase.storage
-    .from('shop-assets')
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .from(SHOP_ASSETS_BUCKET)
+    .upload(path, file, { upsert: true, contentType })
 
   if (uploadError) {
-    return {
-      error:
-        uploadError.message.includes('Bucket not found')
-          ? 'Storage bucket missing — run supabase/05-receipt-system.sql'
-          : uploadError.message,
-    }
+    console.error('[uploadShopAsset] storage upload failed', {
+      shopId,
+      kind,
+      path,
+      message: uploadError.message,
+      error: uploadError,
+    })
+    return { error: formatStorageError(uploadError.message) }
   }
 
-  const { data } = supabase.storage.from('shop-assets').getPublicUrl(path)
+  const { data } = supabase.storage.from(SHOP_ASSETS_BUCKET).getPublicUrl(path)
+  console.log('[uploadShopAsset] success', { path, publicUrl: data.publicUrl })
   return { url: data.publicUrl }
 }
 
@@ -275,22 +325,28 @@ export async function uploadServiceImage(
   serviceId: string,
   file: File
 ): Promise<{ url?: string; error?: string }> {
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const path = `${shopId}/services/${serviceId}-${Date.now()}.${ext}`
+  const ext = assetExtension(file)
+  const path = `shops/${shopId}/services/${serviceId}.${ext}`
+  const contentType = assetContentType(file, ext)
+
+  console.log('[uploadServiceImage] start', { shopId, serviceId, path, contentType, size: file.size })
 
   const { error: uploadError } = await supabase.storage
-    .from('shop-assets')
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .from(SHOP_ASSETS_BUCKET)
+    .upload(path, file, { upsert: true, contentType })
 
   if (uploadError) {
-    return {
-      error:
-        uploadError.message.includes('Bucket not found')
-          ? 'Storage bucket missing — run supabase/05-receipt-system.sql'
-          : uploadError.message,
-    }
+    console.error('[uploadServiceImage] storage upload failed', {
+      shopId,
+      serviceId,
+      path,
+      message: uploadError.message,
+      error: uploadError,
+    })
+    return { error: formatStorageError(uploadError.message) }
   }
 
-  const { data } = supabase.storage.from('shop-assets').getPublicUrl(path)
+  const { data } = supabase.storage.from(SHOP_ASSETS_BUCKET).getPublicUrl(path)
+  console.log('[uploadServiceImage] success', { path, publicUrl: data.publicUrl })
   return { url: data.publicUrl }
 }

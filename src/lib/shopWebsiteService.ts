@@ -31,7 +31,22 @@ export async function saveShopWebsiteSettings(
     .update(websiteSettingsToRow(settings))
     .eq('id', settings.shopId)
 
-  if (error) return { ok: false, error: error.message }
+  if (error) {
+    console.error('[saveShopWebsiteSettings] failed', {
+      shopId: settings.shopId,
+      message: error.message,
+      error,
+    })
+    const hint = error.message.includes('hero_image_url')
+      ? ' — run supabase/24-shop-website-images.sql in Supabase'
+      : ''
+    return { ok: false, error: error.message + hint }
+  }
+  console.log('[saveShopWebsiteSettings] ok', {
+    shopId: settings.shopId,
+    hero_image_url: settings.heroImageUrl || null,
+    logo_url: settings.logoUrl || null,
+  })
   return { ok: true }
 }
 
