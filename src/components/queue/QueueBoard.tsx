@@ -2,9 +2,11 @@
 // Queue Board — iPad Real-time Dashboard
 // Staff Briefing + Room Assignment + Walk-in
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { fetchRooms } from '../../lib/roomService'
+import { loadQueueCache, saveQueueCache } from '../../lib/queueCache'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import type { Room } from '../../types/room'
 import './QueueBoard.css'
 
@@ -37,29 +39,41 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
   )
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const canAssignRoom = pinLevel !== 'staff'
+  const [readOnlyOffline, setReadOnlyOffline] = useState(false)
+  const [cacheLabel, setCacheLabel] = useState<string | null>(null)
+  const online = useOnlineStatus()
+  const canAssignRoom = pinLevel !== 'staff' && online && !readOnlyOffline
 
-  useEffect(() => {
-    loadBookings()
-    if (canAssignRoom) {
-      fetchRooms(supabase, shopId).then(setRooms).catch(() => setRooms([]))
+  const loadBookings = useCallback(async () => {
+    setLoading(true)
+    setReadOnlyOffline(false)
+    setCacheLabel(null)
+
+    const staffKey = pinLevel === 'staff' ? staffId : undefined
+
+    if (!navigator.onLine) {
+      const cached = loadQueueCache(shopId, selectedDate, staffKey)
+      if (cached) {
+        setBookings(cached.bookings as any[])
+        setBriefing(cached.briefing)
+        setReadOnlyOffline(true)
+        setCacheLabel(
+          new Date(cached.savedAt).toLocaleString('en-AU', {
+            day: 'numeric',
+            month: 'short',
+            hour: 'numeric',
+            minute: '2-digit',
+          })
+        )
+      } else {
+        setBookings([])
+        setBriefing(null)
+        setReadOnlyOffline(true)
+      }
+      setLoading(false)
+      return
     }
 
-    const channel = supabase
-      .channel(`queue-${shopId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'bookings',
-        filter: `shop_id=eq.${shopId}`,
-      }, () => loadBookings())
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [shopId, selectedDate, staffId, canAssignRoom])
-
-  async function loadBookings() {
-    setLoading(true)
     const dayStart = `${selectedDate}T00:00:00+10:00`
     const dayEnd = `${selectedDate}T23:59:59+10:00`
 
@@ -83,26 +97,75 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
       query = query.eq('staff_id', staffId)
     }
 
-    const { data } = await query
-    setBookings(data ?? [])
+    const { data, error } = await query
 
+    if (error) {
+      const cached = loadQueueCache(shopId, selectedDate, staffKey)
+      if (cached) {
+        setBookings(cached.bookings as any[])
+        setBriefing(cached.briefing)
+        setReadOnlyOffline(true)
+        setCacheLabel(
+          new Date(cached.savedAt).toLocaleString('en-AU', {
+            day: 'numeric',
+            month: 'short',
+            hour: 'numeric',
+            minute: '2-digit',
+          })
+        )
+      }
+      setLoading(false)
+      return
+    }
+
+    const rows = data ?? []
+    setBookings(rows)
+
+    let briefData: unknown = null
     if (pinLevel === 'staff' && staffId) {
-      const { data: briefData } = await supabase.rpc('build_staff_briefing', {
+      const { data: brief } = await supabase.rpc('build_staff_briefing', {
         p_shop_id: shopId,
         p_staff_id: staffId,
         p_date: selectedDate,
       })
-      setBriefing(briefData)
+      briefData = brief
+      setBriefing(brief)
+    } else {
+      setBriefing(null)
     }
 
+    saveQueueCache(shopId, selectedDate, rows, briefData, staffKey)
     setLoading(false)
-  }
+  }, [shopId, selectedDate, staffId, pinLevel])
+
+  useEffect(() => {
+    void loadBookings()
+    if (online && pinLevel !== 'staff') {
+      fetchRooms(supabase, shopId).then(setRooms).catch(() => setRooms([]))
+    }
+
+    if (!online) return
+
+    const channel = supabase
+      .channel(`queue-${shopId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bookings',
+        filter: `shop_id=eq.${shopId}`,
+      }, () => { void loadBookings() })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [shopId, selectedDate, staffId, pinLevel, online, loadBookings])
 
   async function updateStatus(bookingId: string, status: string) {
+    if (!online || readOnlyOffline) return
     await supabase.from('bookings').update({ status }).eq('id', bookingId)
   }
 
   async function assignRoom(bookingId: string, roomId: string | null) {
+    if (!online || readOnlyOffline) return
     await supabase.from('bookings').update({ room_id: roomId }).eq('id', bookingId)
     setBookings(prev =>
       prev.map(b => {
@@ -125,9 +188,14 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
 
   return (
     <div className="queue-board">
+      {readOnlyOffline && cacheLabel && (
+        <p className="queue-cache-hint">Showing cached queue from {cacheLabel}</p>
+      )}
+
       <div className="queue-header">
         <div className="queue-title">
           {pinLevel === 'staff' ? '📋 My Queue' : '📅 Queue Board'}
+          {readOnlyOffline && <span className="queue-offline-tag">Offline</span>}
         </div>
         <input
           type="date"
@@ -262,22 +330,25 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
                     </div>
 
                     <div className="status-actions">
-                      {booking.status === 'confirmed' && (
+                      {readOnlyOffline && (
+                        <p className="queue-readonly-note">Read-only while offline</p>
+                      )}
+                      {!readOnlyOffline && booking.status === 'confirmed' && (
                         <button className="action-btn arrived" onClick={() => updateStatus(booking.id, 'arrived')}>
                           ✅ Mark Arrived
                         </button>
                       )}
-                      {booking.status === 'arrived' && (
+                      {!readOnlyOffline && booking.status === 'arrived' && (
                         <button className="action-btn start" onClick={() => updateStatus(booking.id, 'in_progress')}>
                           ▶️ Start Session
                         </button>
                       )}
-                      {booking.status === 'in_progress' && (
+                      {!readOnlyOffline && booking.status === 'in_progress' && (
                         <button className="action-btn complete" onClick={() => updateStatus(booking.id, 'completed')}>
                           ✅ Complete
                         </button>
                       )}
-                      {booking.status !== 'cancelled' && booking.status !== 'no_show' && (
+                      {!readOnlyOffline && booking.status !== 'cancelled' && booking.status !== 'no_show' && (
                         <button className="action-btn noshow" onClick={() => updateStatus(booking.id, 'no_show')}>
                           ❌ No Show
                         </button>

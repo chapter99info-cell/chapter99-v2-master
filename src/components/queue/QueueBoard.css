@@ -402,6 +402,33 @@
   box-shadow: var(--focus-ring);
 }
 
+.queue-cache-hint {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-light);
+  color: var(--color-accent-dark);
+  font-size: 13px;
+}
+
+.queue-offline-tag {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: #633806;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.queue-readonly-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
   .queue-card-main {
     grid-template-columns: 1fr;
