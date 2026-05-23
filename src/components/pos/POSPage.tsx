@@ -28,6 +28,7 @@ import { getSyncStatus } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
 import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
 import { syncTransactionToSheet } from '../../lib/googleSheets'
+import { fetchLastCustomerVisit } from '../../lib/customerHistory'
 import { SHOP_ID, supabase } from '../../lib/supabase'
 import { SHOP_UPDATED_EVENT } from '../../lib/shopLogo'
 import GoogleReviewQR from './GoogleReviewQR'
@@ -87,6 +88,7 @@ export default function POSPage() {
   const [therapists, setTherapists] = useState<{ id: string; name_en: string }[]>([])
   const [therapistId, setTherapistId] = useState('')
   const [therapistName, setTherapistName] = useState('')
+  const [lastVisitHint, setLastVisitHint] = useState<string | null>(null)
 
   useEffect(() => {
     const load = () => fetchShop(SHOP_ID).then(setShop)
@@ -138,6 +140,37 @@ export default function POSPage() {
     const id = setInterval(update, 10000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    const email = clientEmail.trim()
+    if (!email || !email.includes('@')) {
+      setLastVisitHint(null)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(() => {
+      fetchLastCustomerVisit(SHOP_ID, email).then(visit => {
+        if (cancelled) return
+        if (!visit) {
+          setLastVisitHint(null)
+          return
+        }
+        const daysLabel =
+          visit.daysAgo === 0
+            ? 'today'
+            : visit.daysAgo === 1
+              ? '1 day ago'
+              : `${visit.daysAgo} days ago`
+        setLastVisitHint(
+          `Last visit: ${daysLabel} · Service: ${visit.serviceLabel} · ${formatAUD(visit.total)}`
+        )
+      })
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [clientEmail])
 
   const payment = (() => {
     if (!bill.length) return null
@@ -554,6 +587,9 @@ export default function POSPage() {
                   value={clientEmail}
                   onChange={e => setClientEmail(e.target.value)}
                 />
+                {lastVisitHint && (
+                  <p className="pos-customer-hint">{lastVisitHint}</p>
+                )}
                 <input
                   className="pos-input"
                   placeholder="เบอร์โทร (SMS)"

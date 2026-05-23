@@ -9,11 +9,13 @@ export async function parseApiJson<T extends Record<string, unknown>>(
   try {
     return JSON.parse(text) as T
   } catch {
-    const preview = text.replace(/\s+/g, ' ').slice(0, 120)
-    throw new Error(
-      preview.startsWith('<')
-        ? `Server error (${res.status}) — check API logs`
-        : preview || `Request failed (${res.status})`
-    )
+    const preview = text.replace(/\s+/g, ' ').slice(0, 200)
+    const contentType = res.headers.get('content-type') ?? ''
+    if (preview.startsWith('<') || contentType.includes('text/html')) {
+      throw new Error(
+        `API returned HTML instead of JSON (${res.status}). Deploy /api routes on Vercel or run "vercel dev" locally — not plain "vite".`
+      )
+    }
+    throw new Error(preview || `Request failed (${res.status})`)
   }
 }

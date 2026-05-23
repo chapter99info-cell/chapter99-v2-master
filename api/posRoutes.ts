@@ -35,10 +35,15 @@ export async function POST_sms(req: VercelRequest, res: VercelResponse) {
 
 import { Resend } from 'resend'
 import type { Transaction } from '../src/types/pos'
-
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
 export async function POST_email(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+
+  if (!process.env.RESEND_API_KEY) {
+    return res.status(500).json({ error: 'RESEND_API_KEY is not configured' })
+  }
+
   const { to, subject, shopName, transaction: tx, pdfBase64 } = req.body as {
     to: string
     subject: string
@@ -54,7 +59,7 @@ export async function POST_email(req: VercelRequest, res: VercelResponse) {
 
   try {
     const result = await resend.emails.send({
-      from: `${shopName} <receipts@chapter99.com.au>`,
+      from: `${shopName || 'Chapter99'} <receipts@chapter99solutions.com.au>`,
       to,
       subject,
       html: buildEmailHTML(tx, shopName),

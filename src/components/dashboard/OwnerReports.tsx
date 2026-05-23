@@ -8,6 +8,7 @@ import {
   exportTransactionsCsv,
   exportCommissionCsv,
   getMonthBounds,
+  getExportRangeBounds,
 } from '../../lib/reportService'
 import './OwnerReports.css'
 
@@ -27,6 +28,7 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
   })
   const [exportEnd, setExportEnd] = useState(() => new Date().toISOString().slice(0, 10))
   const [exportLoading, setExportLoading] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   const [commissionMonth, setCommissionMonth] = useState(() => {
     const d = new Date()
@@ -84,11 +86,16 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
   const handleRevenueExport = async () => {
     setExportLoading(true)
     try {
-      const start = new Date(exportStart + 'T00:00:00')
-      const end = new Date(exportEnd + 'T23:59:59')
-      end.setDate(end.getDate() + 1)
+      const { start, end } = getExportRangeBounds(exportStart, exportEnd)
       const rows = await fetchTransactionsForExport(shopId, start, end)
+      if (rows.length === 0) {
+        setExportError('No paid transactions in that date range.')
+        return
+      }
+      setExportError('')
       exportTransactionsCsv(rows, `${exportStart}_to_${exportEnd}`)
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'Export failed')
     } finally {
       setExportLoading(false)
     }
@@ -181,6 +188,7 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
       <section className="reports-section">
         <h3>Revenue export</h3>
         <p className="reports-muted">Download CSV: date, transaction_id, service, amount, GST, payment_method, customer</p>
+        {exportError && <p className="reports-error">{exportError}</p>}
         <div className="reports-export-row">
           <label>
             From

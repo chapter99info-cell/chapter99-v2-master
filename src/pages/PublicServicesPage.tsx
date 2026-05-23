@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase, SHOP_ID } from '../lib/supabase'
+import { useShopContext } from '../contexts/ShopContext'
+import { supabase } from '../lib/supabase'
 import './PublicSite.css'
 
 interface ServiceRow {
@@ -13,14 +14,18 @@ interface ServiceRow {
 }
 
 export default function PublicServicesPage() {
+  const { shopId, businessType, withShopQuery } = useShopContext()
   const [services, setServices] = useState<ServiceRow[]>([])
   const [loading, setLoading] = useState(true)
+  const isRestaurant = businessType === 'restaurant'
 
   useEffect(() => {
+    if (!shopId) return
+    setLoading(true)
     supabase
       .from('services')
       .select('id, name_en, name_th, duration, price, gst_free')
-      .eq('shop_id', SHOP_ID)
+      .eq('shop_id', shopId)
       .eq('active', true)
       .order('sort_order', { ascending: true })
       .order('name_en', { ascending: true })
@@ -28,19 +33,21 @@ export default function PublicServicesPage() {
         setServices((data as ServiceRow[]) ?? [])
         setLoading(false)
       })
-  }, [])
+  }, [shopId])
 
   return (
     <div className="public-page">
-      <h1 className="public-page-title">Our services</h1>
+      <h1 className="public-page-title">{isRestaurant ? 'Our menu' : 'Our services'}</h1>
       <p className="public-page-lead">
-        All treatments are performed by qualified therapists. Prices in AUD.
+        {isRestaurant
+          ? 'Prices in AUD. Add items from the order page when ready.'
+          : 'All treatments are performed by qualified therapists. Prices in AUD.'}
       </p>
 
       {loading ? (
-        <p className="public-empty">Loading services…</p>
+        <p className="public-empty">Loading…</p>
       ) : services.length === 0 ? (
-        <p className="public-empty">Services coming soon.</p>
+        <p className="public-empty">{isRestaurant ? 'Menu coming soon.' : 'Services coming soon.'}</p>
       ) : (
         <div className="public-service-list">
           {services.map(svc => (
@@ -48,10 +55,12 @@ export default function PublicServicesPage() {
               <div>
                 <h3>{svc.name_en}</h3>
                 {svc.name_th && <p>{svc.name_th}</p>}
-                <p>
-                  {svc.duration} minutes
-                  {svc.gst_free ? ' · GST-free' : ''}
-                </p>
+                {!isRestaurant && (
+                  <p>
+                    {svc.duration} minutes
+                    {svc.gst_free ? ' · GST-free' : ''}
+                  </p>
+                )}
               </div>
               <span className="public-service-price">${Number(svc.price).toFixed(2)}</span>
             </article>
@@ -60,8 +69,8 @@ export default function PublicServicesPage() {
       )}
 
       <p style={{ marginTop: 24, textAlign: 'center' }}>
-        <Link to="/book" className="public-btn primary">
-          Book now
+        <Link to={withShopQuery('/book')} className="public-btn primary">
+          {isRestaurant ? 'Order now' : 'Book now'}
         </Link>
       </p>
     </div>

@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { VOUCHER_PRESET_AMOUNTS } from '../types/giftVoucher'
-import { SHOP_ID } from '../lib/supabase'
-import { fetchShop } from '../lib/shopService'
-import type { Shop } from '../types/pos'
+import { useShopContext } from '../contexts/ShopContext'
 import { formatAUD } from '../lib/posCalc'
 import { parseApiJson } from '../lib/parseApiResponse'
 import './PublicVoucherPage.css'
 
 export default function PublicVoucherPage() {
+  const { shop, shopId, shopSlug } = useShopContext()
   const [searchParams] = useSearchParams()
-  const [shop, setShop] = useState<Shop | null>(null)
   const [amount, setAmount] = useState<number | 'custom'>(100)
   const [customAmount, setCustomAmount] = useState('')
   const [recipientName, setRecipientName] = useState('')
@@ -23,10 +21,6 @@ export default function PublicVoucherPage() {
 
   const resolvedAmount =
     amount === 'custom' ? parseFloat(customAmount) || 0 : amount
-
-  useEffect(() => {
-    fetchShop(SHOP_ID).then(setShop)
-  }, [])
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id')
@@ -59,6 +53,10 @@ export default function PublicVoucherPage() {
 
   const handleCheckout = async () => {
     setError('')
+    if (!shopId) {
+      setError('Shop not loaded — use the booking link from the store website.')
+      return
+    }
     if (resolvedAmount < 5) {
       setError('Minimum voucher amount is $5')
       return
@@ -70,16 +68,20 @@ export default function PublicVoucherPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/stripe-create-checkout', {
+      const res = await fetch('/api/voucher-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify({
           amount: resolvedAmount,
           recipientName,
           recipientEmail,
           buyerName: buyerName.trim() || recipientName,
           buyerEmail,
-          shopId: SHOP_ID,
+          shopId,
+          shopSlug: shopSlug ?? undefined,
         }),
       })
       const data = await parseApiJson<{ url?: string; error?: string }>(res)

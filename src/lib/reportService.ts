@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { calcCommission } from './posCalc'
 import type { PaymentBreakdown, PaymentSplit } from '../types/pos'
+import { sydneyDayEndExclusiveUtc, sydneyDayStartUtc, sydneyYmd } from './sydneyTime'
 
 export type ReportPeriod = 'today' | 'week' | 'month'
 
@@ -44,37 +45,68 @@ interface TxRow {
   payment_splits: PaymentSplit[] | null
 }
 
-function sydneyNow(): Date {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' }))
+function addDaysYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + days))
+  return dt.toISOString().slice(0, 10)
 }
 
 export function getPeriodBounds(period: ReportPeriod): { start: Date; end: Date } {
-  const now = sydneyNow()
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
-  const end = new Date(start)
-  end.setDate(end.getDate() + 1)
+  const today = sydneyYmd()
+  let startYmd = today
+  let endYmd = addDaysYmd(today, 1)
 
   if (period === 'week') {
-    const day = start.getDay()
-    const diff = day === 0 ? 6 : day - 1
-    start.setDate(start.getDate() - diff)
-    end.setTime(start.getTime())
-    end.setDate(end.getDate() + 7)
+    const noon = new Date(`${today}T12:00:00.000Z`)
+    const weekday = new Intl.DateTimeFormat('en-AU', {
+      timeZone: 'Australia/Sydney',
+      weekday: 'short',
+    }).format(noon)
+    const map: Record<string, number> = {
+      Mon: 0,
+      Tue: 1,
+      Wed: 2,
+      Thu: 3,
+      Fri: 4,
+      Sat: 5,
+      Sun: 6,
+    }
+    const diff = map[weekday] ?? 0
+    startYmd = addDaysYmd(today, -diff)
+    endYmd = addDaysYmd(startYmd, 7)
   } else if (period === 'month') {
-    start.setDate(1)
-    end.setMonth(end.getMonth() + 1)
-    end.setDate(1)
+    startYmd = `${today.slice(0, 7)}-01`
+    const [y, m] = startYmd.split('-').map(Number)
+    const nextMonth = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+    endYmd = nextMonth
   }
 
-  return { start, end }
+  return {
+    start: sydneyDayStartUtc(startYmd),
+    end: sydneyDayStartUtc(endYmd),
+  }
 }
 
 export function getMonthBounds(monthKey: string): { start: Date; end: Date } {
+  const startYmd = `${monthKey}-01`
   const [y, m] = monthKey.split('-').map(Number)
-  const start = new Date(y, m - 1, 1)
-  const end = new Date(y, m, 1)
-  return { start, end }
+  const endYmd =
+    m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+  return {
+    start: sydneyDayStartUtc(startYmd),
+    end: sydneyDayStartUtc(endYmd),
+  }
+}
+
+/** Inclusive date range for CSV export (exportStart/exportEnd as YYYY-MM-DD, Sydney). */
+export function getExportRangeBounds(exportStart: string, exportEnd: string): {
+  start: Date
+  end: Date
+} {
+  return {
+    start: sydneyDayStartUtc(exportStart),
+    end: sydneyDayEndExclusiveUtc(exportEnd),
+  }
 }
 
 async function fetchTransactionsInRange(

@@ -1,25 +1,31 @@
-import { useEffect, useState } from 'react'
-import BookingWizard from '../components/booking/BookingWizard'
-import { fetchShop } from '../lib/shopService'
-import { SHOP_ID } from '../lib/supabase'
+import { useShopContext } from '../contexts/ShopContext'
+import MassageBookingView from './booking/MassageBookingView'
+import RestaurantOrderView from './booking/RestaurantOrderView'
 import './PublicSite.css'
 
 export default function BookPage() {
-  const [shopName, setShopName] = useState('')
+  const { loading, error, businessType } = useShopContext()
 
-  useEffect(() => {
-    fetchShop(SHOP_ID).then(shop => setShopName(shop.name))
-  }, [])
+  if (loading) {
+    return (
+      <div className="public-page">
+        <p className="public-page-lead">Loading booking…</p>
+      </div>
+    )
+  }
 
-  return (
-    <div className="public-page public-book-wrap">
-      <p className="public-eyebrow">Online booking</p>
-      <h1 className="public-page-title">{shopName || 'Book your appointment'}</h1>
-      <p className="public-page-lead">
-        Choose your treatment, preferred time, and therapist. Confirmation by email — no account
-        needed.
-      </p>
-      <BookingWizard shopId={SHOP_ID} variant="public" />
-    </div>
-  )
+  if (error) {
+    return (
+      <div className="public-page">
+        <h1 className="public-page-title">Booking unavailable</h1>
+        <p className="public-page-lead">{error}</p>
+      </div>
+    )
+  }
+
+  if (businessType === 'restaurant') {
+    return <RestaurantOrderView />
+  }
+
+  return <MassageBookingView />
 }

@@ -2,9 +2,12 @@
 
 import { supabase, SHOP_ID } from './supabase'
 import type { Shop } from '../types/pos'
+import { isBusinessType, type BusinessType } from '../types/shop'
 
 export interface ShopRow {
   id: string
+  slug: string | null
+  business_type: string | null
   name: string
   abn: string | null
   address: string | null
@@ -53,6 +56,7 @@ export interface ShopSettingsInput {
 
 const DEFAULT_SHOP: Shop = {
   id: SHOP_ID,
+  businessType: 'massage',
   name: 'Chapter99 Demo Shop',
   abn: '',
   address: '',
@@ -71,6 +75,8 @@ const DEFAULT_SHOP: Shop = {
 export function mapRowToShop(row: ShopRow): Shop {
   return {
     id: row.id,
+    slug: row.slug ?? undefined,
+    businessType: isBusinessType(row.business_type) ? row.business_type : 'massage',
     name: row.name,
     abn: row.abn ?? '',
     address: row.address ?? '',
@@ -129,6 +135,34 @@ export async function fetchShop(shopId: string = SHOP_ID): Promise<Shop> {
 
   if (error || !data) return { ...DEFAULT_SHOP, id: shopId }
   return mapRowToShop(data as ShopRow)
+}
+
+/** Resolve `?shop=mira` slug to shop row (active shops only). */
+export async function fetchShopBySlug(slug: string): Promise<Shop | null> {
+  const key = slug.trim().toLowerCase()
+  if (!key) return null
+
+  const { data, error } = await supabase
+    .from('shops')
+    .select('*')
+    .eq('slug', key)
+    .eq('active', true)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return mapRowToShop(data as ShopRow)
+}
+
+export async function saveShopBusinessType(
+  shopId: string,
+  businessType: BusinessType
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ business_type: businessType })
+    .eq('id', shopId)
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }
 
 export async function saveShopSettings(

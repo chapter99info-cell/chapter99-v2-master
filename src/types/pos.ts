@@ -1,6 +1,8 @@
 // Chapter99 V4 — Phase 5 POS Types
 // All monetary values in AUD cents to avoid float errors
 
+import type { BusinessType } from './shop'
+
 export type PaymentMethod = 'cash' | 'payid' | 'card' | 'hicaps' | 'amex' | 'split'
 
 export interface PaymentSplit {
@@ -78,6 +80,8 @@ export interface Staff {
 
 export interface Shop {
   id: string
+  slug?: string
+  businessType: BusinessType
   name: string
   abn: string
   address: string

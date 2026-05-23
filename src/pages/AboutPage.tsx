@@ -1,21 +1,18 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchShop } from '../lib/shopService'
-import { SHOP_ID } from '../lib/supabase'
+import { useShopContext } from '../contexts/ShopContext'
 import './PublicSite.css'
 
 export default function AboutPage() {
-  const [shop, setShop] = useState<Awaited<ReturnType<typeof fetchShop>> | null>(null)
-
-  useEffect(() => {
-    fetchShop(SHOP_ID).then(setShop)
-  }, [])
+  const { shop, loading, withShopQuery, businessType } = useShopContext()
+  const isRestaurant = businessType === 'restaurant'
 
   return (
     <div className="public-page">
-      <h1 className="public-page-title">About {shop?.name ?? 'Mira Thai Massage'}</h1>
+      <h1 className="public-page-title">About {shop?.name ?? (loading ? '…' : 'Us')}</h1>
       <p className="public-page-lead">
-        Authentic Thai massage in a calm, professional setting.
+        {isRestaurant
+          ? 'Fresh food and warm hospitality.'
+          : 'Authentic Thai massage in a calm, professional setting.'}
       </p>
 
       <div className="public-info-card">
@@ -42,8 +39,12 @@ export default function AboutPage() {
           </p>
         )}
         <p>
-          <Link to="/book" className="public-btn primary" style={{ marginTop: 12, display: 'inline-block' }}>
-            Book an appointment
+          <Link
+            to={withShopQuery('/book')}
+            className="public-btn primary"
+            style={{ marginTop: 12, display: 'inline-block' }}
+          >
+            {isRestaurant ? 'Order now' : 'Book an appointment'}
           </Link>
         </p>
       </div>

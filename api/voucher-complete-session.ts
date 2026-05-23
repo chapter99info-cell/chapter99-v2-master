@@ -17,6 +17,8 @@ import {
   buildGiftVoucherEmailSubject,
   buildGiftVoucherEmailText,
 } from './giftVoucherEmailTemplate'
+import { VOUCHERS_FROM } from './emailConstants'
+import { withJsonApi } from './jsonApi'
 
 function oneYearFromToday(): string {
   const d = new Date()
@@ -26,9 +28,7 @@ function oneYearFromToday(): string {
 
 const ROUTE = 'voucher-complete-session'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Content-Type', 'application/json')
-
+async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return sendJsonError(res, 405, 'Method not allowed')
   }
@@ -130,7 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       try {
         await resend.emails.send({
-          from: 'Chapter99 Gift Vouchers <onboarding@resend.dev>',
+          from: VOUCHERS_FROM,
           to: recipientEmail,
           subject: buildGiftVoucherEmailSubject(payload),
           html: buildGiftVoucherEmailHTML(payload),
@@ -152,3 +152,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return sendJsonError(res, 500, stripeErrorMessage(err), String(err))
   }
 }
+
+export default withJsonApi(voucherCompleteHandler)

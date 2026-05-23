@@ -1217,6 +1217,12 @@ export default function BookingWizard({
             {person1.name}
             {isCouple && ` & ${person2.name}`} — {date} at {time}
           </p>
+          <p className="bw-hint">
+            Therapist{isCouple ? 's' : ''}:{' '}
+            {isCouple
+              ? `${person1.therapistName || 'No preference'} · ${person2.therapistName || 'No preference'}`
+              : person1.therapistName || 'Any available therapist'}
+          </p>
           {lastBookingId && (
             <p className="bw-booking-ref">
               Booking reference: <strong>{lastBookingId}</strong>

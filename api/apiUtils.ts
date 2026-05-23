@@ -32,20 +32,19 @@ export function getRequestOrigin(req: VercelRequest): string {
   return DEFAULT_PUBLIC_ORIGIN
 }
 
-export function logStripeKeyStatus(route: string): boolean {
-  const secret = process.env.STRIPE_SECRET_KEY?.trim()
+export function getStripeSecret(route: string): string | null {
+  const secret =
+    process.env.STRIPE_SECRET_KEY?.trim() ||
+    process.env.STRIPE_SECRET?.trim() ||
+    ''
   const loaded = Boolean(secret)
   console.log(
     `[${route}] STRIPE_SECRET_KEY loaded:`,
     loaded,
-    loaded ? `${secret!.slice(0, 7)}… (${secret!.length} chars)` : 'missing'
+    loaded ? `${secret.slice(0, 7)}… (${secret.length} chars)` : 'missing'
   )
-  return loaded
-}
-
-export function getStripeSecret(route: string): string | null {
-  if (!logStripeKeyStatus(route)) return null
-  return process.env.STRIPE_SECRET_KEY!.trim()
+  if (!loaded) return null
+  return secret
 }
 
 export function createStripeClient(secret: string): Stripe {

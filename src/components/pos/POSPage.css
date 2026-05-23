@@ -137,6 +137,13 @@
   background: var(--surface);
 }
 
+.pos-customer-hint {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+  line-height: 1.4;
+}
+
 /* Services Grid */
 .services-grid {
   display: grid;

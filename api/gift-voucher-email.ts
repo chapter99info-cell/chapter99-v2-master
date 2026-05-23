@@ -7,9 +7,11 @@ import {
   type GiftVoucherEmailPayload,
 } from './giftVoucherEmailTemplate'
 
-const FROM = 'Chapter99 Gift Vouchers <onboarding@resend.dev>'
+import { VOUCHERS_FROM } from './emailConstants'
 
 export async function POST_giftVoucherEmail(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+
   if (!process.env.RESEND_API_KEY) {
     return res.status(500).json({ error: 'RESEND_API_KEY is not configured' })
   }
@@ -44,7 +46,7 @@ export async function POST_giftVoucherEmail(req: VercelRequest, res: VercelRespo
 
   try {
     const result = await resend.emails.send({
-      from: FROM,
+      from: VOUCHERS_FROM,
       to: payload.to,
       subject: buildGiftVoucherEmailSubject(payload),
       html: buildGiftVoucherEmailHTML(payload),

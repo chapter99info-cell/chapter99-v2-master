@@ -1,3 +1,11 @@
+.public-banner-warn {
+  padding: 10px 20px;
+  background: #fff3cd;
+  color: #664d03;
+  border-bottom: 1px solid #ffc107;
+  font-size: 0.95rem;
+}
+
 .public-site {
   min-height: 100vh;
   display: flex;
