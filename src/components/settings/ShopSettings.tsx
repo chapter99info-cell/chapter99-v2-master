@@ -13,6 +13,7 @@ import { SHOP_ID } from '../../lib/supabase'
 import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
 import { PlanGate } from '../plan/PlanGatedTab'
+import MenuQrSection from './MenuQrSection'
 import './ShopSettings.css'
 
 interface ShopSettingsProps {
@@ -51,6 +52,7 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [sheetTesting, setSheetTesting] = useState(false)
+  const [shopSlug, setShopSlug] = useState<string | null>(null)
 
   useEffect(() => {
     load()
@@ -61,6 +63,7 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
     setError('')
     const shop = await fetchShop(shopId)
     setForm(shopToForm(shop))
+    setShopSlug(shop.slug ?? null)
     setLoading(false)
   }
 
@@ -287,6 +290,8 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
           GST registered
         </label>
       </section>
+
+      <MenuQrSection shopSlug={shopSlug} shopName={form.name} />
 
       <section className="ss-section">
         <h2 className="ss-section-title">SMS notifications</h2>

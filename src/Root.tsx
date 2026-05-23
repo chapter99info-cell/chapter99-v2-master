@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import BookPage from './pages/BookPage'
 import AboutPage from './pages/AboutPage'
 import PublicServicesPage from './pages/PublicServicesPage'
+import PublicMenuPage from './pages/PublicMenuPage'
 import PublicVoucherPage from './pages/PublicVoucherPage'
 import PublicPageGuard from './components/routing/PublicPageGuard'
 import OfflineBanner from './components/pwa/OfflineBanner'
@@ -46,6 +47,14 @@ export default function Root() {
             element={
               <PublicPageGuard page="services">
                 <PublicServicesPage />
+              </PublicPageGuard>
+            }
+          />
+          <Route
+            path="menu"
+            element={
+              <PublicPageGuard page="services">
+                <PublicMenuPage />
               </PublicPageGuard>
             }
           />
