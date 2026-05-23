@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import './PwaBanners.css'
 
 const DISMISS_KEY = 'chapter99-pwa-install-dismissed'
@@ -27,12 +28,17 @@ function isIos(): boolean {
 }
 
 export default function InstallPrompt() {
+  const location = useLocation()
   const [visible, setVisible] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [iosHint, setIosHint] = useState(false)
 
+  const isDashboardRoute =
+    location.pathname === '/' ||
+    location.pathname.startsWith('/staff')
+
   useEffect(() => {
-    if (!isMobileDevice() || isStandalone()) return
+    if (!isMobileDevice() || isStandalone() || !isDashboardRoute) return
     if (localStorage.getItem(DISMISS_KEY) === '1') return
 
     const onBip = (e: Event) => {
@@ -50,7 +56,7 @@ export default function InstallPrompt() {
     }
 
     return () => window.removeEventListener('beforeinstallprompt', onBip)
-  }, [])
+  }, [isDashboardRoute])
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, '1')
@@ -70,7 +76,7 @@ export default function InstallPrompt() {
   return (
     <div className="pwa-install-banner" role="dialog" aria-label="Install app">
       <div className="pwa-install-body">
-        <strong>Add Mira to your Home Screen</strong>
+        <strong>Add Mira Thai Massage to your Home Screen</strong>
         {iosHint ? (
           <p>
             Tap <span className="pwa-install-kbd">Share</span> then{' '}

@@ -9,7 +9,7 @@ export default function OfflineBanner() {
   return (
     <div className="pwa-offline-banner" role="status" aria-live="polite">
       <span className="pwa-offline-icon" aria-hidden>📡</span>
-      <span>You are offline — queue view is read-only (cached data).</span>
+      <span>You are offline — some features may not work.</span>
     </div>
   )
 }

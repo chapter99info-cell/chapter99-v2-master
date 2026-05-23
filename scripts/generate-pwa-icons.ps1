@@ -7,13 +7,13 @@ function Save-Icon {
   $g.SmoothingMode = 'AntiAlias'
   $g.Clear([System.Drawing.Color]::FromArgb(255, 26, 61, 43))
   $gold = [System.Drawing.Color]::FromArgb(255, 201, 162, 39)
-  $font = New-Object System.Drawing.Font('Georgia', [int]($Size * 0.22), [System.Drawing.FontStyle]::Bold)
+  $font = New-Object System.Drawing.Font('Georgia', [int]($Size * 0.52), [System.Drawing.FontStyle]::Bold)
   $brush = New-Object System.Drawing.SolidBrush($gold)
   $sf = New-Object System.Drawing.StringFormat
   $sf.Alignment = 'Center'
   $sf.LineAlignment = 'Center'
   $rect = New-Object System.Drawing.RectangleF(0, 0, $Size, $Size)
-  $g.DrawString('MIRA', $font, $brush, $rect, $sf)
+  $g.DrawString('M', $font, $brush, $rect, $sf)
   $g.Dispose()
   $dir = Split-Path $Path -Parent
   if ($dir -and !(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
