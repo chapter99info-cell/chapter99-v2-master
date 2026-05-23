@@ -8,11 +8,6 @@
       "NODE_OPTIONS": "--max-old-space-size=6144"
     }
   },
-  "functions": {
-    "api/**/*.ts": {
-      "includeFiles": "server/**"
-    }
-  },
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
   "crons": [
     {

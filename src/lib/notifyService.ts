@@ -148,7 +148,7 @@ export async function sendGiftVoucherEmail(
   }
 
   try {
-    const res = await fetch('/api/email-voucher', {
+    const res = await fetch('/api/gift-voucher-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

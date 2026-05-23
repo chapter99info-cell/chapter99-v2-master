@@ -68,7 +68,7 @@ export default function PublicVoucherPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/voucher-checkout', {
+      const res = await fetch('/api/stripe-create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
