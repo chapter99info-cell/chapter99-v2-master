@@ -10,6 +10,7 @@
   "dependencies": {
     "@react-pdf/renderer": "^3.4.0",
     "@supabase/supabase-js": "^2.43.0",
+    "chart.js": "^4.5.1",
     "dexie": "^3.2.7",
     "dexie-react-hooks": "^1.1.7",
     "formidable": "^3.5.1",

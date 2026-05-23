@@ -4,6 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { ShopOverview, MRRSummary, SuperAdminStats } from '../types/admin'
+import { normalizeShopPlan, type ShopPlan } from '../types/plan'
 
 // Service role client — full access to all shops
 const supabase = createClient(
@@ -11,10 +12,10 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 )
 
-const PLAN_PRICES = {
+const PLAN_PRICES: Record<ShopPlan, number> = {
   starter: 29,
-  professional: 69,
-  business: 110,
+  growth: 69,
+  pro: 110,
 }
 
 // ── Fetch all shops with stats ────────────────────────────────
@@ -25,7 +26,7 @@ export async function fetchAllShops(): Promise<ShopOverview[]> {
   const { data: shops } = await supabase
     .from('shops')
     .select(`
-      id, name, plan, active, created_at, phone, email,
+      id, name, slug, plan, active, created_at, phone, email,
       staff(id, active),
       bookings(id, created_at),
       transactions(id, paid_at, payment),
@@ -51,9 +52,10 @@ export async function fetchAllShops(): Promise<ShopOverview[]> {
     return {
       id: shop.id,
       name: shop.name,
-      plan: shop.plan,
+      slug: (shop.slug as string) || undefined,
+      plan: normalizeShopPlan(shop.plan as string),
       status: shop.active ? 'active' : 'suspended',
-      mrr: PLAN_PRICES[shop.plan as keyof typeof PLAN_PRICES] ?? 0,
+      mrr: PLAN_PRICES[normalizeShopPlan(shop.plan as string)],
       setupFee: 0,
       joinedAt: shop.created_at,
       lastActivity: monthTx[0]?.paid_at ?? shop.created_at,
@@ -77,8 +79,8 @@ export async function fetchMRRSummary(shops: ShopOverview[]): Promise<MRRSummary
 
   const byPlan = {
     starter: active.filter(s => s.plan === 'starter').reduce((s, x) => s + x.mrr, 0),
-    professional: active.filter(s => s.plan === 'professional').reduce((s, x) => s + x.mrr, 0),
-    business: active.filter(s => s.plan === 'business').reduce((s, x) => s + x.mrr, 0),
+    growth: active.filter(s => s.plan === 'growth').reduce((s, x) => s + x.mrr, 0),
+    pro: active.filter(s => s.plan === 'pro').reduce((s, x) => s + x.mrr, 0),
   }
 
   // New shops this month

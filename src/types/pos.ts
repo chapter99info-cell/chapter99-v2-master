@@ -2,6 +2,7 @@
 // All monetary values in AUD cents to avoid float errors
 
 import type { BusinessType } from './shop'
+import type { ShopPlan } from './plan'
 
 export type PaymentMethod = 'cash' | 'payid' | 'card' | 'hicaps' | 'amex' | 'split'
 
@@ -82,6 +83,11 @@ export interface Shop {
   id: string
   slug?: string
   businessType: BusinessType
+  plan: ShopPlan
+  addonStripe: boolean
+  addonSms: boolean
+  addonWebsite: boolean
+  addonReports: boolean
   name: string
   abn: string
   address: string
@@ -106,6 +112,19 @@ export interface Shop {
   googleSheetUrl?: string
   googleSheetSyncEnabled?: boolean
   googleReviewUrl?: string
+  // Public storefront page visibility
+  pageHomeEnabled: boolean
+  pageServicesEnabled: boolean
+  pageVouchersEnabled: boolean
+  pageAboutEnabled: boolean
+  disabledRedirectPath: string
+  heroImageUrl?: string
+  heroTitle?: string
+  heroSubtitle?: string
+  aboutText?: string
+  aboutPhone?: string
+  aboutAddress?: string
+  googleMapsUrl?: string
 }
 
 export interface ReceiptRecord {

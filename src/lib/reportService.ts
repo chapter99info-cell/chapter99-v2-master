@@ -51,10 +51,13 @@ function addDaysYmd(ymd: string, days: number): string {
   return dt.toISOString().slice(0, 10)
 }
 
-export function getPeriodBounds(period: ReportPeriod): { start: Date; end: Date } {
+export function resolvePeriodYmds(period: ReportPeriod): {
+  startYmd: string
+  endYmdExclusive: string
+} {
   const today = sydneyYmd()
   let startYmd = today
-  let endYmd = addDaysYmd(today, 1)
+  let endYmdExclusive = addDaysYmd(today, 1)
 
   if (period === 'week') {
     const noon = new Date(`${today}T12:00:00.000Z`)
@@ -73,18 +76,60 @@ export function getPeriodBounds(period: ReportPeriod): { start: Date; end: Date 
     }
     const diff = map[weekday] ?? 0
     startYmd = addDaysYmd(today, -diff)
-    endYmd = addDaysYmd(startYmd, 7)
+    endYmdExclusive = addDaysYmd(startYmd, 7)
   } else if (period === 'month') {
     startYmd = `${today.slice(0, 7)}-01`
     const [y, m] = startYmd.split('-').map(Number)
-    const nextMonth = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
-    endYmd = nextMonth
+    const nextMonth =
+      m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+    endYmdExclusive = nextMonth
   }
 
+  return { startYmd, endYmdExclusive }
+}
+
+export function ymdsInRange(startYmd: string, endYmdExclusive: string): string[] {
+  const days: string[] = []
+  let cur = startYmd
+  while (cur < endYmdExclusive) {
+    days.push(cur)
+    cur = addDaysYmd(cur, 1)
+  }
+  return days
+}
+
+export function getPreviousPeriodYmds(period: ReportPeriod): {
+  startYmd: string
+  endYmdExclusive: string
+} {
+  const { startYmd, endYmdExclusive } = resolvePeriodYmds(period)
+  const len = ymdsInRange(startYmd, endYmdExclusive).length
+  return {
+    startYmd: addDaysYmd(startYmd, -len),
+    endYmdExclusive: startYmd,
+  }
+}
+
+export function getPeriodBounds(period: ReportPeriod): { start: Date; end: Date } {
+  const { startYmd, endYmdExclusive } = resolvePeriodYmds(period)
   return {
     start: sydneyDayStartUtc(startYmd),
-    end: sydneyDayStartUtc(endYmd),
+    end: sydneyDayStartUtc(endYmdExclusive),
   }
+}
+
+export function formatSydneyDayLabel(ymd: string): string {
+  const d = sydneyDayStartUtc(ymd)
+  return d.toLocaleDateString('en-AU', {
+    timeZone: 'Australia/Sydney',
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
+function pctChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null
+  return Math.round(((current - previous) / previous) * 1000) / 10
 }
 
 export function getMonthBounds(monthKey: string): { start: Date; end: Date } {
@@ -315,6 +360,223 @@ export function exportTransactionsCsv(rows: TransactionExportRow[], label: strin
       r.customer,
     ])
   )
+}
+
+export interface ReportsDashboardMetrics {
+  revenue: number
+  commission: number
+  profit: number
+  revenueChangePct: number | null
+  commissionChangePct: number | null
+  profitChangePct: number | null
+}
+
+export interface ReportsDailyRow {
+  ymd: string
+  label: string
+  revenue: number
+  commission: number
+  profit: number
+}
+
+export interface ReportsServiceSlice {
+  name: string
+  amount: number
+  pct: number
+  color: string
+}
+
+export interface ReportsTherapistCommission {
+  therapistId: string
+  therapistName: string
+  commission: number
+  pct: number
+}
+
+export interface ReportsDashboardData {
+  metrics: ReportsDashboardMetrics
+  daily: ReportsDailyRow[]
+  services: ReportsServiceSlice[]
+  therapists: ReportsTherapistCommission[]
+}
+
+const SERVICE_CHART_COLORS = ['#1a3d2b', '#378ADD', '#EF9F27', '#D4537E', '#888888']
+
+function txPaidYmd(tx: TxRow): string {
+  return sydneyYmd(new Date(tx.paid_at))
+}
+
+function aggregateTransactions(
+  txs: TxRow[],
+  rateMap: Map<string, number>,
+  staffNames: Map<string, string>,
+  dayKeys: string[]
+): {
+  revenue: number
+  commission: number
+  dailyMap: Map<string, { revenue: number; commission: number }>
+  serviceMap: Map<string, number>
+  therapistMap: Map<string, { id: string; name: string; commission: number }>
+} {
+  const dailyMap = new Map<string, { revenue: number; commission: number }>()
+  for (const ymd of dayKeys) {
+    dailyMap.set(ymd, { revenue: 0, commission: 0 })
+  }
+
+  const serviceMap = new Map<string, number>()
+  const therapistMap = new Map<string, { id: string; name: string; commission: number }>()
+
+  let revenue = 0
+  let commission = 0
+
+  for (const tx of txs) {
+    const ymd = txPaidYmd(tx)
+    const rev = txRevenue(tx)
+    const sub = txSubtotal(tx)
+    const name = tx.therapist_name?.trim() || 'Unassigned'
+    const therapistId = tx.therapist_id ?? `name:${name}`
+    const displayName =
+      (tx.therapist_id && staffNames.get(tx.therapist_id)) || name
+    const rate =
+      (tx.therapist_id && rateMap.get(tx.therapist_id)) ||
+      rateMap.get(name.toLowerCase()) ||
+      0
+    const { therapistEarns } = calcCommission(sub, rate)
+    const comm = therapistEarns
+
+    revenue = Math.round((revenue + rev) * 100) / 100
+    commission = Math.round((commission + comm) * 100) / 100
+
+    if (dailyMap.has(ymd)) {
+      const day = dailyMap.get(ymd)!
+      day.revenue = Math.round((day.revenue + rev) * 100) / 100
+      day.commission = Math.round((day.commission + comm) * 100) / 100
+    }
+
+    for (const item of tx.items ?? []) {
+      const svc = item.serviceName?.trim() || 'Other'
+      const amt = Number(item.price) || 0
+      serviceMap.set(svc, Math.round(((serviceMap.get(svc) ?? 0) + amt) * 100) / 100)
+    }
+
+    const tRow = therapistMap.get(therapistId) ?? {
+      id: therapistId,
+      name: displayName,
+      commission: 0,
+    }
+    tRow.commission = Math.round((tRow.commission + comm) * 100) / 100
+    therapistMap.set(therapistId, tRow)
+  }
+
+  return { revenue, commission, dailyMap, serviceMap, therapistMap }
+}
+
+async function fetchStaffNameMap(shopId: string): Promise<Map<string, string>> {
+  const { data } = await supabase
+    .from('staff')
+    .select('id, name_en')
+    .eq('shop_id', shopId)
+    .eq('active', true)
+
+  const map = new Map<string, string>()
+  for (const s of data ?? []) {
+    map.set(s.id as string, s.name_en as string)
+  }
+  return map
+}
+
+export async function fetchReportsDashboard(
+  shopId: string,
+  period: ReportPeriod
+): Promise<ReportsDashboardData> {
+  const { startYmd, endYmdExclusive } = resolvePeriodYmds(period)
+  const prev = getPreviousPeriodYmds(period)
+  const dayKeys = ymdsInRange(startYmd, endYmdExclusive)
+
+  const currentBounds = {
+    start: sydneyDayStartUtc(startYmd),
+    end: sydneyDayStartUtc(endYmdExclusive),
+  }
+  const previousBounds = {
+    start: sydneyDayStartUtc(prev.startYmd),
+    end: sydneyDayStartUtc(prev.endYmdExclusive),
+  }
+
+  const [currentTxs, previousTxs, rateMap, staffNames] = await Promise.all([
+    fetchTransactionsInRange(shopId, currentBounds.start, currentBounds.end),
+    fetchTransactionsInRange(shopId, previousBounds.start, previousBounds.end),
+    fetchStaffCommissionMap(shopId),
+    fetchStaffNameMap(shopId),
+  ])
+
+  const current = aggregateTransactions(currentTxs, rateMap, staffNames, dayKeys)
+  const previousAgg = aggregateTransactions(
+    previousTxs,
+    rateMap,
+    staffNames,
+    ymdsInRange(prev.startYmd, prev.endYmdExclusive)
+  )
+
+  const profit = Math.round((current.revenue - current.commission) * 100) / 100
+  const prevProfit = Math.round((previousAgg.revenue - previousAgg.commission) * 100) / 100
+
+  const daily: ReportsDailyRow[] = dayKeys.map(ymd => {
+    const day = current.dailyMap.get(ymd) ?? { revenue: 0, commission: 0 }
+    const dayProfit = Math.round((day.revenue - day.commission) * 100) / 100
+    return {
+      ymd,
+      label: formatSydneyDayLabel(ymd),
+      revenue: day.revenue,
+      commission: day.commission,
+      profit: dayProfit,
+    }
+  })
+
+  const serviceEntries = [...current.serviceMap.entries()].sort((a, b) => b[1] - a[1])
+  const serviceTotal = serviceEntries.reduce((s, [, amt]) => s + amt, 0)
+  const top4 = serviceEntries.slice(0, 4)
+  const otherAmount = serviceEntries.slice(4).reduce((s, [, amt]) => s + amt, 0)
+  const serviceSlices: { name: string; amount: number }[] = [
+    ...top4.map(([name, amount]) => ({ name, amount })),
+    ...(otherAmount > 0 ? [{ name: 'Other', amount: otherAmount }] : []),
+  ]
+  const services: ReportsServiceSlice[] = serviceSlices.map((slice, i) => ({
+    name: slice.name,
+    amount: slice.amount,
+    pct: serviceTotal > 0 ? Math.round((slice.amount / serviceTotal) * 1000) / 10 : 0,
+    color: SERVICE_CHART_COLORS[i] ?? SERVICE_CHART_COLORS[4],
+  }))
+
+  const therapistTotal = [...current.therapistMap.values()].reduce(
+    (s, t) => s + t.commission,
+    0
+  )
+  const therapists: ReportsTherapistCommission[] = [...current.therapistMap.values()]
+    .filter(t => t.commission > 0)
+    .sort((a, b) => b.commission - a.commission)
+    .map(t => ({
+      therapistId: t.id,
+      therapistName: t.name,
+      commission: t.commission,
+      pct:
+        therapistTotal > 0
+          ? Math.round((t.commission / therapistTotal) * 1000) / 10
+          : 0,
+    }))
+
+  return {
+    metrics: {
+      revenue: current.revenue,
+      commission: current.commission,
+      profit,
+      revenueChangePct: pctChange(current.revenue, previousAgg.revenue),
+      commissionChangePct: pctChange(current.commission, previousAgg.commission),
+      profitChangePct: pctChange(profit, prevProfit),
+    },
+    daily,
+    services,
+    therapists,
+  }
 }
 
 export function exportCommissionCsv(rows: CommissionReportRow[], monthKey: string): void {

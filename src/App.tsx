@@ -1,7 +1,14 @@
 // Chapter99 V4 — Main App Entry
 // PIN-based routing to correct dashboard
 
-import { useState, useCallback, useEffect, type Dispatch, type SetStateAction } from 'react'
+import {
+  useState,
+  useCallback,
+  useEffect,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { fetchShop } from './lib/shopService'
 import { SHOP_UPDATED_EVENT } from './lib/shopLogo'
@@ -18,6 +25,9 @@ import RevenueSummary from './components/dashboard/RevenueSummary'
 import GiftVoucherList from './components/dashboard/GiftVoucherList'
 import OwnerReports from './components/dashboard/OwnerReports'
 import { countUnreadNotifications } from './lib/notificationService'
+import { PlanProvider, usePlan } from './contexts/PlanContext'
+import { PlanGatedTab, PlanGate } from './components/plan/PlanGatedTab'
+import type { PlanFeature } from './types/plan'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -149,7 +159,43 @@ export default function App() {
     )
   }
 
-  // Cashier / Owner — full dashboard
+  return (
+    <PlanProvider shopId={SHOP_ID}>
+      <StaffDashboard
+        session={session}
+        shopBranding={shopBranding}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        unreadAlerts={unreadAlerts}
+        refreshUnreadAlerts={refreshUnreadAlerts}
+        onLogout={logout}
+      />
+    </PlanProvider>
+  )
+}
+
+type OwnerTabDef = { id: string; label: string; feature?: PlanFeature }
+
+function StaffDashboard({
+  session,
+  shopBranding,
+  activeTab,
+  setActiveTab,
+  unreadAlerts,
+  refreshUnreadAlerts,
+  onLogout,
+}: {
+  session: Session
+  shopBranding: { name: string; logoUrl?: string } | null
+  activeTab: string
+  setActiveTab: (tab: string) => void
+  unreadAlerts: number
+  refreshUnreadAlerts: () => void
+  onLogout: () => void
+}) {
+  const { planLabel } = usePlan()
+  const isOwner = session.level === 'owner'
+
   const mainTabs = [
     { id: 'queue', label: '📅 Queue' },
     { id: 'pos', label: '🧾 POS' },
@@ -157,16 +203,15 @@ export default function App() {
     { id: 'alerts', label: '🔔 Alerts' },
   ]
 
-  const ownerTabs = [
+  const ownerTabs: OwnerTabDef[] = [
     { id: 'staff', label: '👥 Staff' },
     { id: 'services', label: '🛎 Services' },
     { id: 'rooms', label: '🚪 Rooms' },
-    { id: 'vouchers', label: '🎁 Vouchers' },
-    { id: 'reports', label: '📊 Reports' },
+    { id: 'vouchers', label: '🎁 Vouchers', feature: 'gift_vouchers' },
+    { id: 'reports', label: '📊 Reports', feature: 'reports' },
+    { id: 'website', label: '🌐 Website', feature: 'website_builder' },
     { id: 'settings', label: '⚙️ Settings' },
   ]
-
-  const isOwner = session.level === 'owner'
 
   return (
     <div className="app-root">
@@ -175,7 +220,16 @@ export default function App() {
         shopName={shopBranding?.name}
         logoUrl={shopBranding?.logoUrl}
         badge={isOwner ? 'Owner' : 'Cashier'}
-        onLogout={logout}
+        planBadge={planLabel}
+        onLogout={onLogout}
+        extraTabs={
+          <PlanGatedTab
+            feature="multi_shop"
+            label="🏢 Multi-shop"
+            active={false}
+            onSelect={() => undefined}
+          />
+        }
       />
       <div className="app-tabs">
         {mainTabs.map(t => (
@@ -198,16 +252,26 @@ export default function App() {
       {isOwner && (
         <div className="app-tabs app-tabs-owner">
           <span className="app-tabs-owner-label">Owner</span>
-          {ownerTabs.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              className={`app-tab${activeTab === t.id ? ' active' : ''}`}
-              onClick={() => setActiveTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+          {ownerTabs.map(t =>
+            t.feature ? (
+              <PlanGatedTab
+                key={t.id}
+                feature={t.feature}
+                label={t.label}
+                active={activeTab === t.id}
+                onSelect={() => setActiveTab(t.id)}
+              />
+            ) : (
+              <button
+                key={t.id}
+                type="button"
+                className={`app-tab${activeTab === t.id ? ' active' : ''}`}
+                onClick={() => setActiveTab(t.id)}
+              >
+                {t.label}
+              </button>
+            )
+          )}
         </div>
       )}
       <div className="app-content">
@@ -234,14 +298,27 @@ export default function App() {
           <RoomManager shopId={SHOP_ID} />
         )}
         {activeTab === 'vouchers' && isOwner && (
-          <GiftVoucherList shopId={SHOP_ID} />
+          <PlanGate feature="gift_vouchers">
+            <GiftVoucherList shopId={SHOP_ID} />
+          </PlanGate>
         )}
         {activeTab === 'reports' && isOwner && (
-          <OwnerReports shopId={SHOP_ID} />
+          <PlanGate feature="reports">
+            <OwnerReports shopId={SHOP_ID} />
+          </PlanGate>
         )}
-        {activeTab === 'settings' && isOwner && (
-          <ShopSettings shopId={SHOP_ID} />
+        {activeTab === 'website' && isOwner && (
+          <PlanGate feature="website_builder">
+            <div className="plan-gate-locked plan-website-placeholder">
+              <h2>Website builder</h2>
+              <p>
+                Public site content and page visibility are managed by Chapter99 Super Admin.
+                Contact us to publish or update your storefront.
+              </p>
+            </div>
+          </PlanGate>
         )}
+        {activeTab === 'settings' && isOwner && <ShopSettings shopId={SHOP_ID} />}
       </div>
     </div>
   )
@@ -307,12 +384,22 @@ function PINScreen({ pin, setPin, onVerify, error, loading }: {
   )
 }
 
-function AppHeader({ title, badge, onLogout, logoUrl, shopName }: {
+function AppHeader({
+  title,
+  badge,
+  planBadge,
+  onLogout,
+  logoUrl,
+  shopName,
+  extraTabs,
+}: {
   title: string
   badge?: string
+  planBadge?: string
   onLogout: () => void
   logoUrl?: string
   shopName?: string
+  extraTabs?: ReactNode
 }) {
   return (
     <div className="app-header">
@@ -327,9 +414,15 @@ function AppHeader({ title, badge, onLogout, logoUrl, shopName }: {
           <span className="app-logo">Chapter99</span>
         )}
         {badge && <span className="app-badge">{badge}</span>}
+        {planBadge && <span className="app-plan-badge">{planBadge}</span>}
         <span className="app-title">{title}</span>
       </div>
-      <button className="logout-btn" onClick={onLogout}>Lock 🔒</button>
+      <div className="app-header-right">
+        {extraTabs}
+        <button type="button" className="logout-btn" onClick={onLogout}>
+          Lock 🔒
+        </button>
+      </div>
     </div>
   )
 }

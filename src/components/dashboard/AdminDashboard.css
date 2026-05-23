@@ -129,6 +129,8 @@
   text-align: center; font-weight: 500;
 }
 .plan-tag.plan-starter { background: #EAF3DE; color: #3B6D11; }
+.plan-tag.plan-growth { background: #FAEEDA; color: #633806; }
+.plan-tag.plan-pro { background: #E1F5EE; color: #085041; }
 .plan-tag.plan-professional { background: #FAEEDA; color: #633806; }
 .plan-tag.plan-business { background: #E1F5EE; color: #085041; }
 .cell-mrr { font-size: 13px; font-weight: 500; color: #0F6E56; }
@@ -146,6 +148,105 @@
 }
 .action-btn.danger { border-color: #F5C4B3; color: #993C1D; background: #FAECE7; }
 .action-btn.success { border-color: #C0DD97; color: #3B6D11; background: #EAF3DE; }
+
+.shop-info-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+}
+.shop-info-btn:hover .shop-name { color: var(--color-primary); }
+.table-row-clickable:hover { background: #faf9f5; }
+
+/* Shop detail */
+.shop-detail { max-width: 1200px; }
+.shop-detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.shop-detail-title h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+}
+.shop-detail-meta {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+.shop-detail-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shop-detail-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.shop-detail-tab {
+  font-size: 13px;
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.shop-detail-tab.active {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.shop-detail-tab:hover:not(.active) {
+  border-color: var(--color-accent);
+  color: var(--color-primary);
+}
+.shop-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.shop-stat-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #999;
+  margin-bottom: 4px;
+}
+.shop-stat-value {
+  font-size: 15px;
+  font-weight: 500;
+}
+.shop-stat-contact {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .shop-detail-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 
 /* Settings */
 .settings-tab { display: flex; flex-direction: column; gap: 16px; }

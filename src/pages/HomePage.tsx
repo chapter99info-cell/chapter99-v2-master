@@ -1,31 +1,46 @@
 import { Link } from 'react-router-dom'
 import { useShopContext } from '../contexts/ShopContext'
+import { useShopPages } from '../hooks/useShopPages'
 import './PublicSite.css'
 
 export default function HomePage() {
   const { shop, loading, withShopQuery, businessType } = useShopContext()
+  const { pageServicesEnabled, pageVouchersEnabled, pageAboutEnabled } = useShopPages()
   const isRestaurant = businessType === 'restaurant'
-  const name = shop?.name || (loading ? '…' : 'Welcome')
+  const name = shop?.heroTitle?.trim() || shop?.name || (loading ? '…' : 'Welcome')
+  const defaultSub = isRestaurant
+    ? 'Order online for pickup or delivery, or visit us in person.'
+    : 'Relax, restore, and recharge. Book your treatment online or visit us in person.'
+  const subtitle = shop?.heroSubtitle?.trim() || defaultSub
+
+  const heroImage = shop?.heroImageUrl?.trim()
 
   return (
     <div className="public-page">
-      <section className="public-hero">
+      <section
+        className={`public-hero${heroImage ? ' public-hero--image' : ''}`}
+        style={
+          heroImage
+            ? {
+                backgroundImage: `linear-gradient(rgba(26, 61, 43, 0.55), rgba(26, 61, 43, 0.7)), url(${heroImage})`,
+              }
+            : undefined
+        }
+      >
         <p className="public-eyebrow">
           {isRestaurant ? 'Dine with us' : 'Traditional Thai Massage'}
         </p>
         <h1 className="public-hero-title">{name}</h1>
-        <p className="public-hero-sub">
-          {isRestaurant
-            ? 'Order online for pickup or delivery, or visit us in person.'
-            : 'Relax, restore, and recharge. Book your treatment online or visit us in person.'}
-        </p>
+        <p className="public-hero-sub">{subtitle}</p>
         <div className="public-hero-actions">
           <Link to={withShopQuery('/book')} className="public-btn primary">
             {isRestaurant ? 'Order now' : 'Book now'}
           </Link>
-          <Link to={withShopQuery('/services')} className="public-btn secondary">
-            {isRestaurant ? 'View menu' : 'View services'}
-          </Link>
+          {pageServicesEnabled && (
+            <Link to={withShopQuery('/services')} className="public-btn secondary">
+              {isRestaurant ? 'View menu' : 'View services'}
+            </Link>
+          )}
         </div>
       </section>
 
@@ -39,16 +54,20 @@ export default function HomePage() {
               : 'Choose your service, therapist, and time — confirmation by email.'}
           </p>
         </Link>
-        <Link to={withShopQuery('/voucher')} className="public-card">
-          <span className="public-card-icon">🎁</span>
-          <h2>Gift vouchers</h2>
-          <p>Give the gift of wellness — delivered by email.</p>
-        </Link>
-        <Link to={withShopQuery('/about')} className="public-card">
-          <span className="public-card-icon">🌿</span>
-          <h2>About us</h2>
-          <p>Our story, location, and contact details.</p>
-        </Link>
+        {pageVouchersEnabled && (
+          <Link to={withShopQuery('/voucher')} className="public-card">
+            <span className="public-card-icon">🎁</span>
+            <h2>Gift vouchers</h2>
+            <p>Give the gift of wellness — delivered by email.</p>
+          </Link>
+        )}
+        {pageAboutEnabled && (
+          <Link to={withShopQuery('/about')} className="public-card">
+            <span className="public-card-icon">🌿</span>
+            <h2>About us</h2>
+            <p>Our story, location, and contact details.</p>
+          </Link>
+        )}
       </section>
     </div>
   )

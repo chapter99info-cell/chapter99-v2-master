@@ -11,6 +11,7 @@ interface ServiceRow {
   duration: number
   price: number
   gst_free: boolean
+  image_url: string | null
 }
 
 export default function PublicServicesPage() {
@@ -24,7 +25,7 @@ export default function PublicServicesPage() {
     setLoading(true)
     supabase
       .from('services')
-      .select('id, name_en, name_th, duration, price, gst_free')
+      .select('id, name_en, name_th, duration, price, gst_free, image_url')
       .eq('shop_id', shopId)
       .eq('active', true)
       .order('sort_order', { ascending: true })
@@ -52,7 +53,14 @@ export default function PublicServicesPage() {
         <div className="public-service-list">
           {services.map(svc => (
             <article key={svc.id} className="public-service-item">
-              <div>
+              {svc.image_url && (
+                <img
+                  src={svc.image_url}
+                  alt=""
+                  className="public-service-photo"
+                />
+              )}
+              <div className="public-service-body">
                 <h3>{svc.name_en}</h3>
                 {svc.name_th && <p>{svc.name_th}</p>}
                 {!isRestaurant && (

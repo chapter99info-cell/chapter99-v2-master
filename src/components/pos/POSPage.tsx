@@ -32,12 +32,40 @@ import { fetchLastCustomerVisit } from '../../lib/customerHistory'
 import { SHOP_ID, supabase } from '../../lib/supabase'
 import { SHOP_UPDATED_EVENT } from '../../lib/shopLogo'
 import GoogleReviewQR from './GoogleReviewQR'
+import { usePlan } from '../../hooks/usePlan'
+import UpgradeModal from '../plan/UpgradeModal'
+import type { PlanFeature } from '../../types/plan'
 
 type POSMode = 'pos' | 'walkin' | 'queue'
 type POSStep = 'bill' | 'payment' | 'success'
 type SplittableMethod = Exclude<PaymentMethod, 'split'>
 
+const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
+  booking: 'Booking',
+  queue: 'Queue',
+  pos: 'POS',
+  staff: 'Staff',
+  gift_vouchers: 'Gift vouchers',
+  reports: 'Reports',
+  customer_history: 'Customer history',
+  website_builder: 'Website builder',
+  multi_shop: 'Multi-shop',
+  stripe: 'Stripe payments',
+  sms: 'SMS notifications',
+}
+
 export default function POSPage() {
+  const { can, plan, requiredPlan } = usePlan()
+  const [upgradeFeature, setUpgradeFeature] = useState<PlanFeature | null>(null)
+
+  function requireFeature(feature: PlanFeature, action: () => void) {
+    if (!can(feature)) {
+      setUpgradeFeature(feature)
+      return
+    }
+    action()
+  }
+
   const [mode, setMode] = useState<POSMode>('pos')
   const [step, setStep] = useState<POSStep>('bill')
   const [bill, setBill] = useState<BillItem[]>([])
@@ -142,6 +170,10 @@ export default function POSPage() {
   }, [])
 
   useEffect(() => {
+    if (!can('customer_history')) {
+      setLastVisitHint(null)
+      return
+    }
     const email = clientEmail.trim()
     if (!email || !email.includes('@')) {
       setLastVisitHint(null)
@@ -170,7 +202,7 @@ export default function POSPage() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [clientEmail])
+  }, [clientEmail, can])
 
   const payment = (() => {
     if (!bill.length) return null
@@ -393,7 +425,7 @@ export default function POSPage() {
         void syncTransactionToSheet(shop.googleSheetUrl, shop.id, tx)
       }
 
-      if (clientPhone) {
+      if (clientPhone && can('sms')) {
         await sendSMS(
           clientPhone,
           SMS.receiptConfirm(shop.name, formatAUD(payment.total))
@@ -532,14 +564,17 @@ export default function POSPage() {
         <div className="pos-topbar-right">
           <button
             type="button"
-            className="voucher-sell-btn"
-            onClick={() => {
-              setShowSellVoucher(true)
-              setSellError('')
-              setSoldVoucherEmailNote(null)
-            }}
+            className={`voucher-sell-btn${!can('gift_vouchers') ? ' pos-feature-locked' : ''}`}
+            onClick={() =>
+              requireFeature('gift_vouchers', () => {
+                setShowSellVoucher(true)
+                setSellError('')
+                setSoldVoucherEmailNote(null)
+              })
+            }
           >
             🎁 Gift Voucher
+            {!can('gift_vouchers') && <span aria-hidden> 🔒</span>}
           </button>
           {syncStatus.pending > 0 && (
             <span className="sync-badge">
@@ -592,9 +627,11 @@ export default function POSPage() {
                 )}
                 <input
                   className="pos-input"
-                  placeholder="เบอร์โทร (SMS)"
+                  placeholder={can('sms') ? 'เบอร์โทร (SMS)' : 'เบอร์โทร (SMS — upgrade to unlock)'}
                   value={clientPhone}
                   onChange={e => setClientPhone(e.target.value)}
+                  disabled={!can('sms')}
+                  title={!can('sms') ? 'SMS requires Growth plan or SMS add-on' : undefined}
                 />
                 {therapists.length > 0 && (
                   <select
@@ -731,15 +768,18 @@ export default function POSPage() {
                 <div className="payment-action-btns">
                   <button
                     type="button"
-                    className={`split-toggle-btn${showRedeemVoucher && !appliedVoucher ? ' active' : ''}`}
+                    className={`split-toggle-btn${showRedeemVoucher && !appliedVoucher ? ' active' : ''}${!can('gift_vouchers') ? ' pos-feature-locked' : ''}`}
                     onClick={() => {
                       if (appliedVoucher) return
-                      setShowRedeemVoucher(v => !v)
-                      setRedeemError('')
+                      requireFeature('gift_vouchers', () => {
+                        setShowRedeemVoucher(v => !v)
+                        setRedeemError('')
+                      })
                     }}
                     disabled={!!appliedVoucher}
                   >
                     🎫 Redeem Voucher
+                    {!can('gift_vouchers') && <span aria-hidden> 🔒</span>}
                   </button>
                   <button
                     type="button"
@@ -1081,6 +1121,15 @@ export default function POSPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {upgradeFeature && (
+        <UpgradeModal
+          featureLabel={LOCKED_FEATURE_LABELS[upgradeFeature]}
+          requiredPlan={requiredPlan(upgradeFeature)}
+          currentPlan={plan}
+          onClose={() => setUpgradeFeature(null)}
+        />
       )}
     </div>
   )

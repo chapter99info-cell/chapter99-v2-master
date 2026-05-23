@@ -12,6 +12,7 @@ import { notifyShopUpdated } from '../../lib/shopLogo'
 import { SHOP_ID } from '../../lib/supabase'
 import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
+import { PlanGate } from '../plan/PlanGatedTab'
 import './ShopSettings.css'
 
 interface ShopSettingsProps {
@@ -285,6 +286,20 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
           />
           GST registered
         </label>
+      </section>
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">SMS notifications</h2>
+        <PlanGate feature="sms">
+          <p className="ss-hint">
+            When enabled on your plan, POS can send a receipt confirmation SMS when you enter a
+            customer phone at checkout. Booking SMS reminders use the same channel.
+          </p>
+          <p className="ss-hint">
+            Shop phone above is shown on receipts; customer numbers are entered per transaction in
+            POS.
+          </p>
+        </PlanGate>
       </section>
 
       <section className="ss-section">

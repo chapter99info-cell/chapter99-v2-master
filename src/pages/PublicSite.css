@@ -10,6 +10,39 @@
 .public-hero {
   text-align: center;
   padding: 32px 12px 40px;
+  border-radius: var(--radius);
+}
+
+.public-hero--image {
+  padding: 48px 20px 56px;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+}
+
+.public-hero--image .public-eyebrow {
+  color: #c9e8d8;
+}
+
+.public-hero--image .public-hero-title {
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.public-hero--image .public-hero-sub {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.public-hero--image .public-btn.secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.public-hero--image .public-btn.primary {
+  background: #fff;
+  color: #1a3d2b;
+  border-color: #fff;
 }
 
 .public-eyebrow {
@@ -149,12 +182,25 @@
 .public-service-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
   padding: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+
+.public-service-photo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.public-service-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .public-service-item h3 {

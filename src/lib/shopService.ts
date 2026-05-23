@@ -2,6 +2,8 @@
 
 import { supabase, SHOP_ID } from './supabase'
 import type { Shop } from '../types/pos'
+import { DEFAULT_SHOP_PAGE_VISIBILITY, normalizeRedirectPath } from '../types/shopPages'
+import { normalizeShopPlan } from '../types/plan'
 import { isBusinessType, type BusinessType } from '../types/shop'
 
 export interface ShopRow {
@@ -30,6 +32,23 @@ export interface ShopRow {
   google_sheet_url: string | null
   google_sheet_sync_enabled: boolean | null
   google_review_url: string | null
+  page_home_enabled: boolean | null
+  page_services_enabled: boolean | null
+  page_vouchers_enabled: boolean | null
+  page_about_enabled: boolean | null
+  disabled_redirect_path: string | null
+  hero_image_url: string | null
+  hero_title: string | null
+  hero_subtitle: string | null
+  about_text: string | null
+  about_phone: string | null
+  about_address: string | null
+  google_maps_url: string | null
+  plan: string | null
+  addon_stripe: boolean | null
+  addon_sms: boolean | null
+  addon_website: boolean | null
+  addon_reports: boolean | null
 }
 
 export interface ShopSettingsInput {
@@ -57,6 +76,11 @@ export interface ShopSettingsInput {
 const DEFAULT_SHOP: Shop = {
   id: SHOP_ID,
   businessType: 'massage',
+  plan: 'starter',
+  addonStripe: false,
+  addonSms: false,
+  addonWebsite: false,
+  addonReports: false,
   name: 'Chapter99 Demo Shop',
   abn: '',
   address: '',
@@ -70,6 +94,7 @@ const DEFAULT_SHOP: Shop = {
   providerNumber: '',
   cardSurchargeRate: 0.015,
   amexSurchargeRate: 0.02,
+  ...DEFAULT_SHOP_PAGE_VISIBILITY,
 }
 
 export function mapRowToShop(row: ShopRow): Shop {
@@ -77,6 +102,11 @@ export function mapRowToShop(row: ShopRow): Shop {
     id: row.id,
     slug: row.slug ?? undefined,
     businessType: isBusinessType(row.business_type) ? row.business_type : 'massage',
+    plan: normalizeShopPlan(row.plan),
+    addonStripe: row.addon_stripe === true,
+    addonSms: row.addon_sms === true,
+    addonWebsite: row.addon_website === true,
+    addonReports: row.addon_reports === true,
     name: row.name,
     abn: row.abn ?? '',
     address: row.address ?? '',
@@ -99,6 +129,22 @@ export function mapRowToShop(row: ShopRow): Shop {
     googleSheetUrl: row.google_sheet_url ?? undefined,
     googleSheetSyncEnabled: row.google_sheet_sync_enabled ?? false,
     googleReviewUrl: row.google_review_url ?? undefined,
+    pageHomeEnabled: row.page_home_enabled ?? DEFAULT_SHOP_PAGE_VISIBILITY.pageHomeEnabled,
+    pageServicesEnabled:
+      row.page_services_enabled ?? DEFAULT_SHOP_PAGE_VISIBILITY.pageServicesEnabled,
+    pageVouchersEnabled:
+      row.page_vouchers_enabled ?? DEFAULT_SHOP_PAGE_VISIBILITY.pageVouchersEnabled,
+    pageAboutEnabled: row.page_about_enabled ?? DEFAULT_SHOP_PAGE_VISIBILITY.pageAboutEnabled,
+    disabledRedirectPath: normalizeRedirectPath(
+      row.disabled_redirect_path ?? DEFAULT_SHOP_PAGE_VISIBILITY.disabledRedirectPath
+    ),
+    heroImageUrl: row.hero_image_url ?? undefined,
+    heroTitle: row.hero_title ?? undefined,
+    heroSubtitle: row.hero_subtitle ?? undefined,
+    aboutText: row.about_text ?? undefined,
+    aboutPhone: row.about_phone ?? undefined,
+    aboutAddress: row.about_address ?? undefined,
+    googleMapsUrl: row.google_maps_url ?? undefined,
   }
 }
 
@@ -197,13 +243,40 @@ export function resolveShopNotificationEmail(shop: Shop): string {
   return (shop.notificationEmail?.trim() || shop.email?.trim() || '')
 }
 
+export type ShopAssetKind = 'logo' | 'signature' | 'hero'
+
 export async function uploadShopAsset(
   shopId: string,
   file: File,
-  kind: 'logo' | 'signature'
+  kind: ShopAssetKind
 ): Promise<{ url?: string; error?: string }> {
   const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
   const path = `${shopId}/${kind}-${Date.now()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('shop-assets')
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    return {
+      error:
+        uploadError.message.includes('Bucket not found')
+          ? 'Storage bucket missing — run supabase/05-receipt-system.sql'
+          : uploadError.message,
+    }
+  }
+
+  const { data } = supabase.storage.from('shop-assets').getPublicUrl(path)
+  return { url: data.publicUrl }
+}
+
+export async function uploadServiceImage(
+  shopId: string,
+  serviceId: string,
+  file: File
+): Promise<{ url?: string; error?: string }> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${shopId}/services/${serviceId}-${Date.now()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from('shop-assets')

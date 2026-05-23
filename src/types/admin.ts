@@ -1,10 +1,13 @@
 // Chapter99 V4 — Phase 7
 // Super Admin Types (PIN 3501)
 
+import type { ShopPlan } from './plan'
+
 export interface ShopOverview {
   id: string
   name: string
-  plan: 'starter' | 'professional' | 'business'
+  slug?: string
+  plan: ShopPlan
   status: 'active' | 'overdue' | 'suspended'
   mrr: number                // Monthly Recurring Revenue
   setupFee: number
@@ -28,8 +31,8 @@ export interface MRRSummary {
   total: number              // Total MRR all shops
   byPlan: {
     starter: number
-    professional: number
-    business: number
+    growth: number
+    pro: number
   }
   growth: number             // % vs last month
   churnRisk: number          // shops with overdue payment
@@ -42,7 +45,7 @@ export interface Proposal {
   id: string
   shopName: string
   location: string
-  tier: 'starter' | 'professional' | 'business'
+  tier: ShopPlan
   status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired'
   setupFee: number
   monthlyFee: number

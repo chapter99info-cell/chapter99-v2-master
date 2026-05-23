@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchShop, fetchShopBySlug } from '../lib/shopService'
+import { SHOP_UPDATED_EVENT } from '../lib/shopLogo'
 import { SHOP_ID } from '../lib/supabase'
 import type { Shop } from '../types/pos'
 import type { BusinessType } from '../types/shop'
@@ -45,38 +46,41 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function resolve() {
-      setLoading(true)
-      setError(null)
-
-      if (urlSlug) {
-        const resolved = await fetchShopBySlug(urlSlug)
-        if (cancelled) return
-        if (!resolved) {
-          setShop(null)
-          setError(`Shop "${urlSlug}" was not found. Check the booking link from the store website.`)
-          setLoading(false)
-          return
-        }
-        setShop(resolved)
-        setLoading(false)
+  const reloadShop = useCallback(async () => {
+    setError(null)
+    if (urlSlug) {
+      const resolved = await fetchShopBySlug(urlSlug)
+      if (!resolved) {
+        setShop(null)
+        setError(`Shop "${urlSlug}" was not found. Check the booking link from the store website.`)
         return
       }
-
-      const fallback = await fetchShop(SHOP_ID)
-      if (cancelled) return
-      setShop(fallback)
-      setLoading(false)
+      setShop(resolved)
+      return
     }
+    setShop(await fetchShop(SHOP_ID))
+  }, [urlSlug])
 
+  useEffect(() => {
+    let cancelled = false
+    async function resolve() {
+      setLoading(true)
+      await reloadShop()
+      if (!cancelled) setLoading(false)
+    }
     resolve()
     return () => {
       cancelled = true
     }
-  }, [urlSlug])
+  }, [reloadShop])
+
+  useEffect(() => {
+    const onUpdated = () => {
+      void reloadShop()
+    }
+    window.addEventListener(SHOP_UPDATED_EVENT, onUpdated)
+    return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
+  }, [reloadShop])
 
   const shopSlug = urlSlug ?? shop?.slug ?? null
   const shopId = shop?.id ?? null
@@ -116,3 +120,5 @@ export function useShopQueryParam(): string | null {
   const [searchParams] = useSearchParams()
   return searchParams.get(SHOP_QUERY_KEY)?.trim().toLowerCase() || null
 }
+
+export { useShopPages } from '../hooks/useShopPages'

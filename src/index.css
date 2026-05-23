@@ -9,6 +9,9 @@
 @import './components/ui/Toast.css';
 @import './components/pos/POSPage.css';
 @import './components/dashboard/AdminDashboard.css';
+@import './components/admin/ShopWebsiteSettings.css';
+@import './components/admin/ShopPlanBilling.css';
+@import './components/plan/UpgradeModal.css';
 @import './components/staff/StaffManager.css';
 @import './components/dashboard/OwnerReports.css';
 @import './pages/PublicVoucherPage.css';
@@ -58,7 +61,8 @@
   padding: 2px 6px;
 }
 
-.app-badge {
+.app-badge,
+.app-plan-badge {
   font-size: 11px;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
@@ -66,6 +70,19 @@
   color: var(--color-accent-light);
   border: 1px solid rgba(201, 168, 76, 0.5);
   font-weight: 500;
+}
+
+.app-plan-badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .app-title {
@@ -148,6 +165,34 @@
   color: #fff;
   border-color: var(--color-primary);
   box-shadow: var(--shadow-card);
+}
+
+.app-tab-locked {
+  opacity: 0.85;
+}
+
+.app-tab-lock {
+  font-size: 12px;
+}
+
+.plan-gate-locked {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.plan-gate-locked .upgrade-contact-btn {
+  margin-top: 12px;
+}
+
+.plan-website-placeholder {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.plan-website-placeholder h2 {
+  margin: 0 0 8px;
+  color: var(--text);
 }
 
 .app-tab-wrap {

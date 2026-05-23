@@ -1,0 +1,128 @@
+.spb-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-top: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.spb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.spb-plan-badge {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.spb-plan-starter {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+.spb-plan-growth {
+  background: #faeeda;
+  color: #633806;
+}
+
+.spb-plan-pro {
+  background: #e1f5ee;
+  color: #085041;
+}
+
+.spb-save-badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #f0efe8;
+  color: #666;
+}
+
+.spb-save-saving {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.spb-save-saved {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+.spb-save-error {
+  background: #fde8e8;
+  color: #993c1d;
+}
+
+.spb-muted {
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+  margin: 0 0 12px;
+}
+
+.spb-error {
+  color: #993c1d;
+  font-size: 13px;
+}
+
+.spb-block {
+  margin-top: 20px;
+}
+
+.spb-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.spb-select {
+  width: 100%;
+  max-width: 280px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.spb-subtitle {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.spb-addon-hint {
+  margin-bottom: 12px;
+}
+
+.spb-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.spb-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #faf9f5;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .spb-toggles {
+    grid-template-columns: 1fr;
+  }
+}

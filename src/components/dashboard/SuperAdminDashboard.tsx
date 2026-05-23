@@ -13,6 +13,9 @@ import {
 import { formatAUD } from '../../lib/posCalc'
 import AddShopModal from '../shops/AddShopModal'
 import ProposalBuilder from '../proposals/ProposalBuilder'
+import ShopWebsiteSettingsPanel from '../admin/ShopWebsiteSettings'
+import ShopPlanBilling from '../admin/ShopPlanBilling'
+import { PLAN_LABELS } from '../../types/plan'
 
 type AdminTab = 'overview' | 'shops' | 'proposals' | 'settings'
 
@@ -25,6 +28,7 @@ export default function SuperAdminDashboard() {
   const [showAddShop, setShowAddShop] = useState(false)
   const [showProposal, setShowProposal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -92,16 +96,28 @@ export default function SuperAdminDashboard() {
           <OverviewTab mrr={mrr} shops={shops} history={revenueHistory} />
         )}
         {tab === 'shops' && (
-          <ShopsTab
-            shops={filtered}
-            searchQuery={searchQuery}
-            onSearch={setSearchQuery}
-            onAddShop={() => setShowAddShop(true)}
-            onToggle={async (id, active) => {
-              await toggleShopStatus(id, active)
-              loadData()
-            }}
-          />
+          selectedShopId ? (
+            <ShopDetailView
+              shop={shops.find(s => s.id === selectedShopId)!}
+              onBack={() => setSelectedShopId(null)}
+              onToggle={async (id, active) => {
+                await toggleShopStatus(id, active)
+                loadData()
+              }}
+            />
+          ) : (
+            <ShopsTab
+              shops={filtered}
+              searchQuery={searchQuery}
+              onSearch={setSearchQuery}
+              onAddShop={() => setShowAddShop(true)}
+              onSelectShop={setSelectedShopId}
+              onToggle={async (id, active) => {
+                await toggleShopStatus(id, active)
+                loadData()
+              }}
+            />
+          )
         )}
         {tab === 'proposals' && (
           <ProposalBuilder onClose={() => setShowProposal(false)} />
@@ -143,8 +159,8 @@ function OverviewTab({ mrr, shops, history }: {
         <div className="section-title">MRR by Plan</div>
         <div className="plan-bars">
           {[
-            { label: 'Business Plus', amount: mrr.byPlan.business, color: '#0F6E56', price: '$110' },
-            { label: 'Professional', amount: mrr.byPlan.professional, color: '#BA7517', price: '$69' },
+            { label: 'Pro', amount: mrr.byPlan.pro, color: '#0F6E56', price: '$110' },
+            { label: 'Growth', amount: mrr.byPlan.growth, color: '#BA7517', price: '$69' },
             { label: 'Starter', amount: mrr.byPlan.starter, color: '#3B6D11', price: '$29' },
           ].map(p => (
             <div key={p.label} className="plan-bar-row">
@@ -191,12 +207,135 @@ function OverviewTab({ mrr, shops, history }: {
   )
 }
 
+type ShopDetailTab = 'overview' | 'website' | 'plan'
+
+// ── Shop detail (Overview + Website tab) ───────────────────────
+function ShopDetailView({
+  shop,
+  onBack,
+  onToggle,
+}: {
+  shop: ShopOverview | undefined
+  onBack: () => void
+  onToggle: (id: string, active: boolean) => void
+}) {
+  const [detailTab, setDetailTab] = useState<ShopDetailTab>('website')
+
+  if (!shop) {
+    return (
+      <div className="shop-detail">
+        <button type="button" className="action-btn" onClick={onBack}>
+          ← Back to shops
+        </button>
+        <p className="sws-muted">Shop not found.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="shop-detail">
+      <div className="shop-detail-header">
+        <button type="button" className="action-btn" onClick={onBack}>
+          ← Back to shops
+        </button>
+        <div className="shop-detail-title">
+          <h2>{shop.name}</h2>
+          <p className="shop-detail-meta">
+            {shop.id}
+            {shop.slug ? ` · slug: ${shop.slug}` : ''}
+            {' · '}
+            <span className={`plan-tag plan-${shop.plan}`}>{PLAN_LABELS[shop.plan]}</span>
+          </p>
+        </div>
+        <div className="shop-detail-actions">
+          <button
+            type="button"
+            className="action-btn"
+            onClick={() => {
+              const url = shop.slug
+                ? `${window.location.origin}/?shop=${encodeURIComponent(shop.slug)}`
+                : `${window.location.origin}/book`
+              window.open(url, '_blank')
+            }}
+          >
+            Open public site
+          </button>
+          <button
+            type="button"
+            className={`action-btn ${shop.status === 'active' ? 'danger' : 'success'}`}
+            onClick={() => onToggle(shop.id, shop.status !== 'active')}
+          >
+            {shop.status === 'active' ? 'Suspend' : 'Activate'}
+          </button>
+        </div>
+      </div>
+
+      <div className="shop-detail-tabs">
+        <button
+          type="button"
+          className={`shop-detail-tab${detailTab === 'overview' ? ' active' : ''}`}
+          onClick={() => setDetailTab('overview')}
+        >
+          📊 Overview
+        </button>
+        <button
+          type="button"
+          className={`shop-detail-tab${detailTab === 'website' ? ' active' : ''}`}
+          onClick={() => setDetailTab('website')}
+        >
+          🌐 Website
+        </button>
+        <button
+          type="button"
+          className={`shop-detail-tab${detailTab === 'plan' ? ' active' : ''}`}
+          onClick={() => setDetailTab('plan')}
+        >
+          💳 Plan & Billing
+        </button>
+      </div>
+
+      {detailTab === 'overview' && (
+        <div className="section-card shop-detail-stats">
+          <div className="shop-stat">
+            <span className="shop-stat-label">MRR</span>
+            <span className="shop-stat-value">{formatAUD(shop.mrr)}</span>
+          </div>
+          <div className="shop-stat">
+            <span className="shop-stat-label">Bookings (month)</span>
+            <span className="shop-stat-value">{shop.bookingsThisMonth}</span>
+          </div>
+          <div className="shop-stat">
+            <span className="shop-stat-label">Revenue (month)</span>
+            <span className="shop-stat-value">{formatAUD(shop.revenueThisMonth)}</span>
+          </div>
+          <div className="shop-stat">
+            <span className="shop-stat-label">Contact</span>
+            <span className="shop-stat-value shop-stat-contact">
+              {shop.ownerEmail || '—'}
+              {shop.ownerPhone ? ` · ${shop.ownerPhone}` : ''}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {detailTab === 'website' && (
+        <ShopWebsiteSettingsPanel shopId={shop.id} shopName={shop.name} />
+      )}
+
+      {detailTab === 'plan' && (
+        <ShopPlanBilling shopId={shop.id} shopName={shop.name} />
+      )}
+    </div>
+  )
+}
+
 // ── Shops Tab ─────────────────────────────────────────────────
-function ShopsTab({ shops, searchQuery, onSearch, onAddShop, onToggle }: {
+function ShopsTab({ shops, searchQuery, onSearch, onAddShop, onSelectShop, onToggle }: {
   shops: ShopOverview[]
   searchQuery: string
   onSearch: (q: string) => void
   onAddShop: () => void
+  onSelectShop: (id: string) => void
   onToggle: (id: string, active: boolean) => void
 }) {
   return (
@@ -225,15 +364,18 @@ function ShopsTab({ shops, searchQuery, onSearch, onAddShop, onToggle }: {
           <span>Actions</span>
         </div>
         {shops.map(shop => (
-          <div key={shop.id} className="table-row">
-            <div className="shop-info">
+          <div key={shop.id} className="table-row table-row-clickable">
+            <button
+              type="button"
+              className="shop-info shop-info-btn"
+              onClick={() => onSelectShop(shop.id)}
+            >
               <div className="shop-name">{shop.name}</div>
-              <div className="shop-domain">{shop.domain}</div>
-            </div>
-            <span className={`plan-tag plan-${shop.plan}`}>
-              {shop.plan === 'business' ? 'Business+' :
-               shop.plan === 'professional' ? 'Pro' : 'Starter'}
-            </span>
+              <div className="shop-domain">
+                {shop.slug ? `?shop=${shop.slug}` : shop.domain}
+              </div>
+            </button>
+            <span className={`plan-tag plan-${shop.plan}`}>{PLAN_LABELS[shop.plan]}</span>
             <span className="cell-mrr">{formatAUD(shop.mrr)}</span>
             <span className="cell-num">{shop.bookingsThisMonth}</span>
             <span className="cell-revenue">{formatAUD(shop.revenueThisMonth)}</span>
@@ -245,10 +387,11 @@ function ShopsTab({ shops, searchQuery, onSearch, onAddShop, onToggle }: {
             </span>
             <div className="cell-actions">
               <button
+                type="button"
                 className="action-btn"
-                onClick={() => window.open(`https://${shop.domain}`, '_blank')}
+                onClick={() => onSelectShop(shop.id)}
               >
-                View
+                🌐 Website
               </button>
               <button
                 className={`action-btn ${shop.status === 'active' ? 'danger' : 'success'}`}

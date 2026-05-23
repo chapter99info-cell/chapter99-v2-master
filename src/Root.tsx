@@ -6,6 +6,7 @@ import BookPage from './pages/BookPage'
 import AboutPage from './pages/AboutPage'
 import PublicServicesPage from './pages/PublicServicesPage'
 import PublicVoucherPage from './pages/PublicVoucherPage'
+import PublicPageGuard from './components/routing/PublicPageGuard'
 import OfflineBanner from './components/pwa/OfflineBanner'
 import InstallPrompt from './components/pwa/InstallPrompt'
 
@@ -15,11 +16,39 @@ export default function Root() {
       <OfflineBanner />
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route index element={<HomePage />} />
+          <Route
+            index
+            element={
+              <PublicPageGuard page="home">
+                <HomePage />
+              </PublicPageGuard>
+            }
+          />
           <Route path="book" element={<BookPage />} />
-          <Route path="voucher" element={<PublicVoucherPage />} />
-          <Route path="about" element={<AboutPage />} />
-          <Route path="services" element={<PublicServicesPage />} />
+          <Route
+            path="voucher"
+            element={
+              <PublicPageGuard page="vouchers">
+                <PublicVoucherPage />
+              </PublicPageGuard>
+            }
+          />
+          <Route
+            path="about"
+            element={
+              <PublicPageGuard page="about">
+                <AboutPage />
+              </PublicPageGuard>
+            }
+          />
+          <Route
+            path="services"
+            element={
+              <PublicPageGuard page="services">
+                <PublicServicesPage />
+              </PublicPageGuard>
+            }
+          />
         </Route>
         <Route path="/staff/*" element={<App />} />
       </Routes>
