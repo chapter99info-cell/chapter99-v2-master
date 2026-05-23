@@ -3,6 +3,31 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: {
+    chunkSizeWarningLimit: 2500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('chart.js')) return 'charts'
+          if (
+            id.includes('jspdf') ||
+            id.includes('html2canvas') ||
+            id.includes('@react-pdf')
+          ) {
+            return 'pdf'
+          }
+          if (
+            id.includes('react-dom') ||
+            id.includes('react-router') ||
+            id.includes('/react/')
+          ) {
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -46,7 +71,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf}'],
         navigateFallback: '/index.html',
         runtimeCaching: [

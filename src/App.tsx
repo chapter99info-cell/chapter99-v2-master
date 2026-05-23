@@ -5,6 +5,8 @@ import {
   useState,
   useCallback,
   useEffect,
+  lazy,
+  Suspense,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
@@ -23,7 +25,7 @@ import ShopSettings from './components/settings/ShopSettings'
 import RoomManager from './components/rooms/RoomManager'
 import RevenueSummary from './components/dashboard/RevenueSummary'
 import GiftVoucherList from './components/dashboard/GiftVoucherList'
-import OwnerReports from './components/dashboard/OwnerReports'
+const OwnerReports = lazy(() => import('./components/dashboard/OwnerReports'))
 import { countUnreadNotifications } from './lib/notificationService'
 import { PlanProvider, usePlan } from './contexts/PlanContext'
 import { PlanGatedTab, PlanGate } from './components/plan/PlanGatedTab'
@@ -304,7 +306,9 @@ function StaffDashboard({
         )}
         {activeTab === 'reports' && isOwner && (
           <PlanGate feature="reports">
-            <OwnerReports shopId={SHOP_ID} />
+            <Suspense fallback={<p className="reports-muted">Loading reports…</p>}>
+              <OwnerReports shopId={SHOP_ID} />
+            </Suspense>
           </PlanGate>
         )}
         {activeTab === 'website' && isOwner && (
