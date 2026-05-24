@@ -1,0 +1,375 @@
+.public-booking-wizard {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 0 32px;
+}
+
+.pbw-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.pbw-progress-seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #e0ddd5;
+  transition: background 0.2s;
+}
+
+.pbw-progress-seg.active,
+.pbw-progress-seg.done {
+  background: #1a3d2b;
+}
+
+.pbw-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  margin: -12px 0 20px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.pbw-progress-labels span.active {
+  color: #1a3d2b;
+  font-weight: 600;
+}
+
+.pbw-error {
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.pbw-step-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: #1a3d2b;
+}
+
+.pbw-step-lead {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.pbw-category {
+  margin: 20px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1a3d2b;
+}
+
+.pbw-service-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 520px) {
+  .pbw-service-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pbw-service-card {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  text-align: left;
+  padding: 14px;
+  min-height: 88px;
+  border: 2px solid #e0ddd5;
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pbw-service-card:hover {
+  border-color: #1a3d2b;
+}
+
+.pbw-service-card.selected {
+  border-color: #1a3d2b;
+  background: #f0f7f3;
+  box-shadow: 0 0 0 1px #1a3d2b;
+}
+
+.pbw-service-img {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f5f4ee;
+}
+
+.pbw-service-img.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.pbw-service-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pbw-service-name {
+  font-weight: 600;
+  font-size: 15px;
+  margin: 0 0 4px;
+  color: #1a1a1a;
+}
+
+.pbw-service-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pbw-service-price {
+  font-weight: 600;
+  color: #1a3d2b;
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+.pbw-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.pbw-cal-day {
+  min-height: 48px;
+  padding: 8px 4px;
+  border: 1px solid #e0ddd5;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pbw-cal-day:disabled,
+.pbw-cal-day.past {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pbw-cal-day.selected {
+  border-color: #1a3d2b;
+  background: #1a3d2b;
+  color: #fff;
+}
+
+.pbw-cal-day .dow {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.pbw-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.pbw-slot {
+  min-height: 48px;
+  padding: 10px 8px;
+  border: 1px solid #e0ddd5;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.pbw-slot small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.pbw-slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pbw-slot.selected {
+  border-color: #1a3d2b;
+  background: #1a3d2b;
+  color: #fff;
+}
+
+.pbw-slot.selected small {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.pbw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pbw-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .pbw-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pbw-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pbw-form input,
+.pbw-form textarea {
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #e0ddd5;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+}
+
+.pbw-form textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.pbw-summary {
+  background: #f5f4ee;
+  border: 1px solid #e0ddd5;
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.pbw-summary dl {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pbw-summary dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.pbw-summary dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.pbw-total {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a3d2b;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0ddd5;
+}
+
+.pbw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pbw-btn {
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  flex: 1;
+  min-width: 140px;
+}
+
+.pbw-btn-primary {
+  background: #1a3d2b;
+  color: #fff;
+}
+
+.pbw-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pbw-btn-secondary {
+  background: #fff;
+  color: #1a3d2b;
+  border: 2px solid #1a3d2b;
+}
+
+.pbw-done {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.pbw-done-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.pbw-done h2 {
+  color: #1a3d2b;
+  margin: 0 0 8px;
+}
+
+.pbw-ref {
+  font-family: ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a3d2b;
+  margin: 12px 0;
+}
+
+.pbw-done-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 320px;
+  margin: 20px auto 0;
+}
+
+.pbw-done-actions .pbw-btn {
+  width: 100%;
+}
+
+.legal-agree-required {
+  margin: 4px 0 0;
+  color: #993c1d;
+  font-size: 13px;
+}

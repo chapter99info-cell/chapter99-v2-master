@@ -77,6 +77,16 @@
 }
 
 .bw-empty,
+.bw-step .legal-agree-label {
+  max-width: 100%;
+}
+
+.legal-agree-required {
+  margin: 0 0 8px;
+  color: #993c1d;
+  font-size: 13px;
+}
+
 .bw-hint {
   font-size: 13px;
   color: var(--text-secondary);

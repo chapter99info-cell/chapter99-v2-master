@@ -3,14 +3,13 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { Resend } from 'resend'
+import { RECEIPTS_FROM } from '../server/emailConstants'
 import {
   buildBookingConfirmationHTML,
   buildBookingConfirmationSubject,
   buildBookingConfirmationText,
   type BookingConfirmationEmailPayload,
 } from '../server/bookingConfirmationEmailTemplate'
-
-const FROM = 'Chapter99 Bookings <onboarding@resend.dev>'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json')
@@ -42,12 +41,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     shopName: body.shopName.trim(),
     shopAddress: body.shopAddress?.trim(),
     shopPhone: body.shopPhone?.trim(),
+    shopEmail: body.shopEmail?.trim(),
+    logoUrl: body.logoUrl?.trim(),
+    bookingRef: body.bookingRef?.trim() || 'BK-PENDING',
+    cancelUrl: body.cancelUrl?.trim(),
+    totalPrice: body.totalPrice != null ? Number(body.totalPrice) : undefined,
   }
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const result = await resend.emails.send({
-      from: FROM,
+      from: RECEIPTS_FROM,
       to: payload.to,
       subject: buildBookingConfirmationSubject(payload.shopName),
       html: buildBookingConfirmationHTML(payload),

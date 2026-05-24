@@ -7,6 +7,7 @@ interface LegalAgreementCheckboxProps {
   privacyHref: string
   termsHref: string
   id?: string
+  required?: boolean
 }
 
 function LegalLink({
@@ -32,6 +33,7 @@ export default function LegalAgreementCheckbox({
   privacyHref,
   termsHref,
   id = 'legal-agree',
+  required = false,
 }: LegalAgreementCheckboxProps) {
   return (
     <label className="legal-agree-label" htmlFor={id}>
@@ -40,6 +42,8 @@ export default function LegalAgreementCheckbox({
         type="checkbox"
         className="legal-agree-input"
         checked={checked}
+        required={required}
+        aria-required={required}
         onChange={e => onChange(e.target.checked)}
       />
       <span>

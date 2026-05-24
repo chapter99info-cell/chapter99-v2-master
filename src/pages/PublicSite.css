@@ -26,8 +26,46 @@
   gap: 8px;
 }
 
+.legal-toc {
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  background: #f5f4ee;
+  border: 1px solid #e0ddd5;
+  border-radius: var(--radius-sm);
+}
+
+.legal-toc-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a3d2b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.legal-toc ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.legal-toc li {
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.legal-toc a {
+  color: #0f6e56;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.legal-toc a:hover {
+  text-decoration: underline;
+}
+
 .legal-section {
   margin: 0 0 8px;
+  scroll-margin-top: 80px;
 }
 
 .legal-section h2 {

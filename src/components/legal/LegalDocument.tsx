@@ -28,14 +28,16 @@ export default function LegalDocument({
 }
 
 export function LegalSection({
+  id,
   title,
   children,
 }: {
+  id?: string
   title: string
   children: ReactNode
 }) {
   return (
-    <section className="legal-section">
+    <section id={id} className="legal-section">
       <h2>{title}</h2>
       {children}
     </section>

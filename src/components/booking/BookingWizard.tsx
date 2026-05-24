@@ -426,6 +426,10 @@ export default function BookingWizard({
     if (!selectedService || !time || !person1.name.trim()) return
     if (isCouple && !person2.name.trim()) return
     if (isCouple && differentServiceP2 && !selectedService2) return
+    if (isPublic && !legalAgreed) {
+      setError('Please agree to the Terms of Service and Privacy Policy before booking.')
+      return
+    }
 
     setLoading(true)
     setError('')
@@ -1198,12 +1202,23 @@ export default function BookingWizard({
           )}
 
           {isPublic && (
-            <LegalAgreementCheckbox
-              checked={legalAgreed}
-              onChange={setLegalAgreed}
-              privacyHref={privacyHref}
-              termsHref={termsHref}
-            />
+            <>
+              <LegalAgreementCheckbox
+                checked={legalAgreed}
+                onChange={checked => {
+                  setLegalAgreed(checked)
+                  if (checked) setError('')
+                }}
+                privacyHref={privacyHref}
+                termsHref={termsHref}
+                required
+              />
+              {!legalAgreed && (
+                <p className="bw-hint legal-agree-required" role="status">
+                  ต้องติ๊กก่อนจองได้ — You must agree before confirming your booking.
+                </p>
+              )}
+            </>
           )}
 
           <div className="bw-nav">

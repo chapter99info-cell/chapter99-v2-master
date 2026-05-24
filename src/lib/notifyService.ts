@@ -120,6 +120,45 @@ export async function sendOwnerBookingNotificationEmail(
   }
 }
 
+export interface BookingNotificationsRequest {
+  shopId: string
+  bookingId: string
+  shopSlug: string
+  clientName: string
+  clientEmail?: string
+  clientPhone?: string
+  serviceName: string
+  durationMin: number
+  dateLabel: string
+  time: string
+  therapistLabel: string
+  shopName: string
+  shopAddress?: string
+  shopPhone?: string
+  shopEmail?: string
+  ownerNotificationEmail?: string
+  logoUrl?: string
+  cancelUrl: string
+  totalPrice?: number
+  startIso: string
+}
+
+/** Public online booking: confirmation email + SMS + owner alerts. */
+export async function sendBookingNotifications(
+  payload: BookingNotificationsRequest
+): Promise<{ ok: boolean }> {
+  try {
+    const res = await fetch('/api/booking-notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return { ok: res.ok }
+  } catch {
+    return { ok: false }
+  }
+}
+
 export interface BookingConfirmationEmailRequest {
   to: string
   clientName: string
@@ -131,6 +170,11 @@ export interface BookingConfirmationEmailRequest {
   shopName: string
   shopAddress?: string
   shopPhone?: string
+  bookingRef?: string
+  cancelUrl?: string
+  logoUrl?: string
+  totalPrice?: number
+  shopEmail?: string
 }
 
 /** Send booking confirmation email after staff wizard confirms a booking. */
