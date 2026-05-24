@@ -259,34 +259,69 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
     loadStaff()
   }
 
-  async function deleteStaff(id: string) {
+  function requestDeleteStaff(id: string) {
+    closeForm()
+    setConfirmDelete(id)
+  }
+
+  async function deleteStaff() {
+    const id = confirmDelete
+    if (!id) return
+
     setDeleting(true)
     setLoadError('')
-    setConfirmDelete(null)
 
-    const { data, error } = await supabase
-      .from('staff')
-      .update({ active: false, pin_hash: DELETED_PIN_MARKER })
-      .eq('id', id)
-      .eq('shop_id', shopId)
-      .select('id')
+    try {
+      const { data: marked, error: markError } = await supabase
+        .from('staff')
+        .update({ active: false, pin_hash: DELETED_PIN_MARKER })
+        .eq('id', id)
+        .eq('shop_id', shopId)
+        .select('id')
 
-    setDeleting(false)
+      if (!markError && marked?.length) {
+        setConfirmDelete(null)
+        setToast({ message: 'Staff member removed', type: 'success' })
+        await loadStaff()
+        return
+      }
 
-    if (error || !data?.length) {
+      const { data: deactivated, error: deactivateError } = await supabase
+        .from('staff')
+        .update({ active: false })
+        .eq('id', id)
+        .eq('shop_id', shopId)
+        .select('id')
+
+      if (!deactivateError && deactivated?.length) {
+        setConfirmDelete(null)
+        setToast({ message: 'Staff member removed', type: 'success' })
+        await loadStaff()
+        return
+      }
+
+      const baseMsg =
+        deactivateError?.message ?? markError?.message ?? 'Could not delete staff member'
       const msg =
-        error?.message.includes('policy') || error?.code === '42501'
-          ? `${error?.message ?? 'Permission denied'} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
-          : error?.message ?? 'Could not delete staff member (not found or blocked)'
+        baseMsg.includes('policy') ||
+        deactivateError?.code === '42501' ||
+        markError?.code === '42501'
+          ? `${baseMsg} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
+          : baseMsg
       setLoadError(msg)
       setToast({ message: msg, type: 'error' })
-      return
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Delete failed'
+      setLoadError(msg)
+      setToast({ message: msg, type: 'error' })
+    } finally {
+      setDeleting(false)
     }
-
-    setStaffList(prev => prev.filter(s => s.id !== id))
-    setToast({ message: 'Staff member removed', type: 'success' })
-    await loadStaff()
   }
+
+  const deleteTarget = confirmDelete
+    ? staffList.find(s => s.id === confirmDelete)
+    : null
 
   const daysUntil = (dateStr: string) => {
     if (!dateStr) return null
@@ -408,15 +443,13 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
                 >
                   {s.active ? 'Suspend' : 'Activate'}
                 </button>
-                {pinLevel === 'owner' && (
-                  <button
-                    type="button"
-                    className="staff-btn staff-btn--danger"
-                    onClick={() => setConfirmDelete(s.id)}
-                  >
-                    Delete
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="staff-btn staff-btn--danger"
+                  onClick={() => requestDeleteStaff(s.id)}
+                >
+                  Delete
+                </button>
               </div>
             </article>
           )
@@ -602,22 +635,37 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
 
       {confirmDelete && (
         <div
-          className="modal-overlay"
-          onClick={() => !deleting && setConfirmDelete(null)}
+          className="modal-overlay modal-overlay--portal"
+          role="presentation"
+          onClick={() => {
+            if (!deleting) setConfirmDelete(null)
+          }}
         >
           <div
             className="modal-box staff-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="staff-delete-title"
             onClick={e => e.stopPropagation()}
           >
-            <div className="modal-title">⚠️ Delete Staff Member?</div>
+            <div className="modal-title" id="staff-delete-title">
+              ⚠️ Delete Staff Member?
+            </div>
             <p className="staff-delete-msg">
-              Their booking history and financial records will be kept for legal purposes.
-              Only their login access will be removed.
+              {deleteTarget ? (
+                <>
+                  Remove <strong>{deleteTarget.name_en}</strong>? Their booking history and
+                  financial records will be kept. Only their login access will be removed.
+                </>
+              ) : (
+                'Their booking history and financial records will be kept for legal purposes. Only their login access will be removed.'
+              )}
             </p>
             <div className="modal-footer">
               <button
                 type="button"
                 className="modal-btn secondary"
+                disabled={deleting}
                 onClick={() => setConfirmDelete(null)}
               >
                 Cancel
@@ -626,7 +674,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
                 type="button"
                 className="modal-btn danger"
                 disabled={deleting}
-                onClick={() => void deleteStaff(confirmDelete)}
+                onClick={() => void deleteStaff()}
               >
                 {deleting ? 'Deleting…' : 'Confirm Delete'}
               </button>

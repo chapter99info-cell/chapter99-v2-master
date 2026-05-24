@@ -1,17 +1,10 @@
 // Chapter99 V4 — Services CRUD (owner)
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import type { Service } from '../../types/pos'
+import { supabase, SHOP_ID } from '../../lib/supabase'
 import Toast, { type ToastType } from '../ui/Toast'
 import './ServicesManager.css'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-)
-
-const SHOP_ID = import.meta.env.VITE_SHOP_ID ?? 'shop-001'
 
 interface ServiceRow {
   id: string
@@ -195,49 +188,64 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
     }
   }
 
-  async function deleteService(id: string) {
+  function requestDeleteService(id: string) {
+    setShowForm(false)
+    setEditId(null)
+    setConfirmDelete(id)
+  }
+
+  async function deleteService() {
+    const id = confirmDelete
+    if (!id) return
+
     setDeleting(true)
     setError('')
-    setConfirmDelete(null)
-    setServices(prev => prev.filter(s => s.id !== id))
 
-    const { error: deleteError } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id)
-      .eq('shop_id', shopId)
+    try {
+      const { data: deleted, error: deleteError } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id)
+        .eq('shop_id', shopId)
+        .select('id')
 
-    if (!deleteError) {
-      setDeleting(false)
-      setToast({ message: 'Service deleted', type: 'success' })
-      await loadServices()
-      return
-    }
+      if (!deleteError && deleted?.length) {
+        setConfirmDelete(null)
+        setToast({ message: 'Service deleted', type: 'success' })
+        await loadServices()
+        return
+      }
 
-    const { data, error: softError } = await supabase
-      .from('services')
-      .update({ active: false })
-      .eq('id', id)
-      .eq('shop_id', shopId)
-      .select('id')
+      const { data: hidden, error: hideError } = await supabase
+        .from('services')
+        .update({ active: false })
+        .eq('id', id)
+        .eq('shop_id', shopId)
+        .select('id')
 
-    setDeleting(false)
+      if (!hideError && hidden?.length) {
+        setConfirmDelete(null)
+        setToast({
+          message: 'Service removed from menu (linked history kept)',
+          type: 'success',
+        })
+        await loadServices()
+        return
+      }
 
-    if (softError || !data?.length) {
-      await loadServices()
       const msg =
-        softError?.message ??
-        deleteError.message ??
-        'Could not delete service — it may be linked to bookings'
+        hideError?.message ??
+        deleteError?.message ??
+        'Could not delete service — run supabase/36-services-manager-rls.sql in Supabase SQL Editor'
       setError(msg)
       setToast({ message: msg, type: 'error' })
-      return
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Delete failed'
+      setError(msg)
+      setToast({ message: msg, type: 'error' })
+    } finally {
+      setDeleting(false)
     }
-
-    setToast({
-      message: 'Service removed from menu (linked history kept)',
-      type: 'success',
-    })
   }
 
   const filteredServices = services.filter(row => {
@@ -249,6 +257,10 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       row.category.toLowerCase().includes(q)
     )
   })
+
+  const deleteTarget = confirmDelete
+    ? services.find(s => s.id === confirmDelete)
+    : null
 
   const categoryLabel = (c: string) =>
     c.replace('_', ' ').replace(/\b\w/g, ch => ch.toUpperCase())
@@ -332,7 +344,7 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
                   <button
                     type="button"
                     className="service-btn danger"
-                    onClick={() => setConfirmDelete(row.id)}
+                    onClick={() => requestDeleteService(row.id)}
                   >
                     Delete
                   </button>
@@ -462,21 +474,40 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       )}
 
       {confirmDelete && (
-        <div className="modal-overlay" onClick={() => !deleting && setConfirmDelete(null)}>
+        <div
+          className="modal-overlay modal-overlay--portal"
+          role="presentation"
+          onClick={() => {
+            if (!deleting) setConfirmDelete(null)
+          }}
+        >
           <div
             className="modal-box"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="service-delete-title"
             style={{ maxWidth: 400 }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="modal-title">Remove service from menu?</div>
+            <div className="modal-title" id="service-delete-title">
+              Remove service from menu?
+            </div>
             <p className="services-delete-msg">
-              The service will be hidden from POS and online booking. Existing
-              bookings and transactions are kept. You can show it again with Show.
+              {deleteTarget ? (
+                <>
+                  Remove <strong>{deleteTarget.name_en}</strong> from POS and online booking?
+                  Existing bookings and transactions are kept when removal is blocked by linked
+                  records.
+                </>
+              ) : (
+                'Remove this service from POS and online booking?'
+              )}
             </p>
             <div className="modal-footer">
               <button
                 type="button"
                 className="modal-btn secondary"
+                disabled={deleting}
                 onClick={() => setConfirmDelete(null)}
               >
                 Cancel
@@ -485,7 +516,7 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
                 type="button"
                 className="modal-btn danger"
                 disabled={deleting}
-                onClick={() => void deleteService(confirmDelete)}
+                onClick={() => void deleteService()}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>

@@ -203,6 +203,10 @@ body {
   padding: 16px;
 }
 
+.modal-overlay--portal {
+  z-index: 1000;
+}
+
 .modal-box,
 .pos-modal {
   background: var(--surface);
