@@ -27,7 +27,11 @@ import { sendSMS, SMS, sendGiftVoucherEmail } from '../../lib/notifyService'
 import { sendReviewRequestAfterCheckout } from '../../lib/reviewRequestService'
 import { getSyncStatus } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
-import { downloadAndRecordReceipt, emailReceipt } from '../../lib/receiptService'
+import {
+  downloadAndRecordReceipt,
+  emailHealthFundReceipt,
+  emailReceipt,
+} from '../../lib/receiptService'
 import { syncTransactionToSheet } from '../../lib/googleSheets'
 import { fetchLastCustomerVisit } from '../../lib/customerHistory'
 import { supabase } from '../../lib/supabase'
@@ -85,6 +89,13 @@ export default function POSPage() {
   const [receiptNote, setReceiptNote] = useState('')
   const [receiptLoading, setReceiptLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
+  const [healthFundEmailLoading, setHealthFundEmailLoading] = useState(false)
+  const [showReceiptEmailInput, setShowReceiptEmailInput] = useState(false)
+  const [showHealthFundEmailInput, setShowHealthFundEmailInput] = useState(false)
+  const [receiptEmailDraft, setReceiptEmailDraft] = useState('')
+  const [healthFundEmailDraft, setHealthFundEmailDraft] = useState('')
+  const [receiptEmailSent, setReceiptEmailSent] = useState<string | null>(null)
+  const [healthFundEmailSent, setHealthFundEmailSent] = useState<string | null>(null)
   const [healthFundLoading, setHealthFundLoading] = useState(false)
   const [healthFundNote, setHealthFundNote] = useState('')
 
@@ -479,6 +490,12 @@ export default function POSPage() {
     setCurrentTx(null)
     setReceiptNote('')
     setHealthFundNote('')
+    setShowReceiptEmailInput(false)
+    setShowHealthFundEmailInput(false)
+    setReceiptEmailDraft('')
+    setHealthFundEmailDraft('')
+    setReceiptEmailSent(null)
+    setHealthFundEmailSent(null)
     clearAppliedVoucher()
     setStep('bill')
   }
@@ -529,20 +546,68 @@ export default function POSPage() {
     }
   }
 
-  const handleEmailReceipt = async () => {
+  const resolveClientEmail = () =>
+    (currentTx?.clientEmail ?? clientEmail).trim()
+
+  const submitReceiptEmail = async (to: string) => {
     if (!currentTx || !shop) return
+    const email = to.trim()
+    if (!email) return
+
     setEmailLoading(true)
-    const result = await emailReceipt(currentTx, shop)
+    setReceiptNote('')
+    const tx = { ...currentTx, clientEmail: email }
+    const result = await emailReceipt(tx, shop, email)
     setEmailLoading(false)
+
     if (result.ok) {
-      setReceiptNote(
-        result.receiptNumber
-          ? `Receipt ${result.receiptNumber} emailed to ${currentTx.clientEmail}`
-          : 'Receipt emailed to customer'
-      )
-      setCurrentTx({ ...currentTx, receiptSent: true })
+      setClientEmail(email)
+      setCurrentTx({ ...tx, receiptSent: true })
+      setReceiptEmailSent(email)
+      setShowReceiptEmailInput(false)
+      setReceiptEmailDraft('')
     } else {
       setReceiptNote(result.error ?? 'Could not send email')
+    }
+  }
+
+  const onEmailReceiptClick = () => {
+    const email = resolveClientEmail()
+    if (email) void submitReceiptEmail(email)
+    else {
+      setShowReceiptEmailInput(true)
+      setReceiptEmailDraft(clientEmail)
+    }
+  }
+
+  const submitHealthFundEmail = async (to: string) => {
+    if (!currentTx || !shop) return
+    const email = to.trim()
+    if (!email) return
+
+    setHealthFundEmailLoading(true)
+    setHealthFundNote('')
+    const tx = { ...currentTx, clientEmail: email }
+    const result = await emailHealthFundReceipt(tx, shop, email)
+    setHealthFundEmailLoading(false)
+
+    if (result.ok) {
+      setClientEmail(email)
+      setCurrentTx({ ...tx, healthFundIssued: true })
+      setHealthFundEmailSent(email)
+      setShowHealthFundEmailInput(false)
+      setHealthFundEmailDraft('')
+    } else {
+      setHealthFundNote(result.error ?? 'Could not send health fund email')
+    }
+  }
+
+  const onHealthFundEmailClick = () => {
+    const email = resolveClientEmail()
+    if (email) void submitHealthFundEmail(email)
+    else {
+      setShowHealthFundEmailInput(true)
+      setHealthFundEmailDraft(clientEmail)
     }
   }
 
@@ -1001,15 +1066,14 @@ export default function POSPage() {
             >
               {receiptLoading ? 'Generating…' : '📄 Download Receipt'}
             </button>
-            {currentTx?.clientEmail && (
-              <button
-                className="s-btn primary"
-                disabled={emailLoading || !shop}
-                onClick={handleEmailReceipt}
-              >
-                {emailLoading ? 'Sending…' : '✉️ Email Receipt'}
-              </button>
-            )}
+            <button
+              type="button"
+              className="s-btn primary"
+              disabled={emailLoading || !shop}
+              onClick={onEmailReceiptClick}
+            >
+              {emailLoading ? 'Sending…' : '✉️ Email Receipt'}
+            </button>
             <button className="s-btn" onClick={handlePrint}>🖨 Print Receipt</button>
             <button
               type="button"
@@ -1019,8 +1083,65 @@ export default function POSPage() {
             >
               {healthFundLoading ? 'Generating…' : '❤️ Health Fund PDF'}
             </button>
+            <button
+              type="button"
+              className="s-btn"
+              disabled={healthFundEmailLoading || !shop}
+              onClick={onHealthFundEmailClick}
+            >
+              {healthFundEmailLoading ? 'Sending…' : '📧 Email Health Fund PDF'}
+            </button>
             <button className="s-btn" onClick={reset}>ปิดบิล</button>
           </div>
+          {showReceiptEmailInput && !receiptEmailSent && (
+            <div className="success-email-prompt">
+              <input
+                type="email"
+                className="pos-input success-email-input"
+                placeholder="กรอก email ลูกค้า"
+                value={receiptEmailDraft}
+                onChange={e => setReceiptEmailDraft(e.target.value)}
+                autoComplete="email"
+              />
+              <button
+                type="button"
+                className="s-btn primary"
+                disabled={emailLoading || !receiptEmailDraft.trim()}
+                onClick={() => void submitReceiptEmail(receiptEmailDraft)}
+              >
+                {emailLoading ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          )}
+          {receiptEmailSent && (
+            <p className="success-email-sent">✅ ส่งแล้วไปที่ {receiptEmailSent}</p>
+          )}
+          {showHealthFundEmailInput && !healthFundEmailSent && (
+            <div className="success-email-prompt">
+              <input
+                type="email"
+                className="pos-input success-email-input"
+                placeholder="กรอก email ลูกค้า"
+                value={healthFundEmailDraft}
+                onChange={e => setHealthFundEmailDraft(e.target.value)}
+                autoComplete="email"
+              />
+              <button
+                type="button"
+                className="s-btn primary"
+                disabled={healthFundEmailLoading || !healthFundEmailDraft.trim()}
+                onClick={() => void submitHealthFundEmail(healthFundEmailDraft)}
+              >
+                {healthFundEmailLoading ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          )}
+          {healthFundEmailSent && (
+            <p className="success-email-sent">✅ ส่งแล้วไปที่ {healthFundEmailSent}</p>
+          )}
+          {healthFundNote && !healthFundEmailSent && (
+            <p className="success-note">{healthFundNote}</p>
+          )}
           </div>
           {shop?.googleReviewUrl?.trim() && (
             <GoogleReviewQR url={shop.googleReviewUrl} />

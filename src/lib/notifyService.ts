@@ -32,9 +32,10 @@ export async function sendSMS(
 export async function sendReceiptEmail(
   tx: Transaction,
   shopName: string,
-  pdfBase64: string
+  pdfBase64: string,
+  toOverride?: string
 ): Promise<boolean> {
-  const to = tx.clientEmail?.trim()
+  const to = (toOverride ?? tx.clientEmail)?.trim()
   if (!to) {
     console.warn('[receipt-email] skipped: no client email on transaction', tx.id)
     return false
@@ -50,6 +51,7 @@ export async function sendReceiptEmail(
         shopName,
         transaction: tx,
         pdfBase64,
+        emailKind: 'receipt',
       }),
     })
 
@@ -73,6 +75,60 @@ export async function sendReceiptEmail(
     return false
   } catch (err) {
     console.error('[receipt-email] network error', {
+      to,
+      transactionId: tx.id,
+      message: err instanceof Error ? err.message : String(err),
+    })
+    return false
+  }
+}
+
+export async function sendHealthFundEmail(
+  tx: Transaction,
+  shopName: string,
+  pdfBase64: string,
+  toOverride?: string
+): Promise<boolean> {
+  const to = (toOverride ?? tx.clientEmail)?.trim()
+  if (!to) {
+    console.warn('[health-fund-email] skipped: no client email', tx.id)
+    return false
+  }
+
+  try {
+    const res = await fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to,
+        subject: `Health Fund Receipt - ${shopName} ${tx.id}`,
+        shopName,
+        transaction: { ...tx, healthFundIssued: true },
+        pdfBase64,
+        emailKind: 'health_fund',
+      }),
+    })
+
+    const body = (await res.json().catch(() => ({}))) as {
+      success?: boolean
+      id?: string
+      error?: string
+    }
+
+    if (res.ok && body.success) {
+      console.info('[health-fund-email] sent', { to, transactionId: tx.id, resendId: body.id })
+      return true
+    }
+
+    console.error('[health-fund-email] failed', {
+      to,
+      transactionId: tx.id,
+      status: res.status,
+      error: body.error ?? res.statusText,
+    })
+    return false
+  } catch (err) {
+    console.error('[health-fund-email] network error', {
       to,
       transactionId: tx.id,
       message: err instanceof Error ? err.message : String(err),

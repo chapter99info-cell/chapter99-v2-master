@@ -363,6 +363,30 @@
 .success-note { font-size: 13px; color: #0f6e56; margin-top: 4px; text-align: center; }
 .success-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
 
+.success-email-prompt {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 420px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.success-email-input {
+  flex: 1;
+  min-width: 200px;
+  min-height: 44px;
+}
+
+.success-email-sent {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a3d2b;
+  text-align: center;
+}
+
 .google-review-section {
   width: 100%;
   max-width: 280px;

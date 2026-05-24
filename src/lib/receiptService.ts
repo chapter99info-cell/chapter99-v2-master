@@ -6,7 +6,8 @@ import {
   downloadReceiptPDF,
   receiptPDFToBase64,
 } from '../components/receipt/ReceiptPDF'
-import { sendReceiptEmail } from './notifyService'
+import { generateHealthFundBase64 } from './healthFundPDF'
+import { sendHealthFundEmail, sendReceiptEmail } from './notifyService'
 import { saveTransaction } from './posDb'
 
 export interface IssueReceiptResult {
@@ -130,24 +131,27 @@ export async function downloadAndRecordReceipt(
 
 export async function emailReceipt(
   tx: Transaction,
-  shop: Shop
+  shop: Shop,
+  toEmail?: string
 ): Promise<IssueReceiptResult> {
-  if (!tx.clientEmail) {
+  const email = (toEmail ?? tx.clientEmail)?.trim()
+  if (!email) {
     return { ok: false, emailSent: false, error: 'No customer email on this sale' }
   }
 
   try {
+    const txForSend: Transaction = { ...tx, clientEmail: email }
     const receiptNumber = await resolveReceiptNumber(shop.id, tx.id)
-    const pdfBase64 = await receiptPDFToBase64(tx, shop, { receiptNumber })
-    const emailSent = await sendReceiptEmail(tx, shop.name, pdfBase64)
+    const pdfBase64 = await receiptPDFToBase64(txForSend, shop, { receiptNumber })
+    const emailSent = await sendReceiptEmail(txForSend, shop.name, pdfBase64, email)
 
-    await saveReceiptRecord(tx, shop, receiptNumber, {
+    await saveReceiptRecord(txForSend, shop, receiptNumber, {
       emailSent,
       healthFund: tx.paymentMethod === 'hicaps',
     })
 
     if (emailSent) {
-      const updated: Transaction = { ...tx, receiptSent: true }
+      const updated: Transaction = { ...txForSend, receiptSent: true }
       await saveTransaction(updated)
     }
 
@@ -159,6 +163,36 @@ export async function emailReceipt(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Email failed'
+    return { ok: false, emailSent: false, error: message }
+  }
+}
+
+export async function emailHealthFundReceipt(
+  tx: Transaction,
+  shop: Shop,
+  toEmail?: string
+): Promise<IssueReceiptResult> {
+  const email = (toEmail ?? tx.clientEmail)?.trim()
+  if (!email) {
+    return { ok: false, emailSent: false, error: 'No customer email on this sale' }
+  }
+
+  try {
+    const txForSend: Transaction = { ...tx, clientEmail: email, healthFundIssued: true }
+    const pdfBase64 = await generateHealthFundBase64(txForSend, shop)
+    const emailSent = await sendHealthFundEmail(txForSend, shop.name, pdfBase64, email)
+
+    if (emailSent) {
+      await saveTransaction(txForSend)
+    }
+
+    return {
+      ok: emailSent,
+      emailSent,
+      error: emailSent ? undefined : 'Email service unavailable',
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Health fund email failed'
     return { ok: false, emailSent: false, error: message }
   }
 }

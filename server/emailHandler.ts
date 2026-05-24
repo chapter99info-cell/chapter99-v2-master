@@ -13,18 +13,23 @@ export async function POST_email(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'RESEND_API_KEY is not configured' })
   }
 
-  const { to, subject, shopName, transaction: tx, pdfBase64 } = req.body as {
+  const { to, subject, shopName, transaction: tx, pdfBase64, emailKind } = req.body as {
     to: string
     subject: string
     shopName: string
     transaction: Transaction
     pdfBase64?: string
+    emailKind?: 'receipt' | 'health_fund'
   }
 
+  const kind = emailKind === 'health_fund' ? 'health_fund' : 'receipt'
   const attachments = pdfBase64
     ? [
         {
-          filename: `Receipt-${tx.id}.pdf`,
+          filename:
+            kind === 'health_fund'
+              ? `HealthFund-${tx.id}.pdf`
+              : `Receipt-${tx.id}.pdf`,
           content: pdfBase64,
         },
       ]
@@ -40,7 +45,10 @@ export async function POST_email(req: VercelRequest, res: VercelResponse) {
       from: `${shopName || 'Chapter99'} <receipts@chapter99solutions.com.au>`,
       to: to.trim(),
       subject,
-      html: buildEmailHTML(tx, shopName),
+      html:
+        kind === 'health_fund'
+          ? buildHealthFundEmailHTML(tx, shopName)
+          : buildEmailHTML(tx, shopName),
       attachments,
     })
     if (result.error) {
@@ -63,6 +71,41 @@ export async function POST_email(req: VercelRequest, res: VercelResponse) {
     console.error('[api/email] exception', { to: to.trim(), transactionId: tx?.id, message })
     return res.status(500).json({ error: message })
   }
+}
+
+function buildHealthFundEmailHTML(tx: Transaction, shopName: string): string {
+  const date = new Date(tx.paidAt ?? tx.createdAt).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="font-family:-apple-system,sans-serif;background:#f5f4ee;padding:20px">
+  <div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
+    <div style="background:#0F6E56;padding:24px;text-align:center">
+      <h1 style="color:#fff;margin:0;font-size:22px">${shopName}</h1>
+      <p style="color:#9FE1CB;margin:6px 0 0;font-size:13px">Health Fund receipt</p>
+    </div>
+    <div style="padding:24px;font-size:14px;color:#333;line-height:1.6">
+      <p style="margin:0 0 12px">Hi${tx.clientName ? ` ${tx.clientName}` : ''},</p>
+      <p style="margin:0 0 12px">
+        Please find your health fund receipt attached for transaction <strong>${tx.id}</strong>
+        (${date}).
+      </p>
+      <p style="margin:0 0 12px">
+        Submit this PDF to your health fund for your rebate claim.
+      </p>
+      <p style="font-size:12px;color:#999;margin-top:20px;text-align:center">
+        Powered by Chapter99 · chapter99solutions.com.au
+      </p>
+    </div>
+  </div>
+</body>
+</html>`
 }
 
 function buildEmailHTML(tx: Transaction, shopName: string): string {
