@@ -1,10 +1,14 @@
 import BookingWizard from '../../components/booking/BookingWizard'
 import { useShopContext } from '../../contexts/ShopContext'
+import { resolvePrivacyPolicyHref, resolveTermsHref } from '../../lib/legalUrls'
 
 export default function MassageBookingView() {
-  const { shop, shopId } = useShopContext()
+  const { shop, shopId, withShopQuery } = useShopContext()
 
   if (!shopId) return null
+
+  const privacyHref = resolvePrivacyPolicyHref(shop, withShopQuery)
+  const termsHref = resolveTermsHref(shop, withShopQuery)
 
   return (
     <div className="public-page public-book-wrap">
@@ -14,7 +18,12 @@ export default function MassageBookingView() {
         Choose your treatment, preferred time, and therapist. Confirmation by email — no account
         needed.
       </p>
-      <BookingWizard shopId={shopId} variant="public" />
+      <BookingWizard
+        shopId={shopId}
+        variant="public"
+        privacyHref={privacyHref}
+        termsHref={termsHref}
+      />
     </div>
   )
 }

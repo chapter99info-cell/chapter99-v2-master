@@ -1,6 +1,8 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import LegalFooterLink from '../components/legal/LegalFooterLink'
 import { ShopProvider, useShopContext } from '../contexts/ShopContext'
 import { useShopPages } from '../hooks/useShopPages'
+import { resolvePrivacyPolicyHref, resolveTermsHref } from '../lib/legalUrls'
 import './PublicLayout.css'
 
 function PublicLayoutInner() {
@@ -16,6 +18,8 @@ function PublicLayoutInner() {
   const logoUrl = shop?.logoUrl
   const brandPath =
     pagesReady && pageHomeEnabled ? withShopQuery('/') : withShopQuery('/book')
+  const privacyHref = resolvePrivacyPolicyHref(shop, withShopQuery)
+  const termsHref = resolveTermsHref(shop, withShopQuery)
 
   return (
     <div className="public-site">
@@ -100,31 +104,15 @@ function PublicLayoutInner() {
           <span aria-hidden> · </span>
           <Link to="/staff">Staff dashboard</Link>
         </p>
-        {(shop?.privacyPolicyUrl || shop?.termsUrl) && (
-          <p className="public-footer-links public-footer-legal">
-            {shop.privacyPolicyUrl && (
-              <>
-                <a
-                  href={shop.privacyPolicyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Privacy Policy
-                </a>
-                {shop.termsUrl && <span aria-hidden> · </span>}
-              </>
-            )}
-            {shop.termsUrl && (
-              <a href={shop.termsUrl} target="_blank" rel="noopener noreferrer">
-                Terms of Service
-              </a>
-            )}
-          </p>
-        )}
+        <p className="public-footer-links public-footer-legal">
+          <LegalFooterLink href={privacyHref} label="Privacy Policy" />
+          <span aria-hidden> · </span>
+          <LegalFooterLink href={termsHref} label="Terms of Service" />
+        </p>
         <p className="public-footer-powered">
           Powered by{' '}
           <a
-            href="https://chapter99info.com/"
+            href="https://chapter99info.tech/"
             target="_blank"
             rel="noopener noreferrer"
           >

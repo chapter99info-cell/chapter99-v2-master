@@ -412,25 +412,31 @@ export default function ShopWebsiteSettingsPanel({
             onBlur={flushField}
           />
         </div>
+        <h5 className="sws-images-subtitle">Legal pages</h5>
+        <p className="sws-muted sws-images-hint">
+          Leave blank to use built-in pages at <code>/privacy</code> and <code>/terms</code> (with
+          this shop&apos;s name, ABN, and email). Enter a full URL only if the shop hosts its own
+          policy.
+        </p>
         <div className="sws-row-2">
           <div className="sws-field">
-            <label htmlFor="sws-privacy">Privacy Policy URL</label>
+            <label htmlFor="sws-privacy">Custom Privacy Policy URL (optional)</label>
             <input
               id="sws-privacy"
               type="url"
               value={settings.privacyPolicyUrl}
-              placeholder="https://…/privacy"
+              placeholder="https://your-site.com/privacy"
               onChange={e => updateField('privacyPolicyUrl', e.target.value)}
               onBlur={flushField}
             />
           </div>
           <div className="sws-field">
-            <label htmlFor="sws-terms">Terms of Service URL</label>
+            <label htmlFor="sws-terms">Custom Terms URL (optional)</label>
             <input
               id="sws-terms"
               type="url"
               value={settings.termsUrl}
-              placeholder="https://…/terms"
+              placeholder="https://your-site.com/terms"
               onChange={e => updateField('termsUrl', e.target.value)}
               onBlur={flushField}
             />

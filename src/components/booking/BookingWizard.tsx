@@ -19,6 +19,7 @@ import {
   slotWindow,
   type DayBooking,
 } from '../../lib/bookingAvailability'
+import LegalAgreementCheckbox from '../legal/LegalAgreementCheckbox'
 import './BookingWizard.css'
 
 /** Rooms available for assignment (active or legacy rows with null active). */
@@ -58,6 +59,9 @@ interface BookingWizardProps {
   onComplete?: (bookingId: string) => void
   /** `public` = customer online booking at /book (no staff UI). */
   variant?: 'staff' | 'public'
+  /** Built-in or custom legal page URLs (required for public confirm step). */
+  privacyHref?: string
+  termsHref?: string
 }
 
 const STEPS: { id: WizardStep; label: string }[] = [
@@ -116,6 +120,8 @@ export default function BookingWizard({
   bookedBy,
   onComplete,
   variant = 'staff',
+  privacyHref = '/privacy',
+  termsHref = '/terms',
 }: BookingWizardProps) {
   const isPublic = variant === 'public'
   const bookingSource = isPublic ? 'online' : 'walkin'
@@ -127,6 +133,7 @@ export default function BookingWizard({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lastBookingId, setLastBookingId] = useState<string | null>(null)
+  const [legalAgreed, setLegalAgreed] = useState(false)
 
   const [bookingMode, setBookingMode] = useState<BookingMode>('solo')
   const [differentServiceP2, setDifferentServiceP2] = useState(false)
@@ -647,6 +654,7 @@ export default function BookingWizard({
     })
     setError('')
     setLastBookingId(null)
+    setLegalAgreed(false)
   }
 
   function canProceedFromService(): boolean {
@@ -1189,6 +1197,15 @@ export default function BookingWizard({
             </p>
           )}
 
+          {isPublic && (
+            <LegalAgreementCheckbox
+              checked={legalAgreed}
+              onChange={setLegalAgreed}
+              privacyHref={privacyHref}
+              termsHref={termsHref}
+            />
+          )}
+
           <div className="bw-nav">
             <button type="button" className="bw-btn secondary" onClick={() => setStep('client')}>
               ← Back
@@ -1196,7 +1213,7 @@ export default function BookingWizard({
             <button
               type="button"
               className="bw-btn primary"
-              disabled={loading}
+              disabled={loading || (isPublic && !legalAgreed)}
               onClick={saveBooking}
             >
               {loading

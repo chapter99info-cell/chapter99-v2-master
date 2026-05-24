@@ -7,6 +7,8 @@ import AboutPage from './pages/AboutPage'
 import PublicServicesPage from './pages/PublicServicesPage'
 import PublicMenuPage from './pages/PublicMenuPage'
 import PublicVoucherPage from './pages/PublicVoucherPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsOfServicePage from './pages/TermsOfServicePage'
 import PublicPageGuard from './components/routing/PublicPageGuard'
 import OfflineBanner from './components/pwa/OfflineBanner'
 import InstallPrompt from './components/pwa/InstallPrompt'
@@ -26,6 +28,8 @@ export default function Root() {
             }
           />
           <Route path="book" element={<BookPage />} />
+          <Route path="privacy" element={<PrivacyPolicyPage />} />
+          <Route path="terms" element={<TermsOfServicePage />} />
           <Route
             path="voucher"
             element={
