@@ -58,10 +58,10 @@ function normalizeServiceCategory(category: string | undefined): string {
   return value || 'other'
 }
 
-function formatServiceCategoryLabel(category: string): string {
+function formatServiceCategoryTabLabel(category: string): string {
   const key = normalizeServiceCategory(category)
-  if (key === 'other') return 'Other'
-  return key.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
+  if (key === 'other') return 'OTHER'
+  return key.replace(/_/g, ' ').toUpperCase()
 }
 
 const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
@@ -218,7 +218,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
       categories.add(normalizeServiceCategory(svc.category))
     }
     return Array.from(categories).sort((a, b) =>
-      formatServiceCategoryLabel(a).localeCompare(formatServiceCategoryLabel(b))
+      formatServiceCategoryTabLabel(a).localeCompare(formatServiceCategoryTabLabel(b))
     )
   }, [services])
 
@@ -833,7 +833,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                     className={`service-category-tab${serviceCategoryFilter === 'all' ? ' active' : ''}`}
                     onClick={() => setServiceCategoryFilter('all')}
                   >
-                    All
+                    ALL
                   </button>
                   {serviceCategories.map(cat => (
                     <button
@@ -844,7 +844,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                       className={`service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
                       onClick={() => setServiceCategoryFilter(cat)}
                     >
-                      {formatServiceCategoryLabel(cat)}
+                      {formatServiceCategoryTabLabel(cat)}
                     </button>
                   ))}
                 </div>
@@ -879,32 +879,6 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                   })
                 )}
               </div>
-
-              {hasMainServiceInBill && !addonsLoading && serviceAddons.length > 0 && (
-                <div className="service-addon-chips">
-                  <div className="service-addon-chips-label">Add-ons</div>
-                  <div className="service-addon-chip-row">
-                    {serviceAddons.map(addon => {
-                      const lineId = addonBillItemId(addon.id)
-                      const selected = bill.some(i => i.serviceId === lineId)
-                      return (
-                        <button
-                          key={addon.id}
-                          type="button"
-                          className={`service-addon-chip${selected ? ' selected' : ''}`}
-                          onClick={() => toggleAddon(addon)}
-                        >
-                          <span className="service-addon-chip-sign" aria-hidden>
-                            {selected ? '−' : '+'}
-                          </span>
-                          <span className="service-addon-chip-name">{addon.name}</span>
-                          <span className="service-addon-chip-price">{formatAUD(addon.price)}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -943,6 +917,32 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                   ))
                 )}
               </div>
+
+              {hasMainServiceInBill && !addonsLoading && serviceAddons.length > 0 && (
+                <div className="service-addon-chips bill-addon-chips">
+                  <div className="service-addon-chips-label">Add-ons</div>
+                  <div className="service-addon-chip-row">
+                    {serviceAddons.map(addon => {
+                      const lineId = addonBillItemId(addon.id)
+                      const selected = bill.some(i => i.serviceId === lineId)
+                      return (
+                        <button
+                          key={addon.id}
+                          type="button"
+                          className={`service-addon-chip${selected ? ' selected' : ''}`}
+                          onClick={() => toggleAddon(addon)}
+                        >
+                          <span className="service-addon-chip-sign" aria-hidden>
+                            {selected ? '−' : '+'}
+                          </span>
+                          <span className="service-addon-chip-name">{addon.name}</span>
+                          <span className="service-addon-chip-price">{formatAUD(addon.price)}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Totals */}
               {payment && (

@@ -271,6 +271,11 @@
   border-top: 0.5px solid #e8e5de;
 }
 
+.bill-addon-chips {
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
 .service-addon-chips-label {
   font-size: 12px;
   font-weight: 500;
