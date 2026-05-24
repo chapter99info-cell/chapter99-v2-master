@@ -250,6 +250,9 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
       <div className="ss-header">
         <h1 className="ss-title">⚙️ Shop Settings</h1>
         <p className="ss-subtitle">Logo, theme, POS add-ons, receipt & health fund details</p>
+        <a className="ss-jump-link" href="#owner-addons-section">
+          Jump to Add-ons ↓
+        </a>
       </div>
 
       {error && <p className="ss-error">{error}</p>}
@@ -375,6 +378,85 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
           />
           GST registered
         </label>
+      </section>
+
+      <section className="ss-section ss-section-addons" id="owner-addons-section">
+        <h2 className="ss-section-title">Add-ons</h2>
+        <p className="ss-hint" style={{ marginBottom: 12 }}>
+          Optional POS extras (e.g. Coconut Oil +$10). Active add-ons appear on the POS bill after a
+          service is selected.
+        </p>
+
+        {addonsError && <p className="ss-error">{addonsError}</p>}
+
+        <div className="ss-addon-form ss-row">
+          <div className="ss-field">
+            <label htmlFor="ss-addon-name">Name</label>
+            <input
+              id="ss-addon-name"
+              className="ss-input"
+              type="text"
+              placeholder="Coconut Oil"
+              value={addonName}
+              onChange={e => setAddonName(e.target.value)}
+            />
+          </div>
+          <div className="ss-field">
+            <label htmlFor="ss-addon-price">Price ($)</label>
+            <input
+              id="ss-addon-price"
+              className="ss-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="10.00"
+              value={addonPrice}
+              onChange={e => setAddonPrice(e.target.value)}
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          className="ss-btn primary"
+          disabled={addonSaving}
+          onClick={() => void handleAddAddon()}
+        >
+          {addonSaving ? 'Adding…' : 'Add'}
+        </button>
+
+        {addonsLoading ? (
+          <p className="ss-hint" style={{ marginTop: 16 }}>Loading add-ons…</p>
+        ) : addons.length === 0 ? (
+          <p className="ss-hint" style={{ marginTop: 16 }}>No add-ons yet.</p>
+        ) : (
+          <ul className="ss-addon-list">
+            {addons.map(addon => (
+              <li key={addon.id} className={`ss-addon-row${addon.active ? '' : ' inactive'}`}>
+                <div>
+                  <div className="ss-addon-name">{addon.name}</div>
+                  <div className="ss-addon-price">{formatAUD(addon.price)}</div>
+                </div>
+                <div className="ss-addon-actions">
+                  <label className="ss-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={addon.active}
+                      onChange={() => void handleToggleAddonActive(addon)}
+                    />
+                    Active
+                  </label>
+                  <button
+                    type="button"
+                    className="ss-btn secondary ss-addon-delete"
+                    onClick={() => setAddonDeleteTarget(addon)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <MenuQrSection shopSlug={shopSlug} shopName={form.name} />
@@ -602,85 +684,6 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
         <p className="ss-hint">
           Sheets created automatically: Transactions, Bookings, Daily Summary
         </p>
-      </section>
-
-      <section className="ss-section" id="owner-addons-section">
-        <h2 className="ss-section-title">Add-ons</h2>
-        <p className="ss-hint" style={{ marginBottom: 12 }}>
-          Optional POS extras (e.g. Coconut Oil +$10). Active add-ons appear on the POS bill after a
-          service is selected.
-        </p>
-
-        {addonsError && <p className="ss-error">{addonsError}</p>}
-
-        <div className="ss-addon-form ss-row">
-          <div className="ss-field">
-            <label htmlFor="ss-addon-name">Name</label>
-            <input
-              id="ss-addon-name"
-              className="ss-input"
-              type="text"
-              placeholder="Coconut Oil"
-              value={addonName}
-              onChange={e => setAddonName(e.target.value)}
-            />
-          </div>
-          <div className="ss-field">
-            <label htmlFor="ss-addon-price">Price ($)</label>
-            <input
-              id="ss-addon-price"
-              className="ss-input"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="10.00"
-              value={addonPrice}
-              onChange={e => setAddonPrice(e.target.value)}
-            />
-          </div>
-        </div>
-        <button
-          type="button"
-          className="ss-btn primary"
-          disabled={addonSaving}
-          onClick={() => void handleAddAddon()}
-        >
-          {addonSaving ? 'Adding…' : 'Add'}
-        </button>
-
-        {addonsLoading ? (
-          <p className="ss-hint" style={{ marginTop: 16 }}>Loading add-ons…</p>
-        ) : addons.length === 0 ? (
-          <p className="ss-hint" style={{ marginTop: 16 }}>No add-ons yet.</p>
-        ) : (
-          <ul className="ss-addon-list">
-            {addons.map(addon => (
-              <li key={addon.id} className={`ss-addon-row${addon.active ? '' : ' inactive'}`}>
-                <div>
-                  <div className="ss-addon-name">{addon.name}</div>
-                  <div className="ss-addon-price">{formatAUD(addon.price)}</div>
-                </div>
-                <div className="ss-addon-actions">
-                  <label className="ss-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={addon.active}
-                      onChange={() => void handleToggleAddonActive(addon)}
-                    />
-                    Active
-                  </label>
-                  <button
-                    type="button"
-                    className="ss-btn secondary ss-addon-delete"
-                    onClick={() => setAddonDeleteTarget(addon)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       {addonDeleteTarget && (

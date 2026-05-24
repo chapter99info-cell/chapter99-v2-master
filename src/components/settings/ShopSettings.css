@@ -3,7 +3,30 @@
 .shop-settings {
   max-width: 720px;
   margin: 0 auto;
-  padding: 8px 0 32px;
+  padding: 8px 0 48px;
+}
+
+.ss-jump-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.ss-jump-link:hover {
+  text-decoration: underline;
+}
+
+.ss-section-addons {
+  scroll-margin-top: 80px;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(15, 110, 86, 0.12);
+}
+
+#owner-addons-section {
+  scroll-margin-top: 80px;
 }
 
 .ss-header {
