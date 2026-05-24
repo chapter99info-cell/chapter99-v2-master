@@ -60,7 +60,12 @@ const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
   sms: 'SMS notifications',
 }
 
-export default function POSPage() {
+interface POSPageProps {
+  /** PIN entered at staff login (shown in header). */
+  loginPin?: string
+}
+
+export default function POSPage({ loginPin }: POSPageProps = {}) {
   const { shopId } = useStaffShopId()
   const { can, plan, requiredPlan } = usePlan()
   const [upgradeFeature, setUpgradeFeature] = useState<PlanFeature | null>(null)
@@ -673,7 +678,7 @@ export default function POSPage() {
               {syncStatus.pending} pending sync
             </span>
           )}
-          <span className="pin-badge">PIN 4444</span>
+          {loginPin && <span className="pin-badge">PIN {loginPin}</span>}
           <Clock />
         </div>
       </div>

@@ -46,6 +46,21 @@ interface Session {
   level: PINLevel
   staffId?: string
   staffName?: string
+  /** 4-digit PIN used at login (for display only). */
+  pin?: string
+}
+
+function roleBadgeLabel(level: PINLevel): string | undefined {
+  switch (level) {
+    case 'owner':
+      return 'Manager'
+    case 'staff':
+      return 'Therapist'
+    case 'cashier':
+      return 'Cashier'
+    default:
+      return undefined
+  }
 }
 
 export default function App() {
@@ -119,6 +134,7 @@ export default function App() {
         level: data.level,
         staffId: data.staffId,
         staffName: data.staffName,
+        pin: pinToVerify,
       })
       setPin('')
     } else {
@@ -164,6 +180,7 @@ export default function App() {
           title={`Good day, ${session.staffName ?? 'Staff'}!`}
           shopName={shopBranding?.name}
           logoUrl={shopBranding?.logoUrl}
+          badge={roleBadgeLabel(session.level)}
           onLogout={logout}
         />
         <QueueBoard shopId={shopId} pinLevel="staff" staffId={session.staffId} />
@@ -210,6 +227,7 @@ function StaffDashboard({
 }) {
   const { planLabel } = usePlan()
   const isOwner = session.level === 'owner'
+  const badge = roleBadgeLabel(session.level)
 
   const mainTabs = [
     { id: 'queue', label: '📅 Queue' },
@@ -234,7 +252,7 @@ function StaffDashboard({
         title={shopBranding?.name ? `${shopBranding.name} Dashboard` : 'Chapter99 Dashboard'}
         shopName={shopBranding?.name}
         logoUrl={shopBranding?.logoUrl}
-        badge={isOwner ? 'Owner' : 'Cashier'}
+        badge={badge}
         planBadge={planLabel}
         onLogout={onLogout}
         extraTabs={
@@ -296,7 +314,7 @@ function StaffDashboard({
             <QueueBoard shopId={shopId} pinLevel={session.level as any} />
           </>
         )}
-        {activeTab === 'pos' && <POSPage />}
+        {activeTab === 'pos' && <POSPage loginPin={session.pin} />}
         {activeTab === 'booking' && (
           <BookingWizard shopId={shopId} bookedBy={session.staffName} />
         )}
