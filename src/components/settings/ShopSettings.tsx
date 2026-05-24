@@ -171,7 +171,7 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
     <div className="shop-settings">
       <div className="ss-header">
         <h1 className="ss-title">⚙️ Shop Settings</h1>
-        <p className="ss-subtitle">Logo, theme, receipt & health fund details</p>
+        <p className="ss-subtitle">Logo, theme, POS add-ons, receipt & health fund details</p>
       </div>
 
       {error && <p className="ss-error">{error}</p>}
@@ -299,12 +299,16 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
         </label>
       </section>
 
-      <MenuQrSection shopSlug={shopSlug} shopName={form.name} />
-
-      <section className="ss-section">
-        <h2 className="ss-section-title">Add-ons</h2>
+      <section className="ss-section" id="owner-addons-section">
+        <h2 className="ss-section-title">Service add-ons</h2>
+        <p className="ss-hint">
+          Optional POS extras (e.g. Coconut Oil +$10). Active add-ons appear as toggle chips on the
+          bill after a service is selected.
+        </p>
         <ServiceAddonsManager shopId={shopId} />
       </section>
+
+      <MenuQrSection shopSlug={shopSlug} shopName={form.name} />
 
       <section className="ss-section">
         <h2 className="ss-section-title">SMS notifications</h2>

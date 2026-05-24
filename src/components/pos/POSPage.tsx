@@ -58,10 +58,11 @@ function normalizeServiceCategory(category: string | undefined): string {
   return value || 'other'
 }
 
+/** Tab label from services.category (empty → Other). */
 function formatServiceCategoryTabLabel(category: string): string {
   const key = normalizeServiceCategory(category)
-  if (key === 'other') return 'OTHER'
-  return key.replace(/_/g, ' ').toUpperCase()
+  if (key === 'other') return 'Other'
+  return key.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
 }
 
 const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
@@ -217,9 +218,11 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
     for (const svc of services) {
       categories.add(normalizeServiceCategory(svc.category))
     }
-    return Array.from(categories).sort((a, b) =>
-      formatServiceCategoryTabLabel(a).localeCompare(formatServiceCategoryTabLabel(b))
-    )
+    return Array.from(categories).sort((a, b) => {
+      if (a === 'other') return 1
+      if (b === 'other') return -1
+      return formatServiceCategoryTabLabel(a).localeCompare(formatServiceCategoryTabLabel(b))
+    })
   }, [services])
 
   const filteredServices = useMemo(() => {
@@ -833,7 +836,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                     className={`service-category-tab${serviceCategoryFilter === 'all' ? ' active' : ''}`}
                     onClick={() => setServiceCategoryFilter('all')}
                   >
-                    ALL
+                    All
                   </button>
                   {serviceCategories.map(cat => (
                     <button

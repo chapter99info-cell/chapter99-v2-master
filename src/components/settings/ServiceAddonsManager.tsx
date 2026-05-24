@@ -31,7 +31,12 @@ export default function ServiceAddonsManager({ shopId = SHOP_ID }: ServiceAddons
     try {
       setAddons(await fetchServiceAddons(shopId))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load add-ons')
+      const message = e instanceof Error ? e.message : 'Could not load add-ons'
+      setError(
+        message.includes('service_addons')
+          ? `${message} — run supabase/35-service-addons.sql in the Supabase SQL Editor.`
+          : message
+      )
       setAddons([])
     }
     setLoading(false)
