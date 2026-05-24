@@ -1,15 +1,8 @@
 // Chapter99 V4 — Shop settings (Owner only)
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { THEME_PRESETS } from '../../types/pos'
 import { formatAUD } from '../../lib/posCalc'
-import {
-  createServiceAddon,
-  deleteServiceAddon,
-  fetchServiceAddons,
-  setServiceAddonActive,
-} from '../../lib/serviceAddonService'
-import type { ServiceAddon } from '../../types/serviceAddon'
 import {
   fetchShop,
   saveShopSettings,
@@ -17,7 +10,7 @@ import {
   type ShopSettingsInput,
 } from '../../lib/shopService'
 import { notifyShopUpdated } from '../../lib/shopLogo'
-import { SHOP_ID } from '../../lib/supabase'
+import { supabase, SHOP_ID } from '../../lib/supabase'
 import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
 import { PlanGate } from '../plan/PlanGatedTab'
@@ -29,6 +22,15 @@ import './ShopSettings.css'
 
 interface ShopSettingsProps {
   shopId?: string
+}
+
+interface ServiceAddonRow {
+  id: string
+  shop_id: string
+  name: string
+  price: number
+  active: boolean
+  created_at?: string
 }
 
 function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsInput {
@@ -67,38 +69,55 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
   const [sheetTesting, setSheetTesting] = useState(false)
   const [shopSlug, setShopSlug] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [addons, setAddons] = useState<ServiceAddon[]>([])
-  const [addonsLoading, setAddonsLoading] = useState(true)
-  const [addonsError, setAddonsError] = useState('')
-  const [addonName, setAddonName] = useState('')
-  const [addonPrice, setAddonPrice] = useState('')
+  const [addons, setAddons] = useState<ServiceAddonRow[]>([])
+  const [newAddonName, setNewAddonName] = useState('')
+  const [newAddonPrice, setNewAddonPrice] = useState('')
+  const [addonLoading, setAddonLoading] = useState(false)
   const [addonSaving, setAddonSaving] = useState(false)
-  const [addonDeleteTarget, setAddonDeleteTarget] = useState<ServiceAddon | null>(null)
-
-  const loadAddons = useCallback(async () => {
-    setAddonsLoading(true)
-    setAddonsError('')
-    try {
-      setAddons(await fetchServiceAddons(shopId))
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Could not load add-ons'
-      setAddonsError(
-        message.includes('service_addons')
-          ? `${message} — run supabase/35-service-addons.sql in Supabase SQL Editor.`
-          : message
-      )
-      setAddons([])
-    }
-    setAddonsLoading(false)
-  }, [shopId])
+  const [addonsFetchError, setAddonsFetchError] = useState('')
+  const [addonDeleteTarget, setAddonDeleteTarget] = useState<ServiceAddonRow | null>(null)
 
   useEffect(() => {
     void load()
   }, [shopId])
 
   useEffect(() => {
-    void loadAddons()
-  }, [loadAddons])
+    let cancelled = false
+
+    async function fetchAddons() {
+      setAddonLoading(true)
+      setAddonsFetchError('')
+      const { data, error } = await supabase
+        .from('service_addons')
+        .select('id, shop_id, name, price, active, created_at')
+        .eq('shop_id', shopId)
+        .order('created_at', { ascending: true })
+
+      if (cancelled) return
+
+      if (error) {
+        setAddonsFetchError(
+          error.message.includes('service_addons')
+            ? `${error.message} — run supabase/35-service-addons.sql in Supabase SQL Editor.`
+            : error.message
+        )
+        setAddons([])
+      } else {
+        setAddons(
+          (data ?? []).map(row => ({
+            ...row,
+            price: Number(row.price),
+          })) as ServiceAddonRow[]
+        )
+      }
+      setAddonLoading(false)
+    }
+
+    void fetchAddons()
+    return () => {
+      cancelled = true
+    }
+  }, [shopId])
 
   async function load() {
     setLoading(true)
@@ -182,9 +201,32 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
     }
   }
 
+  async function reloadAddons() {
+    setAddonLoading(true)
+    setAddonsFetchError('')
+    const { data, error } = await supabase
+      .from('service_addons')
+      .select('id, shop_id, name, price, active, created_at')
+      .eq('shop_id', shopId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      setAddonsFetchError(error.message)
+      setAddons([])
+    } else {
+      setAddons(
+        (data ?? []).map(row => ({
+          ...row,
+          price: Number(row.price),
+        })) as ServiceAddonRow[]
+      )
+    }
+    setAddonLoading(false)
+  }
+
   async function handleAddAddon() {
-    const parsedPrice = parseFloat(addonPrice)
-    if (!addonName.trim()) {
+    const parsedPrice = parseFloat(newAddonPrice)
+    if (!newAddonName.trim()) {
       setToast({ message: 'Enter an add-on name', type: 'error' })
       return
     }
@@ -194,39 +236,55 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
     }
 
     setAddonSaving(true)
-    const result = await createServiceAddon(shopId, addonName, parsedPrice)
+    const { error } = await supabase.from('service_addons').insert({
+      shop_id: shopId,
+      name: newAddonName.trim(),
+      price: parsedPrice,
+      active: true,
+    })
     setAddonSaving(false)
 
-    if (result.error) {
-      setToast({ message: result.error, type: 'error' })
+    if (error) {
+      setToast({ message: error.message, type: 'error' })
       return
     }
 
-    setAddonName('')
-    setAddonPrice('')
+    setNewAddonName('')
+    setNewAddonPrice('')
     setToast({ message: 'Add-on added', type: 'success' })
-    await loadAddons()
+    await reloadAddons()
   }
 
-  async function handleToggleAddonActive(addon: ServiceAddon) {
-    const result = await setServiceAddonActive(addon.id, !addon.active)
-    if (!result.ok) {
-      setToast({ message: result.error ?? 'Update failed', type: 'error' })
+  async function handleToggleAddonActive(addon: ServiceAddonRow) {
+    const { error } = await supabase
+      .from('service_addons')
+      .update({ active: !addon.active })
+      .eq('id', addon.id)
+      .eq('shop_id', shopId)
+
+    if (error) {
+      setToast({ message: error.message, type: 'error' })
       return
     }
-    await loadAddons()
+    await reloadAddons()
   }
 
   async function handleDeleteAddon() {
     if (!addonDeleteTarget) return
-    const result = await deleteServiceAddon(addonDeleteTarget.id)
+    const { error } = await supabase
+      .from('service_addons')
+      .delete()
+      .eq('id', addonDeleteTarget.id)
+      .eq('shop_id', shopId)
+
     setAddonDeleteTarget(null)
-    if (!result.ok) {
-      setToast({ message: result.error ?? 'Delete failed', type: 'error' })
+
+    if (error) {
+      setToast({ message: error.message, type: 'error' })
       return
     }
     setToast({ message: 'Add-on deleted', type: 'success' })
-    await loadAddons()
+    await reloadAddons()
   }
 
   async function handleRefreshDailySummary() {
@@ -610,14 +668,19 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
         </p>
       </section>
 
-      <section className="ss-section ss-section-addons" id="owner-addons-section">
-        <h2 className="ss-section-title">Add-ons</h2>
+      {/* Service Add-ons — must render before Save settings */}
+      <section
+        className="ss-section ss-section-addons"
+        id="owner-addons-section"
+        data-testid="service-addons-section"
+      >
+        <h2 className="ss-section-title">Service Add-ons</h2>
         <p className="ss-hint" style={{ marginBottom: 12 }}>
           Optional POS extras (e.g. Coconut Oil +$10). Active add-ons appear on the POS bill after a
           service is selected.
         </p>
 
-        {addonsError && <p className="ss-error">{addonsError}</p>}
+        {addonsFetchError && <p className="ss-error">{addonsFetchError}</p>}
 
         <div className="ss-addon-form ss-row">
           <div className="ss-field">
@@ -627,8 +690,8 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
               className="ss-input"
               type="text"
               placeholder="Coconut Oil"
-              value={addonName}
-              onChange={e => setAddonName(e.target.value)}
+              value={newAddonName}
+              onChange={e => setNewAddonName(e.target.value)}
             />
           </div>
           <div className="ss-field">
@@ -640,21 +703,21 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
               min="0"
               step="0.01"
               placeholder="10.00"
-              value={addonPrice}
-              onChange={e => setAddonPrice(e.target.value)}
+              value={newAddonPrice}
+              onChange={e => setNewAddonPrice(e.target.value)}
             />
           </div>
         </div>
         <button
           type="button"
           className="ss-btn primary"
-          disabled={addonSaving}
+          disabled={addonSaving || addonLoading}
           onClick={() => void handleAddAddon()}
         >
           {addonSaving ? 'Adding…' : 'Add'}
         </button>
 
-        {addonsLoading ? (
+        {addonLoading ? (
           <p className="ss-hint" style={{ marginTop: 16 }}>Loading add-ons…</p>
         ) : addons.length === 0 ? (
           <p className="ss-hint" style={{ marginTop: 16 }}>No add-ons yet.</p>

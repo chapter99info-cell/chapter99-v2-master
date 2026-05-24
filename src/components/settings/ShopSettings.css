@@ -21,8 +21,8 @@
 
 .ss-section-addons {
   scroll-margin-top: 80px;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px rgba(15, 110, 86, 0.12);
+  border: 2px solid var(--color-primary, #0f6e56);
+  box-shadow: 0 2px 8px rgba(15, 110, 86, 0.12);
 }
 
 #owner-addons-section {
