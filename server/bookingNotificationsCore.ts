@@ -118,7 +118,7 @@ export async function sendBookingNotifications(
       const r = await resend.emails.send({
         from: RECEIPTS_FROM,
         to: ownerPayload.to,
-        subject: buildOwnerBookingNotificationSubject(input.shopName),
+        subject: buildOwnerBookingNotificationSubject(input.shopName, input.clientName),
         html: buildOwnerBookingNotificationHTML(ownerPayload),
         text: buildOwnerBookingNotificationText(ownerPayload),
       })

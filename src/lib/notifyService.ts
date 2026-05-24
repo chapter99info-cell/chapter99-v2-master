@@ -161,10 +161,10 @@ export async function sendOwnerBookingNotificationEmail(
   }
 
   try {
-    const res = await fetch('/api/booking-owner-notification-email', {
+    const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, emailKind: 'owner_booking' }),
     })
     const data = (await res.json().catch(() => ({}))) as { error?: string }
     if (!res.ok) {
@@ -244,10 +244,10 @@ export async function sendBookingConfirmationEmail(
   }
 
   try {
-    const res = await fetch('/api/booking-confirmation-email', {
+    const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, emailKind: 'booking_confirmation' }),
     })
     const data = (await res.json().catch(() => ({}))) as { error?: string }
     if (!res.ok) {
@@ -281,10 +281,10 @@ export async function sendGiftVoucherEmail(
   }
 
   try {
-    const res = await fetch('/api/gift-voucher-email', {
+    const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, emailKind: 'gift_voucher' }),
     })
     const data = (await res.json().catch(() => ({}))) as { error?: string }
     if (!res.ok) {

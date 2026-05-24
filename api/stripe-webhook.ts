@@ -47,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (meta.purpose === 'booking_deposit') {
     try {
-      const { completeBookingDepositSession } = await import('../server/bookingDepositCore')
+      const { completeBookingDepositSession } = await import('../server/bookingDepositCore.js')
       const origin =
         process.env.PUBLIC_APP_URL?.trim() ||
         process.env.VERCEL_URL

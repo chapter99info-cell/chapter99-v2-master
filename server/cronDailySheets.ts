@@ -1,16 +1,8 @@
-/**
- * Vercel Cron — refresh Daily Summary for all shops with Google Sheets sync enabled
- * Schedule in vercel.json: "0 14 * * *" (~midnight AEST)
- *
- * Requires: CRON_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
- *           GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY
- */
-
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { refreshDailySummaryFromTransactions } from '../../server/sheetsSyncCore'
+import { refreshDailySummaryFromTransactions } from './sheetsSyncCore'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function runCronDailySheets(req: VercelRequest, res: VercelResponse) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }

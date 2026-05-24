@@ -1,22 +1,15 @@
-/**
- * POST /api/booking-confirmation-email — send booking confirmation via Resend
- */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { Resend } from 'resend'
-import { RECEIPTS_FROM } from '../server/emailConstants'
+import { RECEIPTS_FROM } from './emailConstants'
 import {
   buildBookingConfirmationHTML,
   buildBookingConfirmationSubject,
   buildBookingConfirmationText,
   type BookingConfirmationEmailPayload,
-} from '../server/bookingConfirmationEmailTemplate'
+} from './bookingConfirmationEmailTemplate'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function POST_bookingConfirmationEmail(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json')
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
 
   if (!process.env.RESEND_API_KEY) {
     return res.status(500).json({ error: 'RESEND_API_KEY is not configured' })
@@ -61,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true, id: result.data?.id })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Email send failed'
-    console.error('[booking-confirmation-email]', message)
+    console.error('[email booking_confirmation]', message)
     return res.status(500).json({ error: message })
   }
 }

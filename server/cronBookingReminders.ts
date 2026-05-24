@@ -1,11 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import {
-  markReminderSent,
-  sendBookingReminderSms,
-} from '../../server/bookingNotificationsCore'
+import { markReminderSent, sendBookingReminderSms } from './bookingNotificationsCore'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function runCronBookingReminders(req: VercelRequest, res: VercelResponse) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }

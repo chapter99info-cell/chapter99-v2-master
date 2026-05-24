@@ -1,6 +1,3 @@
-/**
- * POST /api/booking-owner-notification-email — notify shop owner of a new booking
- */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { Resend } from 'resend'
 import {
@@ -8,16 +5,15 @@ import {
   buildOwnerBookingNotificationSubject,
   buildOwnerBookingNotificationText,
   type OwnerBookingNotificationPayload,
-} from '../server/bookingOwnerNotificationEmailTemplate'
+} from './bookingOwnerNotificationEmailTemplate'
 
 const FROM = 'Chapter99 Bookings <onboarding@resend.dev>'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function POST_ownerBookingNotificationEmail(
+  req: VercelRequest,
+  res: VercelResponse
+) {
   res.setHeader('Content-Type', 'application/json')
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
 
   if (!process.env.RESEND_API_KEY) {
     return res.status(500).json({ error: 'RESEND_API_KEY is not configured' })
@@ -59,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true, id: result.data?.id })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Email send failed'
-    console.error('[booking-owner-notification-email]', message)
+    console.error('[email owner_booking]', message)
     return res.status(500).json({ error: message })
   }
 }

@@ -1,13 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { Resend } from 'resend'
+import { VOUCHERS_FROM } from './emailConstants'
 import {
   buildGiftVoucherEmailHTML,
   buildGiftVoucherEmailSubject,
   buildGiftVoucherEmailText,
   type GiftVoucherEmailPayload,
-} from '../server/giftVoucherEmailTemplate'
-
-import { VOUCHERS_FROM } from '../server/emailConstants'
+} from './giftVoucherEmailTemplate'
 
 export async function POST_giftVoucherEmail(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -58,9 +57,4 @@ export async function POST_giftVoucherEmail(req: VercelRequest, res: VercelRespo
     const message = err instanceof Error ? err.message : 'Failed to send email'
     return res.status(500).json({ error: message })
   }
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'POST') return POST_giftVoucherEmail(req, res)
-  return res.status(405).json({ error: 'Method not allowed' })
 }
