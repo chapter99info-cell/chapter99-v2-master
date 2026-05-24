@@ -46,6 +46,8 @@ export interface ShopRow {
   about_phone: string | null
   about_address: string | null
   google_maps_url: string | null
+  privacy_policy_url: string | null
+  terms_url: string | null
   plan: string | null
   addon_stripe: boolean | null
   addon_sms: boolean | null
@@ -151,6 +153,8 @@ export function mapRowToShop(row: ShopRow): Shop {
     aboutPhone: row.about_phone ?? undefined,
     aboutAddress: row.about_address ?? undefined,
     googleMapsUrl: row.google_maps_url ?? undefined,
+    privacyPolicyUrl: row.privacy_policy_url ?? undefined,
+    termsUrl: row.terms_url ?? undefined,
   }
 }
 

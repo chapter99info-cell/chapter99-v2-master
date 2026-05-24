@@ -8,7 +8,7 @@ import {
 } from '../types/shopWebsite'
 
 const WEBSITE_COLUMNS =
-  'id, slug, logo_url, hero_image_url, page_home_enabled, page_services_enabled, page_vouchers_enabled, page_about_enabled, disabled_redirect_path, hero_title, hero_subtitle, about_text, about_phone, about_address, google_maps_url'
+  'id, slug, logo_url, hero_image_url, page_home_enabled, page_services_enabled, page_vouchers_enabled, page_about_enabled, disabled_redirect_path, hero_title, hero_subtitle, about_text, about_phone, about_address, google_maps_url, privacy_policy_url, terms_url'
 
 export async function fetchShopWebsiteSettings(
   shopId: string

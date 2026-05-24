@@ -412,6 +412,30 @@ export default function ShopWebsiteSettingsPanel({
             onBlur={flushField}
           />
         </div>
+        <div className="sws-row-2">
+          <div className="sws-field">
+            <label htmlFor="sws-privacy">Privacy Policy URL</label>
+            <input
+              id="sws-privacy"
+              type="url"
+              value={settings.privacyPolicyUrl}
+              placeholder="https://…/privacy"
+              onChange={e => updateField('privacyPolicyUrl', e.target.value)}
+              onBlur={flushField}
+            />
+          </div>
+          <div className="sws-field">
+            <label htmlFor="sws-terms">Terms of Service URL</label>
+            <input
+              id="sws-terms"
+              type="url"
+              value={settings.termsUrl}
+              placeholder="https://…/terms"
+              onChange={e => updateField('termsUrl', e.target.value)}
+              onBlur={flushField}
+            />
+          </div>
+        </div>
       </div>
     </section>
   )

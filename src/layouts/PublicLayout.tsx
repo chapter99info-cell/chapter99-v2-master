@@ -100,6 +100,37 @@ function PublicLayoutInner() {
           <span aria-hidden> · </span>
           <Link to="/staff">Staff dashboard</Link>
         </p>
+        {(shop?.privacyPolicyUrl || shop?.termsUrl) && (
+          <p className="public-footer-links public-footer-legal">
+            {shop.privacyPolicyUrl && (
+              <>
+                <a
+                  href={shop.privacyPolicyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Privacy Policy
+                </a>
+                {shop.termsUrl && <span aria-hidden> · </span>}
+              </>
+            )}
+            {shop.termsUrl && (
+              <a href={shop.termsUrl} target="_blank" rel="noopener noreferrer">
+                Terms of Service
+              </a>
+            )}
+          </p>
+        )}
+        <p className="public-footer-powered">
+          Powered by{' '}
+          <a
+            href="https://chapter99info.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Chapter99
+          </a>
+        </p>
       </footer>
     </div>
   )

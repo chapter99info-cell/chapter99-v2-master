@@ -111,6 +111,25 @@
   text-decoration: underline;
 }
 
+.public-footer-legal {
+  margin-top: 4px;
+}
+
+.public-footer-powered {
+  margin-top: 10px !important;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.public-footer-powered a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+}
+
+.public-footer-powered a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   .public-header {
     flex-direction: column;

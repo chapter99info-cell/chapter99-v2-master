@@ -127,6 +127,8 @@ export interface Shop {
   aboutPhone?: string
   aboutAddress?: string
   googleMapsUrl?: string
+  privacyPolicyUrl?: string
+  termsUrl?: string
 }
 
 export interface ReceiptRecord {

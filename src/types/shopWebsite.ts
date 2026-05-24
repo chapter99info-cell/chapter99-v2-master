@@ -16,6 +16,8 @@ export interface ShopWebsiteSettings {
   aboutPhone: string
   aboutAddress: string
   googleMapsUrl: string
+  privacyPolicyUrl: string
+  termsUrl: string
 }
 
 export const REDIRECT_PATH_OPTIONS = [
@@ -36,6 +38,8 @@ export function defaultWebsiteSettings(shopId: string): ShopWebsiteSettings {
     aboutPhone: '',
     aboutAddress: '',
     googleMapsUrl: '',
+    privacyPolicyUrl: '',
+    termsUrl: '',
     logoUrl: '',
     heroImageUrl: '',
   }
@@ -67,6 +71,8 @@ export function rowToWebsiteSettings(row: Record<string, unknown>): ShopWebsiteS
     aboutPhone: (row.about_phone as string) ?? '',
     aboutAddress: (row.about_address as string) ?? '',
     googleMapsUrl: (row.google_maps_url as string) ?? '',
+    privacyPolicyUrl: (row.privacy_policy_url as string) ?? '',
+    termsUrl: (row.terms_url as string) ?? '',
   }
 }
 
@@ -85,5 +91,7 @@ export function websiteSettingsToRow(input: ShopWebsiteSettings) {
     about_phone: input.aboutPhone.trim() || null,
     about_address: input.aboutAddress.trim() || null,
     google_maps_url: input.googleMapsUrl.trim() || null,
+    privacy_policy_url: input.privacyPolicyUrl.trim() || null,
+    terms_url: input.termsUrl.trim() || null,
   }
 }
