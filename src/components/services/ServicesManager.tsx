@@ -73,6 +73,7 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<ServiceForm>(EMPTY_FORM)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -194,26 +195,49 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
     }
   }
 
-  /** Soft delete — keeps bookings/transactions that reference this service. */
   async function deleteService(id: string) {
+    setDeleting(true)
     setError('')
-    const { error: updateError } = await supabase
+    setConfirmDelete(null)
+    setServices(prev => prev.filter(s => s.id !== id))
+
+    const { error: deleteError } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', id)
+      .eq('shop_id', shopId)
+
+    if (!deleteError) {
+      setDeleting(false)
+      setToast({ message: 'Service deleted', type: 'success' })
+      await loadServices()
+      return
+    }
+
+    const { data, error: softError } = await supabase
       .from('services')
       .update({ active: false })
       .eq('id', id)
       .eq('shop_id', shopId)
+      .select('id')
 
-    if (updateError) {
-      setError(updateError.message)
-      setToast({ message: updateError.message, type: 'error' })
-    } else {
-      setConfirmDelete(null)
-      loadServices()
-      setToast({
-        message: 'Service hidden from POS & booking (history kept)',
-        type: 'success',
-      })
+    setDeleting(false)
+
+    if (softError || !data?.length) {
+      await loadServices()
+      const msg =
+        softError?.message ??
+        deleteError.message ??
+        'Could not delete service — it may be linked to bookings'
+      setError(msg)
+      setToast({ message: msg, type: 'error' })
+      return
     }
+
+    setToast({
+      message: 'Service removed from menu (linked history kept)',
+      type: 'success',
+    })
   }
 
   const filteredServices = services.filter(row => {
@@ -438,8 +462,12 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
       )}
 
       {confirmDelete && (
-        <div className="modal-overlay">
-          <div className="modal-box" style={{ maxWidth: 400 }}>
+        <div className="modal-overlay" onClick={() => !deleting && setConfirmDelete(null)}>
+          <div
+            className="modal-box"
+            style={{ maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
             <div className="modal-title">Remove service from menu?</div>
             <p className="services-delete-msg">
               The service will be hidden from POS and online booking. Existing
@@ -456,9 +484,10 @@ export default function ServicesManager({ shopId = SHOP_ID }: ServicesManagerPro
               <button
                 type="button"
                 className="modal-btn danger"
-                onClick={() => deleteService(confirmDelete)}
+                disabled={deleting}
+                onClick={() => void deleteService(confirmDelete)}
               >
-                Delete
+                {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </div>

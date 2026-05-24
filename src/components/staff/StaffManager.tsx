@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import Toast, { type ToastType } from '../ui/Toast'
 import './StaffManager.css'
 
 interface StaffManagerProps {
@@ -114,6 +115,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
 
   const isEdit = Boolean(editId)
   const validationError = validateStaffForm(form, isEdit)
@@ -260,24 +262,29 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
   async function deleteStaff(id: string) {
     setDeleting(true)
     setLoadError('')
-    const { error } = await supabase
+    setConfirmDelete(null)
+
+    const { data, error } = await supabase
       .from('staff')
       .update({ active: false, pin_hash: DELETED_PIN_MARKER })
       .eq('id', id)
       .eq('shop_id', shopId)
+      .select('id')
 
     setDeleting(false)
-    setConfirmDelete(null)
 
-    if (error) {
-      setLoadError(
-        error.message.includes('policy') || error.code === '42501'
-          ? `${error.message} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
-          : `Delete failed: ${error.message}`
-      )
+    if (error || !data?.length) {
+      const msg =
+        error?.message.includes('policy') || error?.code === '42501'
+          ? `${error?.message ?? 'Permission denied'} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
+          : error?.message ?? 'Could not delete staff member (not found or blocked)'
+      setLoadError(msg)
+      setToast({ message: msg, type: 'error' })
       return
     }
 
+    setStaffList(prev => prev.filter(s => s.id !== id))
+    setToast({ message: 'Staff member removed', type: 'success' })
     await loadStaff()
   }
 
@@ -296,6 +303,10 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
 
   return (
     <div className="staff-manager">
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+
       <div className="staff-header">
         <h2 className="staff-title">Staff Management</h2>
         <button type="button" className="add-staff-btn" onClick={startAdd}>
@@ -590,8 +601,14 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
       )}
 
       {confirmDelete && (
-        <div className="modal-overlay">
-          <div className="modal-box staff-delete-modal">
+        <div
+          className="modal-overlay"
+          onClick={() => !deleting && setConfirmDelete(null)}
+        >
+          <div
+            className="modal-box staff-delete-modal"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="modal-title">⚠️ Delete Staff Member?</div>
             <p className="staff-delete-msg">
               Their booking history and financial records will be kept for legal purposes.
