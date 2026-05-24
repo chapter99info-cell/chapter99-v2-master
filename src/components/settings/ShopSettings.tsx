@@ -1,7 +1,15 @@
 // Chapter99 V4 — Shop settings (Owner only)
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { THEME_PRESETS } from '../../types/pos'
+import { formatAUD } from '../../lib/posCalc'
+import {
+  createServiceAddon,
+  deleteServiceAddon,
+  fetchServiceAddons,
+  setServiceAddonActive,
+} from '../../lib/serviceAddonService'
+import type { ServiceAddon } from '../../types/serviceAddon'
 import {
   fetchShop,
   saveShopSettings,
@@ -14,8 +22,6 @@ import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/g
 import Toast, { type ToastType } from '../ui/Toast'
 import { PlanGate } from '../plan/PlanGatedTab'
 import MenuQrSection from './MenuQrSection'
-import ServiceAddonsManager from './ServiceAddonsManager'
-import './ServiceAddonsManager.css'
 import ShopDepositSettingsPanel from '../admin/ShopDepositSettings'
 import '../admin/ShopDepositSettings.css'
 import { sendReviewRequestPreview, type ReviewRequestChannel } from '../../lib/reviewRequestService'
@@ -61,10 +67,35 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
   const [sheetTesting, setSheetTesting] = useState(false)
   const [shopSlug, setShopSlug] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [addons, setAddons] = useState<ServiceAddon[]>([])
+  const [addonsLoading, setAddonsLoading] = useState(true)
+  const [addonsError, setAddonsError] = useState('')
+  const [addonName, setAddonName] = useState('')
+  const [addonPrice, setAddonPrice] = useState('')
+  const [addonSaving, setAddonSaving] = useState(false)
+  const [addonDeleteTarget, setAddonDeleteTarget] = useState<ServiceAddon | null>(null)
+
+  const loadAddons = useCallback(async () => {
+    setAddonsLoading(true)
+    setAddonsError('')
+    try {
+      setAddons(await fetchServiceAddons(shopId))
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not load add-ons'
+      setAddonsError(
+        message.includes('service_addons')
+          ? `${message} — run supabase/35-service-addons.sql in Supabase SQL Editor.`
+          : message
+      )
+      setAddons([])
+    }
+    setAddonsLoading(false)
+  }, [shopId])
 
   useEffect(() => {
-    load()
-  }, [shopId])
+    void load()
+    void loadAddons()
+  }, [shopId, loadAddons])
 
   async function load() {
     setLoading(true)
@@ -146,6 +177,53 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
         type: 'error',
       })
     }
+  }
+
+  async function handleAddAddon() {
+    const parsedPrice = parseFloat(addonPrice)
+    if (!addonName.trim()) {
+      setToast({ message: 'Enter an add-on name', type: 'error' })
+      return
+    }
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setToast({ message: 'Enter a valid price', type: 'error' })
+      return
+    }
+
+    setAddonSaving(true)
+    const result = await createServiceAddon(shopId, addonName, parsedPrice)
+    setAddonSaving(false)
+
+    if (result.error) {
+      setToast({ message: result.error, type: 'error' })
+      return
+    }
+
+    setAddonName('')
+    setAddonPrice('')
+    setToast({ message: 'Add-on added', type: 'success' })
+    await loadAddons()
+  }
+
+  async function handleToggleAddonActive(addon: ServiceAddon) {
+    const result = await setServiceAddonActive(addon.id, !addon.active)
+    if (!result.ok) {
+      setToast({ message: result.error ?? 'Update failed', type: 'error' })
+      return
+    }
+    await loadAddons()
+  }
+
+  async function handleDeleteAddon() {
+    if (!addonDeleteTarget) return
+    const result = await deleteServiceAddon(addonDeleteTarget.id)
+    setAddonDeleteTarget(null)
+    if (!result.ok) {
+      setToast({ message: result.error ?? 'Delete failed', type: 'error' })
+      return
+    }
+    setToast({ message: 'Add-on deleted', type: 'success' })
+    await loadAddons()
   }
 
   async function handleRefreshDailySummary() {
@@ -528,12 +606,110 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
 
       <section className="ss-section" id="owner-addons-section">
         <h2 className="ss-section-title">Add-ons</h2>
-        <p className="ss-hint">
-          Optional POS extras (e.g. Coconut Oil +$10). Shown as toggle chips on the bill after a
-          service is added.
+        <p className="ss-hint" style={{ marginBottom: 12 }}>
+          Optional POS extras (e.g. Coconut Oil +$10). Active add-ons appear on the POS bill after a
+          service is selected.
         </p>
-        <ServiceAddonsManager shopId={shopId} />
+
+        {addonsError && <p className="ss-error">{addonsError}</p>}
+
+        <div className="ss-addon-form ss-row">
+          <div className="ss-field">
+            <label htmlFor="ss-addon-name">Name</label>
+            <input
+              id="ss-addon-name"
+              className="ss-input"
+              type="text"
+              placeholder="Coconut Oil"
+              value={addonName}
+              onChange={e => setAddonName(e.target.value)}
+            />
+          </div>
+          <div className="ss-field">
+            <label htmlFor="ss-addon-price">Price ($)</label>
+            <input
+              id="ss-addon-price"
+              className="ss-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="10.00"
+              value={addonPrice}
+              onChange={e => setAddonPrice(e.target.value)}
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          className="ss-btn primary"
+          disabled={addonSaving}
+          onClick={() => void handleAddAddon()}
+        >
+          {addonSaving ? 'Adding…' : 'Add'}
+        </button>
+
+        {addonsLoading ? (
+          <p className="ss-hint" style={{ marginTop: 16 }}>Loading add-ons…</p>
+        ) : addons.length === 0 ? (
+          <p className="ss-hint" style={{ marginTop: 16 }}>No add-ons yet.</p>
+        ) : (
+          <ul className="ss-addon-list">
+            {addons.map(addon => (
+              <li key={addon.id} className={`ss-addon-row${addon.active ? '' : ' inactive'}`}>
+                <div>
+                  <div className="ss-addon-name">{addon.name}</div>
+                  <div className="ss-addon-price">{formatAUD(addon.price)}</div>
+                </div>
+                <div className="ss-addon-actions">
+                  <label className="ss-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={addon.active}
+                      onChange={() => void handleToggleAddonActive(addon)}
+                    />
+                    Active
+                  </label>
+                  <button
+                    type="button"
+                    className="ss-btn secondary ss-addon-delete"
+                    onClick={() => setAddonDeleteTarget(addon)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+
+      {addonDeleteTarget && (
+        <div className="modal-overlay" onClick={() => setAddonDeleteTarget(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-title">Delete add-on?</div>
+            <p className="ss-hint">
+              Remove <strong>{addonDeleteTarget.name}</strong>? This cannot be undone.
+            </p>
+            <div className="ss-actions" style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                className="ss-btn secondary"
+                onClick={() => setAddonDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ss-btn primary"
+                style={{ background: 'var(--color-danger-dark, #b42318)' }}
+                onClick={() => void handleDeleteAddon()}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="ss-actions">
         <button type="button" className="ss-btn primary" disabled={saving} onClick={handleSave}>

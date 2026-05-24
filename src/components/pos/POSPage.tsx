@@ -836,7 +836,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                     className={`service-category-tab${serviceCategoryFilter === 'all' ? ' active' : ''}`}
                     onClick={() => setServiceCategoryFilter('all')}
                   >
-                    All
+                    ALL
                   </button>
                   {serviceCategories.map(cat => (
                     <button
