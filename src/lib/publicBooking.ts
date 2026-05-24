@@ -9,7 +9,13 @@ import {
 } from './bookingAvailability'
 import { getPublicAppOrigin } from './menuUrl'
 
-export type PublicWizardStep = 'service' | 'datetime' | 'details' | 'confirm' | 'done'
+export type PublicWizardStep =
+  | 'service'
+  | 'datetime'
+  | 'details'
+  | 'confirm'
+  | 'deposit'
+  | 'done'
 
 export const PUBLIC_STEPS: { id: PublicWizardStep; label: string }[] = [
   { id: 'service', label: 'Service' },

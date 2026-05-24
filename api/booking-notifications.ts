@@ -38,6 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cancelUrl: String(body.cancelUrl ?? ''),
       totalPrice: body.totalPrice != null ? Number(body.totalPrice) : undefined,
       startIso: String(body.startIso ?? ''),
+      depositPaid: body.depositPaid != null ? Number(body.depositPaid) : undefined,
+      balanceDue: body.balanceDue != null ? Number(body.balanceDue) : undefined,
     })
     return res.status(200).json({ success: true, ...result })
   } catch (err) {

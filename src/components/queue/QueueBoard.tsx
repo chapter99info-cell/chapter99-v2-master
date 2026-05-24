@@ -17,6 +17,8 @@ const supabase = createClient(
 
 const STATUS_CONFIG: Record<string, { label: string }> = {
   confirmed:   { label: 'Confirmed' },
+  pending_deposit: { label: 'Awaiting deposit' },
+  deposit_paid: { label: 'Deposit paid' },
   arrived:     { label: 'Arrived' },
   in_progress: { label: 'In Progress' },
   completed:   { label: 'Completed' },
@@ -365,7 +367,9 @@ export default function QueueBoard({ shopId, pinLevel, staffId }: QueueBoardProp
                       {readOnlyOffline && (
                         <p className="queue-readonly-note">Read-only while offline</p>
                       )}
-                      {!readOnlyOffline && booking.status === 'confirmed' && (
+                      {!readOnlyOffline &&
+                        (booking.status === 'confirmed' ||
+                          booking.status === 'deposit_paid') && (
                         <>
                           <button
                             type="button"

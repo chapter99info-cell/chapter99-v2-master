@@ -107,6 +107,12 @@ export interface Shop {
   cardSurchargeRate: number   // 0.015
   amexSurchargeRate: number   // 0.02
   stripePublicKey?: string
+  /** Online booking deposit (requires Stripe add-on) */
+  depositEnabled?: boolean
+  depositType?: 'percent' | 'fixed'
+  depositPercent?: number
+  depositFixedAmount?: number
+  depositRefundHours?: number
   payidBsb?: string
   payidAccount?: string
   googleSheetUrl?: string

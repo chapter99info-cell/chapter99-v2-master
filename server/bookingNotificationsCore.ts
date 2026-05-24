@@ -51,6 +51,8 @@ export interface BookingNotificationsInput {
   cancelUrl: string
   totalPrice?: number
   startIso: string
+  depositPaid?: number
+  balanceDue?: number
 }
 
 export async function sendBookingNotifications(
@@ -75,6 +77,8 @@ export async function sendBookingNotifications(
     bookingRef: ref,
     cancelUrl: input.cancelUrl,
     totalPrice: input.totalPrice,
+    depositPaid: input.depositPaid,
+    balanceDue: input.balanceDue,
   }
 
   if (process.env.RESEND_API_KEY && emailPayload.to) {

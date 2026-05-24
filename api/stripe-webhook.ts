@@ -44,6 +44,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const session = event.data.object as Stripe.Checkout.Session
   const meta = session.metadata ?? {}
+
+  if (meta.purpose === 'booking_deposit') {
+    try {
+      const { completeBookingDepositSession } = await import('../server/bookingDepositCore')
+      const origin =
+        process.env.PUBLIC_APP_URL?.trim() ||
+        process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : 'https://chapter99-v4-complete.vercel.app'
+      await completeBookingDepositSession(session, origin)
+      return res.json({ received: true, bookingDeposit: true })
+    } catch (e) {
+      console.error('[stripe-webhook] booking deposit', e)
+      return res.status(500).json({ error: 'Booking deposit completion failed' })
+    }
+  }
+
   const shopId = meta.shop_id
   const amount = parseFloat(meta.amount_aud || '0')
   const recipientEmail = meta.recipient_email

@@ -14,6 +14,8 @@ export interface BookingConfirmationEmailPayload {
   bookingRef: string
   cancelUrl?: string
   totalPrice?: number
+  depositPaid?: number
+  balanceDue?: number
 }
 
 function escapeHtml(s: string): string {
@@ -30,7 +32,15 @@ export function buildBookingConfirmationSubject(shopName: string): string {
 
 export function buildBookingConfirmationText(p: BookingConfirmationEmailPayload): string {
   const price =
-    p.totalPrice != null ? `\nTotal: $${p.totalPrice.toFixed(2)} AUD\n` : ''
+    p.totalPrice != null ? `\nService total: $${p.totalPrice.toFixed(2)} AUD\n` : ''
+  const deposit =
+    p.depositPaid != null
+      ? `Deposit paid: $${p.depositPaid.toFixed(2)} AUD\n`
+      : ''
+  const balance =
+    p.balanceDue != null && p.balanceDue > 0
+      ? `Balance due at visit: $${p.balanceDue.toFixed(2)} AUD\n`
+      : ''
   return `Hi ${p.clientName},
 
 Thank you — your booking is confirmed at ${p.shopName}.
@@ -41,7 +51,7 @@ Service: ${p.serviceName} (${p.durationMin} minutes)
 Date: ${p.date}
 Time: ${p.time}
 Therapist: ${p.therapistLabel}
-${price}
+${price}${deposit}${balance}
 ${p.shopAddress ? `Location: ${p.shopAddress}\n` : ''}${p.shopPhone ? `Phone: ${p.shopPhone}\n` : ''}${p.shopEmail ? `Email: ${p.shopEmail}\n` : ''}
 Cancellation policy: Please give at least 24 hours notice to cancel or reschedule.
 
@@ -67,7 +77,15 @@ export function buildBookingConfirmationHTML(p: BookingConfirmationEmailPayload)
     : ''
   const priceRow =
     p.totalPrice != null
-      ? `<tr><td style="padding:10px 16px;border-bottom:1px solid #e8e6e0;"><span style="color:#666;font-size:13px;">Total</span><br><strong>$${p.totalPrice.toFixed(2)} AUD</strong></td></tr>`
+      ? `<tr><td style="padding:10px 16px;border-bottom:1px solid #e8e6e0;"><span style="color:#666;font-size:13px;">Service total</span><br><strong>$${p.totalPrice.toFixed(2)} AUD</strong></td></tr>`
+      : ''
+  const depositRow =
+    p.depositPaid != null
+      ? `<tr><td style="padding:10px 16px;border-bottom:1px solid #e8e6e0;"><span style="color:#666;font-size:13px;">Deposit paid</span><br><strong style="color:#1a3d2b;">$${p.depositPaid.toFixed(2)} AUD</strong></td></tr>`
+      : ''
+  const balanceRow =
+    p.balanceDue != null && p.balanceDue > 0
+      ? `<tr><td style="padding:10px 16px;border-bottom:1px solid #e8e6e0;"><span style="color:#666;font-size:13px;">Balance due at visit</span><br><strong>$${p.balanceDue.toFixed(2)} AUD</strong></td></tr>`
       : ''
   const cancelBtn = p.cancelUrl
     ? `<p style="margin:20px 0 0;text-align:center;"><a href="${escapeHtml(p.cancelUrl)}" style="display:inline-block;padding:12px 20px;background:#993c1d;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;">Cancel booking</a></p>`
@@ -97,6 +115,8 @@ export function buildBookingConfirmationHTML(p: BookingConfirmationEmailPayload)
               <tr><td style="padding:10px 16px;border-bottom:1px solid #e8e6e0;"><span style="color:#666;font-size:13px;">Date & time</span><br><strong>${date}</strong> at <strong>${time}</strong></td></tr>
               <tr><td style="padding:10px 16px;border-bottom:1px solid #e8e6e0;"><span style="color:#666;font-size:13px;">Therapist</span><br><strong>${therapist}</strong></td></tr>
               ${priceRow}
+              ${depositRow}
+              ${balanceRow}
             </table>
             ${address ? `<p style="margin:16px 0 4px;font-size:14px;"><strong>Location:</strong> ${address}</p>` : ''}
             ${phone ? `<p style="margin:4px 0;"><strong>Phone:</strong> ${phone}</p>` : ''}

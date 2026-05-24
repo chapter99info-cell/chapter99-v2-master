@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import {
   assertSlotAvailable,
@@ -9,6 +10,13 @@ import {
 } from '../../lib/bookingAvailability'
 import { resolveShopNotificationEmail } from '../../lib/shopService'
 import { sendBookingNotifications } from '../../lib/notifyService'
+import {
+  calculateDepositAmount,
+  formatAud,
+  requiresOnlineDeposit,
+  shopDepositSettings,
+} from '../../lib/bookingDeposit'
+import { parseApiJson } from '../../lib/parseApiResponse'
 import type { Shop } from '../../types/pos'
 import LegalAgreementCheckbox from '../legal/LegalAgreementCheckbox'
 import {
@@ -81,7 +89,11 @@ export default function PublicBookingWizard({
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [assignedTherapist, setAssignedTherapist] = useState<string | null>(null)
   const [calendarMonth, setCalendarMonth] = useState(0)
+  const [depositAmount, setDepositAmount] = useState(0)
+  const [payingDeposit, setPayingDeposit] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
 
+  const depositRequired = requiresOnlineDeposit(shop)
   const selectedService = services.find(s => s.id === serviceId)
   const stepIndex = PUBLIC_STEPS.findIndex(s => s.id === step)
   const upcomingDays = getUpcomingDays(28)
@@ -95,6 +107,83 @@ export default function PublicBookingWizard({
   useEffect(() => {
     scrollTop()
   }, [step, scrollTop])
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id')
+    const depositSuccess = searchParams.get('deposit_success')
+    if (depositSuccess !== '1' || !sessionId) return
+
+    setLoading(true)
+    fetch('/api/booking-deposit-complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    })
+      .then(async res => {
+        const data = await parseApiJson<{
+          bookingId?: string
+          clientName?: string
+          serviceName?: string
+          dateLabel?: string
+          time?: string
+          depositAmount?: number
+          totalPrice?: number
+          therapistLabel?: string
+          error?: string
+        }>(res)
+        if (!res.ok) throw new Error(data.error || 'Could not confirm payment')
+        if (data.bookingId) setBookingId(data.bookingId)
+        if (data.depositAmount != null) setDepositAmount(data.depositAmount)
+        if (data.clientName) {
+          const parts = data.clientName.trim().split(/\s+/)
+          setFirstName(parts[0] ?? '')
+          setLastName(parts.slice(1).join(' '))
+        }
+        if (data.therapistLabel) setAssignedTherapist(data.therapistLabel)
+        if (data.serviceName && !selectedService) {
+          setServices(prev => {
+            if (prev.some(s => s.name_en === data.serviceName)) return prev
+            return [
+              ...prev,
+              {
+                id: 'paid',
+                name_en: data.serviceName!,
+                name_th: null,
+                duration: 60,
+                price: data.totalPrice ?? 0,
+                gst_free: true,
+                category: 'Services',
+                image_url: null,
+              },
+            ]
+          })
+          setServiceId('paid')
+        }
+        setStep('done')
+        setSearchParams(prev => {
+          const next = new URLSearchParams(prev)
+          next.delete('deposit_success')
+          next.delete('session_id')
+          return next
+        }, { replace: true })
+      })
+      .catch(e => {
+        setError(e instanceof Error ? e.message : 'Payment confirmation failed')
+      })
+      .finally(() => setLoading(false))
+  }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (searchParams.get('deposit_cancelled') === '1') {
+      setError('Payment was cancelled. Your time slot is held — you can try again below.')
+      setStep('deposit')
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        next.delete('deposit_cancelled')
+        return next
+      }, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     supabase
@@ -224,6 +313,11 @@ export default function PublicBookingWizard({
       return
     }
 
+    const cfg = shopDepositSettings(shop)
+    const deposit = depositRequired
+      ? calculateDepositAmount(selectedService.price, cfg)
+      : 0
+
     const { data: booking, error: bookErr } = await supabase
       .from('bookings')
       .insert({
@@ -234,9 +328,13 @@ export default function PublicBookingWizard({
         therapist_name: therapistName,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        status: 'confirmed',
+        status: depositRequired ? 'pending_deposit' : 'confirmed',
         source: 'online',
         medical_notes: notes.trim() || null,
+        deposit_amount: depositRequired ? deposit : null,
+        deposit_paid: false,
+        terms_agreed: true,
+        terms_agreed_at: new Date().toISOString(),
       })
       .select('id')
       .single()
@@ -249,6 +347,13 @@ export default function PublicBookingWizard({
     }
 
     setBookingId(booking.id as string)
+
+    if (depositRequired) {
+      setDepositAmount(deposit)
+      goTo('deposit')
+      return
+    }
+
     const dateLabel = formatSydneyDateLabel(date)
     const timeLabel = formatTime12(time)
     const cancelUrl = buildCancelUrl(shopSlug, booking.id as string)
@@ -280,6 +385,31 @@ export default function PublicBookingWizard({
     goTo('done')
   }
 
+  async function payDeposit() {
+    if (!bookingId) return
+    setPayingDeposit(true)
+    setError('')
+    try {
+      const res = await fetch('/api/booking-deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          bookingId,
+          shopId,
+          shopSlug,
+          clientEmail: email.trim(),
+        }),
+      })
+      const data = await parseApiJson<{ url?: string; error?: string }>(res)
+      if (!res.ok) throw new Error(data.error || 'Could not start checkout')
+      if (data.url) window.location.href = data.url
+      else throw new Error('No checkout URL returned')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Checkout failed')
+      setPayingDeposit(false)
+    }
+  }
+
   const grouped = groupServicesByCategory(services)
   const bookingRef = bookingId ? formatBookingRef(bookingId) : ''
   const dateLabel = formatSydneyDateLabel(date)
@@ -301,7 +431,7 @@ export default function PublicBookingWizard({
 
   return (
     <div className="public-booking-wizard" ref={topRef}>
-      {step !== 'done' && (
+      {step !== 'done' && step !== 'deposit' && (
         <>
           <div className="pbw-progress" role="progressbar" aria-valuenow={stepIndex + 1} aria-valuemin={1} aria-valuemax={4}>
             {PUBLIC_STEPS.map((s, i) => (
@@ -596,6 +726,28 @@ export default function PublicBookingWizard({
             <p className="pbw-total">
               Total: {formatPrice(selectedService.price, selectedService.gst_free)}
             </p>
+            {depositRequired && selectedService && (
+              <p className="pbw-step-lead" style={{ marginTop: 12 }}>
+                Deposit due now:{' '}
+                <strong>
+                  {formatAud(
+                    calculateDepositAmount(
+                      selectedService.price,
+                      shopDepositSettings(shop)
+                    )
+                  )}
+                </strong>{' '}
+                (balance at visit:{' '}
+                {formatAud(
+                  selectedService.price -
+                    calculateDepositAmount(
+                      selectedService.price,
+                      shopDepositSettings(shop)
+                    )
+                )}
+                )
+              </p>
+            )}
           </div>
           <div className="pbw-actions">
             <button type="button" className="pbw-btn pbw-btn-secondary" onClick={() => goTo('details')}>
@@ -607,9 +759,49 @@ export default function PublicBookingWizard({
               disabled={loading}
               onClick={() => void confirmBooking()}
             >
-              {loading ? 'Booking…' : 'Confirm Booking'}
+              {loading
+                ? 'Booking…'
+                : depositRequired
+                  ? 'Continue to payment'
+                  : 'Confirm Booking'}
             </button>
           </div>
+        </section>
+      )}
+
+      {step === 'deposit' && selectedService && bookingId && (
+        <section className="pbw-step">
+          <h2 className="pbw-step-title">Pay deposit</h2>
+          <p className="pbw-step-lead">
+            A deposit of <strong>{formatAud(depositAmount)}</strong> is required to confirm your
+            booking.
+          </p>
+          <div className="pbw-summary">
+            <p>
+              {selectedService.name_en} · {dateLabel} at {timeLabel}
+            </p>
+            <p className="pbw-total">
+              Service total: {formatPrice(selectedService.price, selectedService.gst_free)}
+            </p>
+            <p className="pbw-total">Deposit now: {formatAud(depositAmount)}</p>
+            <p className="pbw-step-lead">
+              Balance due at visit:{' '}
+              {formatAud(Math.max(0, selectedService.price - depositAmount))}
+            </p>
+          </div>
+          <div className="pbw-actions">
+            <button
+              type="button"
+              className="pbw-btn pbw-btn-primary"
+              disabled={payingDeposit || loading}
+              onClick={() => void payDeposit()}
+            >
+              {payingDeposit ? 'Redirecting…' : 'Pay deposit with Stripe'}
+            </button>
+          </div>
+          <p className="pbw-step-lead" style={{ fontSize: 12 }}>
+            Secure card payment. Your slot is held for 30 minutes while you complete checkout.
+          </p>
         </section>
       )}
 
@@ -619,7 +811,18 @@ export default function PublicBookingWizard({
             ✅
           </div>
           <h2>Booking Confirmed!</h2>
-          <p>Thank you, {firstName}. We have sent confirmation to your email and SMS.</p>
+          <p>
+            Thank you, {firstName}.{' '}
+            {depositRequired
+              ? 'Your deposit is received and confirmation has been sent by email and SMS.'
+              : 'We have sent confirmation to your email and SMS.'}
+          </p>
+          {depositRequired && depositAmount > 0 && (
+            <p>
+              Deposit paid: {formatAud(depositAmount)} · Balance at visit:{' '}
+              {formatAud(Math.max(0, selectedService.price - depositAmount))}
+            </p>
+          )}
           <p className="pbw-ref">Reference: {bookingRef}</p>
           <p>
             {selectedService.name_en} · {dateLabel} at {timeLabel}

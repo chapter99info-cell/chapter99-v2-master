@@ -53,6 +53,11 @@ export interface ShopRow {
   addon_sms: boolean | null
   addon_website: boolean | null
   addon_reports: boolean | null
+  deposit_enabled: boolean | null
+  deposit_type: string | null
+  deposit_percent: number | null
+  deposit_fixed_amount: number | null
+  deposit_refund_hours: number | null
 }
 
 export interface ShopSettingsInput {
@@ -77,6 +82,11 @@ export interface ShopSettingsInput {
   googleReviewUrl: string
   reviewRequestEnabled: boolean
   reviewRequestChannel: 'email' | 'sms' | 'both'
+  depositEnabled: boolean
+  depositType: 'percent' | 'fixed'
+  depositPercent: number
+  depositFixedAmount: number
+  depositRefundHours: number
 }
 
 const DEFAULT_SHOP: Shop = {
@@ -155,6 +165,11 @@ export function mapRowToShop(row: ShopRow): Shop {
     googleMapsUrl: row.google_maps_url ?? undefined,
     privacyPolicyUrl: row.privacy_policy_url ?? undefined,
     termsUrl: row.terms_url ?? undefined,
+    depositEnabled: row.deposit_enabled === true,
+    depositType: row.deposit_type === 'fixed' ? 'fixed' : 'percent',
+    depositPercent: row.deposit_percent ?? 20,
+    depositFixedAmount: Number(row.deposit_fixed_amount ?? 20),
+    depositRefundHours: row.deposit_refund_hours ?? 24,
   }
 }
 
@@ -188,6 +203,11 @@ export function shopToUpdatePayload(input: ShopSettingsInput) {
     google_review_url: input.googleReviewUrl || null,
     review_request_enabled: input.reviewRequestEnabled,
     review_request_channel: input.reviewRequestChannel,
+    deposit_enabled: input.depositEnabled,
+    deposit_type: input.depositType,
+    deposit_percent: input.depositPercent,
+    deposit_fixed_amount: input.depositFixedAmount,
+    deposit_refund_hours: input.depositRefundHours,
   }
 }
 

@@ -4,6 +4,7 @@ import { Resend } from 'resend'
 import twilio from 'twilio'
 import { RECEIPTS_FROM } from '../server/emailConstants'
 import { cancelBookingById } from '../server/bookingNotificationsCore'
+import { refundBookingDepositIfEligible } from '../server/bookingDepositCore'
 
 function supabaseAdmin() {
   return createClient(
@@ -73,6 +74,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .eq('id', bookingId)
     .maybeSingle()
 
+  let refundNote = ''
+  if (before?.shop_id) {
+    const refund = await refundBookingDepositIfEligible(bookingId, before.shop_id as string)
+    if (refund.refunded) refundNote = ' Deposit refunded.'
+  }
+
   const result = await cancelBookingById(bookingId, shopSlug)
   if (!result.ok) {
     return res.status(400).json({ error: result.error ?? 'Could not cancel' })
@@ -101,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       timeZone: 'Australia/Sydney',
     })
     const ownerTo = shop?.notification_email?.trim() || shop?.email?.trim()
-    const msg = `Booking cancelled: ${client?.name ?? 'Guest'} — ${svc?.name_en ?? 'Service'} on ${dateLabel} at ${time}.`
+    const msg = `Booking cancelled: ${client?.name ?? 'Guest'} — ${svc?.name_en ?? 'Service'} on ${dateLabel} at ${time}.${refundNote}`
 
     if (process.env.RESEND_API_KEY && ownerTo) {
       const resend = new Resend(process.env.RESEND_API_KEY)

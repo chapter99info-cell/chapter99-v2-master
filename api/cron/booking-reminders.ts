@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       clients ( name, phone )
     `
     )
-    .eq('status', 'confirmed')
+    .in('status', ['confirmed', 'deposit_paid'])
     .is('reminder_sent_at', null)
     .gte('start_time', windowStart)
     .lte('start_time', windowEnd)

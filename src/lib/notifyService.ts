@@ -141,6 +141,8 @@ export interface BookingNotificationsRequest {
   cancelUrl: string
   totalPrice?: number
   startIso: string
+  depositPaid?: number
+  balanceDue?: number
 }
 
 /** Public online booking: confirmation email + SMS + owner alerts. */
