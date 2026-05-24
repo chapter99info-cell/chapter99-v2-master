@@ -82,11 +82,6 @@ export interface ShopSettingsInput {
   googleReviewUrl: string
   reviewRequestEnabled: boolean
   reviewRequestChannel: 'email' | 'sms' | 'both'
-  depositEnabled: boolean
-  depositType: 'percent' | 'fixed'
-  depositPercent: number
-  depositFixedAmount: number
-  depositRefundHours: number
 }
 
 const DEFAULT_SHOP: Shop = {
@@ -203,11 +198,6 @@ export function shopToUpdatePayload(input: ShopSettingsInput) {
     google_review_url: input.googleReviewUrl || null,
     review_request_enabled: input.reviewRequestEnabled,
     review_request_channel: input.reviewRequestChannel,
-    deposit_enabled: input.depositEnabled,
-    deposit_type: input.depositType,
-    deposit_percent: input.depositPercent,
-    deposit_fixed_amount: input.depositFixedAmount,
-    deposit_refund_hours: input.depositRefundHours,
   }
 }
 

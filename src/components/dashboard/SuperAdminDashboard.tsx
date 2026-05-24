@@ -18,6 +18,7 @@ import StaffLoginQrSection from '../admin/StaffLoginQrSection'
 import ShopCustomDomain from '../admin/ShopCustomDomain'
 import { buildOriginForCustomDomain } from '../../lib/shopDomain'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
+import ShopDepositSettingsPanel from '../admin/ShopDepositSettings'
 import {
   PLAN_LABELS,
   PLAN_MONTHLY_FEES,
@@ -238,6 +239,7 @@ function ShopDetailView({
   onToggle: (id: string, active: boolean) => void
 }) {
   const [websiteOpen, setWebsiteOpen] = useState(true)
+  const [depositOpen, setDepositOpen] = useState(false)
   const [reportsOpen, setReportsOpen] = useState(false)
 
   useEffect(() => {
@@ -329,6 +331,14 @@ function ShopDetailView({
           <h4 className="shop-detail-subtitle">Plan & add-ons</h4>
           <ShopPlanBilling shopId={shop.id} shopName={shop.name} embedded />
         </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="💳 Deposit & Prepayment"
+        open={depositOpen}
+        onToggle={() => setDepositOpen(o => !o)}
+      >
+        <ShopDepositSettingsPanel shopId={shop.id} shopName={shop.name} />
       </CollapsibleSection>
 
       <div className="section-card shop-detail-staff-login">

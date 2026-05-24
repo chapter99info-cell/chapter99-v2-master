@@ -13,8 +13,9 @@ import { SHOP_ID } from '../../lib/supabase'
 import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/googleSheets'
 import Toast, { type ToastType } from '../ui/Toast'
 import { PlanGate } from '../plan/PlanGatedTab'
-import { usePlan } from '../../hooks/usePlan'
 import MenuQrSection from './MenuQrSection'
+import ShopDepositSettingsPanel from '../admin/ShopDepositSettings'
+import '../admin/ShopDepositSettings.css'
 import { sendReviewRequestPreview, type ReviewRequestChannel } from '../../lib/reviewRequestService'
 import './ShopSettings.css'
 
@@ -45,11 +46,6 @@ function shopToForm(shop: Awaited<ReturnType<typeof fetchShop>>): ShopSettingsIn
     googleReviewUrl: shop.googleReviewUrl ?? '',
     reviewRequestEnabled: shop.reviewRequestEnabled ?? false,
     reviewRequestChannel: shop.reviewRequestChannel ?? 'email',
-    depositEnabled: shop.depositEnabled ?? false,
-    depositType: shop.depositType ?? 'percent',
-    depositPercent: shop.depositPercent ?? 20,
-    depositFixedAmount: shop.depositFixedAmount ?? 20,
-    depositRefundHours: shop.depositRefundHours ?? 24,
   }
 }
 
@@ -63,8 +59,6 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
   const [sheetTesting, setSheetTesting] = useState(false)
   const [shopSlug, setShopSlug] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [stripeAddon, setStripeAddon] = useState(false)
-  const { can } = usePlan()
 
   useEffect(() => {
     load()
@@ -76,7 +70,6 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
     const shop = await fetchShop(shopId)
     setForm(shopToForm(shop))
     setShopSlug(shop.slug ?? null)
-    setStripeAddon(shop.addonStripe === true && Boolean(shop.stripePublicKey?.trim()))
     setLoading(false)
   }
 
@@ -396,105 +389,13 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
 
       <section className="ss-section">
         <h2 className="ss-section-title">💳 Deposit &amp; Prepayment</h2>
-        <PlanGate
-          feature="stripe"
-          lockedFallback={
-            <div className="plan-gate-locked">
-              <p>
-                🔒 <strong>Stripe</strong> is required for online deposits.
-              </p>
-              <p className="ss-hint">Contact Chapter99 to enable Stripe on your plan.</p>
-            </div>
-          }
-        >
-          {!stripeAddon ? (
-            <div className="plan-gate-locked">
-              <p>🔒 Stripe is not fully configured for this shop yet.</p>
-              <p className="ss-hint">Contact Chapter99 to enable Stripe payments.</p>
-            </div>
-          ) : (
-            <>
-              <p className="ss-hint" style={{ marginBottom: 12 }}>
-                Require a deposit when customers book online. Remaining balance is paid at the
-                visit. Requires Stripe to be enabled.
-              </p>
-              <label className="ss-checkbox">
-                <input
-                  type="checkbox"
-                  checked={form.depositEnabled}
-                  onChange={e => update('depositEnabled', e.target.checked)}
-                />
-                Require deposit for online bookings
-              </label>
-              {form.depositEnabled && (
-                <>
-                  <div className="ss-field">
-                    <label>Deposit type</label>
-                    <select
-                      value={form.depositType}
-                      onChange={e =>
-                        update('depositType', e.target.value as 'percent' | 'fixed')
-                      }
-                    >
-                      <option value="percent">Percentage (%)</option>
-                      <option value="fixed">Fixed amount ($)</option>
-                    </select>
-                  </div>
-                  {form.depositType === 'percent' ? (
-                    <div className="ss-field">
-                      <label>Deposit: {form.depositPercent}%</label>
-                      <input
-                        type="range"
-                        min={10}
-                        max={50}
-                        step={5}
-                        value={form.depositPercent}
-                        onChange={e =>
-                          update('depositPercent', parseInt(e.target.value, 10))
-                        }
-                      />
-                      <p className="ss-hint">10%–50% of the service price (default 20%).</p>
-                    </div>
-                  ) : (
-                    <div className="ss-field">
-                      <label>Fixed deposit (AUD)</label>
-                      <input
-                        type="number"
-                        min={0.5}
-                        step={0.5}
-                        value={form.depositFixedAmount}
-                        onChange={e =>
-                          update('depositFixedAmount', parseFloat(e.target.value) || 20)
-                        }
-                      />
-                    </div>
-                  )}
-                  <div className="ss-field">
-                    <label>Full deposit refund if cancelled at least (hours) before</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={168}
-                      value={form.depositRefundHours}
-                      onChange={e =>
-                        update('depositRefundHours', parseInt(e.target.value, 10) || 24)
-                      }
-                    />
-                    <p className="ss-hint">
-                      Default 24 hours — customers who cancel earlier get an automatic Stripe
-                      refund.
-                    </p>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </PlanGate>
-        {!can('stripe') && (
-          <p className="ss-hint" style={{ marginTop: 8 }}>
-            Upgrade to Growth (or add the Stripe add-on) to configure deposits.
-          </p>
-        )}
+        <p className="ss-hint">
+          Deposit rules are configured by Chapter99 Super Admin. You can view status and monthly
+          totals below.
+        </p>
+        <div className="ss-deposit-readonly-wrap">
+          <ShopDepositSettingsPanel shopId={shopId} shopName={form.name} readOnly />
+        </div>
       </section>
 
       <section className="ss-section">
