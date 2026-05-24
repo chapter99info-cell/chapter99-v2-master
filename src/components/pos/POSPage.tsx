@@ -2,7 +2,7 @@
 // Main POS Component (iPad-optimised)
 // PIN: 4444 / 9999
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { BillItem, PaymentMethod, PaymentSplit, Transaction, Shop, Service } from '../../types/pos'
 import { mapRowToService } from '../services/ServicesManager'
 import {
@@ -42,10 +42,27 @@ import { usePlan } from '../../hooks/usePlan'
 import UpgradeModal from '../plan/UpgradeModal'
 import type { PlanFeature } from '../../types/plan'
 import Toast, { type ToastType } from '../ui/Toast'
+import {
+  addonBillItemId,
+  fetchServiceAddons,
+  isAddonBillItem,
+} from '../../lib/serviceAddonService'
+import type { ServiceAddon } from '../../types/serviceAddon'
 
 type POSMode = 'pos' | 'walkin' | 'queue'
 type POSStep = 'bill' | 'payment' | 'success'
 type SplittableMethod = Exclude<PaymentMethod, 'split'>
+
+function normalizeServiceCategory(category: string | undefined): string {
+  const value = (category ?? '').trim()
+  return value || 'other'
+}
+
+function formatServiceCategoryLabel(category: string): string {
+  const key = normalizeServiceCategory(category)
+  if (key === 'other') return 'Other'
+  return key.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
+}
 
 const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
   booking: 'Booking',
@@ -91,6 +108,9 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
   const [isLoading, setIsLoading] = useState(false)
   const [services, setServices] = useState<Service[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>('all')
+  const [serviceAddons, setServiceAddons] = useState<ServiceAddon[]>([])
+  const [addonsLoading, setAddonsLoading] = useState(true)
   const [shop, setShop] = useState<Shop | null>(null)
   const [receiptNote, setReceiptNote] = useState('')
   const [receiptLoading, setReceiptLoading] = useState(false)
@@ -179,6 +199,45 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
     loadServices()
   }, [shopId])
 
+  useEffect(() => {
+    async function loadAddons() {
+      setAddonsLoading(true)
+      try {
+        setServiceAddons(await fetchServiceAddons(shopId, { activeOnly: true }))
+      } catch {
+        setServiceAddons([])
+      }
+      setAddonsLoading(false)
+    }
+    void loadAddons()
+  }, [shopId])
+
+  const serviceCategories = useMemo(() => {
+    const categories = new Set<string>()
+    for (const svc of services) {
+      categories.add(normalizeServiceCategory(svc.category))
+    }
+    return Array.from(categories).sort((a, b) =>
+      formatServiceCategoryLabel(a).localeCompare(formatServiceCategoryLabel(b))
+    )
+  }, [services])
+
+  const filteredServices = useMemo(() => {
+    if (serviceCategoryFilter === 'all') return services
+    return services.filter(
+      svc => normalizeServiceCategory(svc.category) === serviceCategoryFilter
+    )
+  }, [services, serviceCategoryFilter])
+
+  useEffect(() => {
+    if (
+      serviceCategoryFilter !== 'all' &&
+      !serviceCategories.includes(serviceCategoryFilter)
+    ) {
+      setServiceCategoryFilter('all')
+    }
+  }, [serviceCategories, serviceCategoryFilter])
+
   // Update sync status
   useEffect(() => {
     const update = async () => setSyncStatus(await getSyncStatus())
@@ -251,6 +310,11 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
       ? parseFloat(sellCustomAmount) || 0
       : sellAmount
 
+  const hasMainServiceInBill = useMemo(
+    () => bill.some(item => !isAddonBillItem(item.serviceId)),
+    [bill]
+  )
+
   // Toggle service in bill
   const toggleService = useCallback((svc: Service) => {
     setBill(prev => {
@@ -264,6 +328,24 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
         gstFree: svc.gstFree,
         itemNo: svc.itemNo,
       }]
+    })
+  }, [])
+
+  const toggleAddon = useCallback((addon: ServiceAddon) => {
+    const lineId = addonBillItemId(addon.id)
+    setBill(prev => {
+      const exists = prev.find(i => i.serviceId === lineId)
+      if (exists) return prev.filter(i => i.serviceId !== lineId)
+      return [
+        ...prev,
+        {
+          serviceId: lineId,
+          serviceName: `+ ${addon.name}`,
+          duration: 0,
+          price: addon.price,
+          gstFree: false,
+        },
+      ]
     })
   }, [])
 
@@ -740,8 +822,33 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
               </div>
 
             {/* Services Grid */}
-            <div className="pos-card">
+            <div className="pos-card services-picker-card">
               <div className="card-label">เลือกบริการ</div>
+              {!servicesLoading && services.length > 0 && (
+                <div className="service-category-tabs" role="tablist" aria-label="Service categories">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={serviceCategoryFilter === 'all'}
+                    className={`service-category-tab${serviceCategoryFilter === 'all' ? ' active' : ''}`}
+                    onClick={() => setServiceCategoryFilter('all')}
+                  >
+                    All
+                  </button>
+                  {serviceCategories.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      role="tab"
+                      aria-selected={serviceCategoryFilter === cat}
+                      className={`service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
+                      onClick={() => setServiceCategoryFilter(cat)}
+                    >
+                      {formatServiceCategoryLabel(cat)}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="services-grid">
                 {servicesLoading ? (
                   <p className="services-empty">กำลังโหลดบริการ…</p>
@@ -749,24 +856,55 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                   <p className="services-empty">
                     ยังไม่มีบริการที่เปิดใช้งาน — เพิ่มในหน้า Services (Owner)
                   </p>
-                ) : services.map(svc => {
-                  const added = bill.some(i => i.serviceId === svc.id)
-                  return (
-                    <button
-                      key={svc.id}
-                      className={`svc-btn${added ? ' added' : ''}`}
-                      onClick={() => toggleService(svc)}
-                    >
-                      <div className="svc-name">{svc.name}</div>
-                      <div className="svc-price">{formatAUD(svc.price)}</div>
-                      <div className="svc-dur">
-                        {svc.duration} min
-                        {svc.gstFree && <span className="gst-free-tag">GST-free</span>}
-                      </div>
-                    </button>
-                  )
-                })}
+                ) : filteredServices.length === 0 ? (
+                  <p className="services-empty">ไม่มีบริการในหมวดนี้</p>
+                ) : (
+                  filteredServices.map(svc => {
+                    const added = bill.some(i => i.serviceId === svc.id)
+                    return (
+                      <button
+                        key={svc.id}
+                        type="button"
+                        className={`svc-card${added ? ' added' : ''}`}
+                        onClick={() => toggleService(svc)}
+                      >
+                        <div className="svc-card-name">{svc.name}</div>
+                        <div className="svc-card-price">{formatAUD(svc.price)}</div>
+                        <div className="svc-card-meta">
+                          <span className="svc-card-duration">{svc.duration} min</span>
+                          {svc.gstFree && <span className="gst-free-tag">GST-free</span>}
+                        </div>
+                      </button>
+                    )
+                  })
+                )}
               </div>
+
+              {hasMainServiceInBill && !addonsLoading && serviceAddons.length > 0 && (
+                <div className="service-addon-chips">
+                  <div className="service-addon-chips-label">Add-ons</div>
+                  <div className="service-addon-chip-row">
+                    {serviceAddons.map(addon => {
+                      const lineId = addonBillItemId(addon.id)
+                      const selected = bill.some(i => i.serviceId === lineId)
+                      return (
+                        <button
+                          key={addon.id}
+                          type="button"
+                          className={`service-addon-chip${selected ? ' selected' : ''}`}
+                          onClick={() => toggleAddon(addon)}
+                        >
+                          <span className="service-addon-chip-sign" aria-hidden>
+                            {selected ? '−' : '+'}
+                          </span>
+                          <span className="service-addon-chip-name">{addon.name}</span>
+                          <span className="service-addon-chip-price">{formatAUD(addon.price)}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -783,10 +921,15 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                   </div>
                 ) : (
                   bill.map(item => (
-                    <div key={item.serviceId} className="bill-item">
+                    <div
+                      key={item.serviceId}
+                      className={`bill-item${isAddonBillItem(item.serviceId) ? ' bill-item-addon' : ''}`}
+                    >
                       <div className="bill-item-info">
                         <div className="bill-item-name">{item.serviceName}</div>
-                        <div className="bill-item-sub">{item.duration} min</div>
+                        <div className="bill-item-sub">
+                          {isAddonBillItem(item.serviceId) ? 'Add-on' : `${item.duration} min`}
+                        </div>
                       </div>
                       <div className="bill-item-price">{formatAUD(item.price)}</div>
                       <button

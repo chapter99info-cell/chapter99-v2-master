@@ -1,0 +1,172 @@
+.service-addons-manager {
+  margin-top: 4px;
+}
+
+.sam-hint {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+
+.sam-error {
+  color: #b42318;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.sam-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.sam-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.sam-field-price {
+  max-width: 120px;
+  flex: 0 1 120px;
+}
+
+.sam-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #444;
+}
+
+.sam-field input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.sam-save-btn {
+  min-height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary, #0f6e56);
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sam-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sam-empty {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+}
+
+.sam-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sam-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e8e5de;
+  border-radius: 10px;
+  background: #faf9f7;
+}
+
+.sam-row.inactive {
+  opacity: 0.65;
+}
+
+.sam-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sam-row-name {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.sam-row-price {
+  font-size: 13px;
+  color: var(--teal, #0f6e56);
+}
+
+.sam-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sam-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sam-delete-btn {
+  padding: 6px 12px;
+  border: 1px solid #e0ddd5;
+  border-radius: 8px;
+  background: #fff;
+  color: #b42318;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sam-modal {
+  max-width: 400px;
+}
+
+.sam-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.sam-cancel-btn,
+.sam-delete-confirm-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.sam-cancel-btn {
+  border: 1px solid #ddd;
+  background: #fff;
+}
+
+.sam-delete-confirm-btn {
+  border: none;
+  background: #b42318;
+  color: #fff;
+}

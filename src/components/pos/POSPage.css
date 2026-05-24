@@ -144,12 +144,55 @@
   line-height: 1.4;
 }
 
-/* Services Grid */
+/* Services picker */
+.services-picker-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.service-category-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.service-category-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.service-category-tab {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 40px;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.service-category-tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
+
 .services-empty {
   grid-column: 1 / -1;
   padding: 24px 12px;
@@ -158,51 +201,135 @@
   color: #888;
   line-height: 1.5;
 }
-.svc-btn {
-  padding: 14px 10px;
+
+.svc-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
   box-shadow: var(--shadow-card);
   cursor: pointer;
-  text-align: center;
-  min-height: 80px;
-  transition: all 0.15s;
+  text-align: left;
+  min-height: 88px;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
   -webkit-user-select: none;
   font-family: inherit;
 }
-.svc-btn:active { transform: scale(0.98); }
-.svc-btn.added {
+
+.svc-card:active {
+  transform: scale(0.98);
+}
+
+.svc-card.added {
   background: var(--color-primary-light);
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(27, 77, 62, 0.15);
 }
-.svc-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1a1a1a;
-  margin-bottom: 3px;
-}
-.svc-price {
+
+.svc-card-name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--teal);
-  margin-bottom: 2px;
+  color: #1a1a1a;
+  line-height: 1.3;
 }
-.svc-dur {
-  font-size: 10px;
-  color: #999;
+
+.svc-card-price {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+.svc-card-meta {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
 }
+
+.svc-card-duration {
+  font-size: 12px;
+  color: #888;
+}
+
 .gst-free-tag {
   font-size: 9px;
   background: var(--green-light);
   color: var(--green);
   padding: 1px 5px;
   border-radius: 10px;
+}
+
+.service-addon-chips {
+  width: 100%;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 0.5px solid #e8e5de;
+}
+
+.service-addon-chips-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.service-addon-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.service-addon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 40px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.service-addon-chip.selected {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.service-addon-chip-sign {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--teal);
+  min-width: 12px;
+}
+
+.service-addon-chip.selected .service-addon-chip-sign {
+  color: var(--color-primary);
+}
+
+.service-addon-chip-name {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.service-addon-chip-price {
+  font-size: 12px;
+  color: #666;
+}
+
+.bill-item-addon .bill-item-name {
+  color: #444;
 }
 
 /* Bill */
@@ -701,10 +828,11 @@
     height: auto;
     overflow: visible;
   }
-  .services-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* Landscape iPad */
+/* Desktop — 3-column service grid */
 @media (min-width: 1024px) {
-  .services-grid { grid-template-columns: repeat(3, 1fr); }
+  .services-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }

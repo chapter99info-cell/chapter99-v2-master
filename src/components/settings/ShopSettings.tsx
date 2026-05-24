@@ -14,6 +14,8 @@ import { testGoogleSheetConnection, refreshDailySheetSummary } from '../../lib/g
 import Toast, { type ToastType } from '../ui/Toast'
 import { PlanGate } from '../plan/PlanGatedTab'
 import MenuQrSection from './MenuQrSection'
+import ServiceAddonsManager from './ServiceAddonsManager'
+import './ServiceAddonsManager.css'
 import ShopDepositSettingsPanel from '../admin/ShopDepositSettings'
 import '../admin/ShopDepositSettings.css'
 import { sendReviewRequestPreview, type ReviewRequestChannel } from '../../lib/reviewRequestService'
@@ -298,6 +300,11 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
       </section>
 
       <MenuQrSection shopSlug={shopSlug} shopName={form.name} />
+
+      <section className="ss-section">
+        <h2 className="ss-section-title">Add-ons</h2>
+        <ServiceAddonsManager shopId={shopId} />
+      </section>
 
       <section className="ss-section">
         <h2 className="ss-section-title">SMS notifications</h2>
