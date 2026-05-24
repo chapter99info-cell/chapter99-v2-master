@@ -46,7 +46,7 @@ export default function ServiceAddonsManager({ shopId = SHOP_ID }: ServiceAddons
     void loadAddons()
   }, [loadAddons])
 
-  async function handleSave() {
+  async function handleAdd() {
     const parsedPrice = parseFloat(price)
     if (!name.trim()) {
       setToast({ message: 'Enter an add-on name', type: 'error' })
@@ -68,7 +68,7 @@ export default function ServiceAddonsManager({ shopId = SHOP_ID }: ServiceAddons
 
     setName('')
     setPrice('')
-    setToast({ message: 'Add-on saved', type: 'success' })
+    setToast({ message: 'Add-on added', type: 'success' })
     await loadAddons()
   }
 
@@ -133,9 +133,9 @@ export default function ServiceAddonsManager({ shopId = SHOP_ID }: ServiceAddons
           type="button"
           className="sam-save-btn"
           disabled={saving}
-          onClick={() => void handleSave()}
+          onClick={() => void handleAdd()}
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'Adding…' : 'Add'}
         </button>
       </div>
 

@@ -299,15 +299,6 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
         </label>
       </section>
 
-      <section className="ss-section" id="owner-addons-section">
-        <h2 className="ss-section-title">Service add-ons</h2>
-        <p className="ss-hint">
-          Optional POS extras (e.g. Coconut Oil +$10). Active add-ons appear as toggle chips on the
-          bill after a service is selected.
-        </p>
-        <ServiceAddonsManager shopId={shopId} />
-      </section>
-
       <MenuQrSection shopSlug={shopSlug} shopName={form.name} />
 
       <section className="ss-section">
@@ -533,6 +524,15 @@ export default function ShopSettings({ shopId = SHOP_ID }: ShopSettingsProps) {
         <p className="ss-hint">
           Sheets created automatically: Transactions, Bookings, Daily Summary
         </p>
+      </section>
+
+      <section className="ss-section" id="owner-addons-section">
+        <h2 className="ss-section-title">Add-ons</h2>
+        <p className="ss-hint">
+          Optional POS extras (e.g. Coconut Oil +$10). Shown as toggle chips on the bill after a
+          service is added.
+        </p>
+        <ServiceAddonsManager shopId={shopId} />
       </section>
 
       <div className="ss-actions">
