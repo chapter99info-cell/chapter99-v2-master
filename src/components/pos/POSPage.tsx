@@ -41,6 +41,7 @@ import GoogleReviewQR from './GoogleReviewQR'
 import { usePlan } from '../../hooks/usePlan'
 import UpgradeModal from '../plan/UpgradeModal'
 import type { PlanFeature } from '../../types/plan'
+import Toast, { type ToastType } from '../ui/Toast'
 
 type POSMode = 'pos' | 'walkin' | 'queue'
 type POSStep = 'bill' | 'payment' | 'success'
@@ -94,12 +95,10 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
   const [receiptNote, setReceiptNote] = useState('')
   const [receiptLoading, setReceiptLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
+  const [emailToast, setEmailToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [healthFundEmailLoading, setHealthFundEmailLoading] = useState(false)
-  const [showReceiptEmailInput, setShowReceiptEmailInput] = useState(false)
   const [showHealthFundEmailInput, setShowHealthFundEmailInput] = useState(false)
-  const [receiptEmailDraft, setReceiptEmailDraft] = useState('')
   const [healthFundEmailDraft, setHealthFundEmailDraft] = useState('')
-  const [receiptEmailSent, setReceiptEmailSent] = useState<string | null>(null)
   const [healthFundEmailSent, setHealthFundEmailSent] = useState<string | null>(null)
   const [healthFundLoading, setHealthFundLoading] = useState(false)
   const [healthFundNote, setHealthFundNote] = useState('')
@@ -495,11 +494,9 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
     setCurrentTx(null)
     setReceiptNote('')
     setHealthFundNote('')
-    setShowReceiptEmailInput(false)
+    setEmailToast(null)
     setShowHealthFundEmailInput(false)
-    setReceiptEmailDraft('')
     setHealthFundEmailDraft('')
-    setReceiptEmailSent(null)
     setHealthFundEmailSent(null)
     clearAppliedVoucher()
     setStep('bill')
@@ -568,22 +565,15 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
     if (result.ok) {
       setClientEmail(email)
       setCurrentTx({ ...tx, receiptSent: true })
-      setReceiptEmailSent(email)
-      setShowReceiptEmailInput(false)
-      setReceiptEmailDraft('')
+      setEmailToast({ message: 'ส่งอีเมลสำเร็จ', type: 'success' })
     } else {
-      setReceiptNote(result.error ?? 'Could not send email')
+      setEmailToast({ message: 'ส่งอีเมลไม่สำเร็จ', type: 'error' })
     }
   }
 
-  const onEmailReceiptClick = () => {
-    const email = resolveClientEmail()
-    if (email) void submitReceiptEmail(email)
-    else {
-      setShowReceiptEmailInput(true)
-      setReceiptEmailDraft(clientEmail)
-    }
-  }
+  const clientEmailForReceipt = step === 'success' ? resolveClientEmail() : ''
+  const showSendReceiptEmail =
+    step === 'success' && clientEmailForReceipt.includes('@')
 
   const submitHealthFundEmail = async (to: string) => {
     if (!currentTx || !shop) return
@@ -1071,14 +1061,16 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
             >
               {receiptLoading ? 'Generating…' : '📄 Download Receipt'}
             </button>
-            <button
-              type="button"
-              className="s-btn primary"
-              disabled={emailLoading || !shop}
-              onClick={onEmailReceiptClick}
-            >
-              {emailLoading ? 'Sending…' : '✉️ Email Receipt'}
-            </button>
+            {showSendReceiptEmail && (
+              <button
+                type="button"
+                className="s-btn primary"
+                disabled={emailLoading || !shop}
+                onClick={() => void submitReceiptEmail(clientEmailForReceipt)}
+              >
+                {emailLoading ? 'กำลังส่ง…' : '✉️ Send Receipt by Email'}
+              </button>
+            )}
             <button className="s-btn" onClick={handlePrint}>🖨 Print Receipt</button>
             <button
               type="button"
@@ -1098,29 +1090,6 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
             </button>
             <button className="s-btn" onClick={reset}>ปิดบิล</button>
           </div>
-          {showReceiptEmailInput && !receiptEmailSent && (
-            <div className="success-email-prompt">
-              <input
-                type="email"
-                className="pos-input success-email-input"
-                placeholder="กรอก email ลูกค้า"
-                value={receiptEmailDraft}
-                onChange={e => setReceiptEmailDraft(e.target.value)}
-                autoComplete="email"
-              />
-              <button
-                type="button"
-                className="s-btn primary"
-                disabled={emailLoading || !receiptEmailDraft.trim()}
-                onClick={() => void submitReceiptEmail(receiptEmailDraft)}
-              >
-                {emailLoading ? 'Sending…' : 'Send'}
-              </button>
-            </div>
-          )}
-          {receiptEmailSent && (
-            <p className="success-email-sent">✅ ส่งแล้วไปที่ {receiptEmailSent}</p>
-          )}
           {showHealthFundEmailInput && !healthFundEmailSent && (
             <div className="success-email-prompt">
               <input
@@ -1282,6 +1251,14 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
           requiredPlan={requiredPlan(upgradeFeature)}
           currentPlan={plan}
           onClose={() => setUpgradeFeature(null)}
+        />
+      )}
+
+      {emailToast && (
+        <Toast
+          message={emailToast.message}
+          type={emailToast.type}
+          onClose={() => setEmailToast(null)}
         />
       )}
     </div>
