@@ -25,6 +25,11 @@ interface StaffRow {
   employment_type: string | null
   start_date: string | null
   active: boolean
+  pin_hash?: string
+}
+
+function isDeletedStaff(row: StaffRow): boolean {
+  return row.pin_hash === DELETED_PIN_MARKER || row.pin_hash === 'DELETED'
 }
 
 interface StaffForm {
@@ -42,6 +47,9 @@ interface StaffForm {
   employmentType: string
   startDate: string
 }
+
+/** Written to pin_hash on soft-delete; excluded from staff list and login. */
+const DELETED_PIN_MARKER = '__deleted__'
 
 const EMPTY_FORM: StaffForm = {
   nameEn: '',
@@ -105,6 +113,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
   const [formError, setFormError] = useState('')
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
 
   const isEdit = Boolean(editId)
   const validationError = validateStaffForm(form, isEdit)
@@ -126,7 +135,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
     const { data, error } = await supabase
       .from('staff')
       .select(
-        'id, name_en, name_th, role, commission_rate, base_hourly, visa_type, visa_expiry, indemnity_expiry, liability_expiry, firstaid_expiry, employment_type, start_date, active, shop_id, created_at'
+        'id, name_en, name_th, role, commission_rate, base_hourly, visa_type, visa_expiry, indemnity_expiry, liability_expiry, firstaid_expiry, employment_type, start_date, active, shop_id, created_at, pin_hash'
       )
       .eq('shop_id', shopId)
       .order('name_en', { ascending: true })
@@ -142,7 +151,8 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
       setStaffList([])
       return
     }
-    setStaffList((data as StaffRow[]) ?? [])
+    const rows = ((data as StaffRow[]) ?? []).filter(s => !isDeletedStaff(s))
+    setStaffList(rows)
   }
 
   function startAdd() {
@@ -248,9 +258,27 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
   }
 
   async function deleteStaff(id: string) {
-    await supabase.from('staff').update({ active: false, pin_hash: 'DELETED' }).eq('id', id)
+    setDeleting(true)
+    setLoadError('')
+    const { error } = await supabase
+      .from('staff')
+      .update({ active: false, pin_hash: DELETED_PIN_MARKER })
+      .eq('id', id)
+      .eq('shop_id', shopId)
+
+    setDeleting(false)
     setConfirmDelete(null)
-    loadStaff()
+
+    if (error) {
+      setLoadError(
+        error.message.includes('policy') || error.code === '42501'
+          ? `${error.message} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
+          : `Delete failed: ${error.message}`
+      )
+      return
+    }
+
+    await loadStaff()
   }
 
   const daysUntil = (dateStr: string) => {
@@ -580,9 +608,10 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
               <button
                 type="button"
                 className="modal-btn danger"
-                onClick={() => deleteStaff(confirmDelete)}
+                disabled={deleting}
+                onClick={() => void deleteStaff(confirmDelete)}
               >
-                Confirm Delete
+                {deleting ? 'Deleting…' : 'Confirm Delete'}
               </button>
             </div>
           </div>
