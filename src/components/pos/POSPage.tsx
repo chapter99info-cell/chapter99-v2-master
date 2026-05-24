@@ -65,6 +65,13 @@ function formatServiceCategoryTabLabel(category: string): string {
   return key.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
 }
 
+const CATEGORY_TAB_LABEL_MAX = 12
+
+function truncateCategoryTabLabel(label: string, maxLen = CATEGORY_TAB_LABEL_MAX): string {
+  if (label.length <= maxLen) return label
+  return `${label.slice(0, maxLen)}...`
+}
+
 const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
   booking: 'Booking',
   queue: 'Queue',
@@ -833,23 +840,31 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                     type="button"
                     role="tab"
                     aria-selected={serviceCategoryFilter === 'all'}
-                    className={`service-category-tab${serviceCategoryFilter === 'all' ? ' active' : ''}`}
+                    className={`service-category-tab service-category-tab--all${serviceCategoryFilter === 'all' ? ' active' : ''}`}
                     onClick={() => setServiceCategoryFilter('all')}
                   >
                     ALL
                   </button>
-                  {serviceCategories.map(cat => (
-                    <button
-                      key={cat}
-                      type="button"
-                      role="tab"
-                      aria-selected={serviceCategoryFilter === cat}
-                      className={`service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
-                      onClick={() => setServiceCategoryFilter(cat)}
-                    >
-                      {formatServiceCategoryTabLabel(cat)}
-                    </button>
-                  ))}
+                  <div className="service-category-tabs-scroll">
+                    {serviceCategories.map(cat => {
+                      const fullLabel = formatServiceCategoryTabLabel(cat)
+                      const shortLabel = truncateCategoryTabLabel(fullLabel)
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          role="tab"
+                          aria-selected={serviceCategoryFilter === cat}
+                          aria-label={fullLabel}
+                          title={fullLabel}
+                          className={`service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
+                          onClick={() => setServiceCategoryFilter(cat)}
+                        >
+                          {shortLabel}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
               <div className="services-grid">
