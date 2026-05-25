@@ -53,7 +53,7 @@ interface Session {
 function roleBadgeLabel(level: PINLevel): string | undefined {
   switch (level) {
     case 'owner':
-      return 'Manager'
+      return 'Owner'
     case 'staff':
       return 'Therapist'
     case 'cashier':
