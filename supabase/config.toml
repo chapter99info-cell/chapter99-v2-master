@@ -1,0 +1,15 @@
+# Trip2Talk V4 — Supabase CLI (Edge Functions deploy)
+project_id = "rvcwprxnqwscgjusmjvj"
+
+[api]
+enabled = true
+
+# Publishable anon keys (sb_publishable_*) are not JWTs — use apikey header from the client SDK.
+[functions.google-workspace-sync]
+verify_jwt = false
+
+[functions.send-trip-receipt]
+verify_jwt = false
+
+[functions.get-weather]
+verify_jwt = false

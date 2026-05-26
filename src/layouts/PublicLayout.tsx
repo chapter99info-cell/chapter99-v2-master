@@ -79,7 +79,7 @@ function PublicLayoutInner() {
               About
             </NavLink>
           )}
-          <Link to="/staff" className="public-nav-link public-nav-staff">
+          <Link to="/chapter99/staff" className="public-nav-link public-nav-staff">
             Staff Login
           </Link>
         </nav>
@@ -102,7 +102,7 @@ function PublicLayoutInner() {
             {shop?.businessType === 'restaurant' ? 'Order online' : 'Book online'}
           </Link>
           <span aria-hidden> · </span>
-          <Link to="/staff">Staff dashboard</Link>
+          <Link to="/chapter99/staff">Staff dashboard</Link>
         </p>
         <p className="public-footer-links public-footer-legal">
           <LegalFooterLink href={privacyHref} label="Privacy Policy" />

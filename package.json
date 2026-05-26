@@ -6,7 +6,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "upload-backup": "node scripts/upload-backup-to-drive.mjs"
+    "upload-backup": "node scripts/upload-backup-to-drive.mjs",
+    "verify-vercel": "node scripts/verify-vercel-project.mjs",
+    "install:guide": "node scripts/install-guide-page-new.mjs",
+    "deploy:trip2talk": "npm run verify-vercel && npm run build && npx vercel --prod --yes"
   },
   "dependencies": {
     "@react-pdf/renderer": "^3.4.0",

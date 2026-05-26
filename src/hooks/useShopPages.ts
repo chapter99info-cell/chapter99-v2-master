@@ -46,7 +46,7 @@ export function useShopPages(): UseShopPagesResult {
 
     return {
       ...visibility,
-      ready: !loading && shop !== null,
+      ready: !loading,
       redirectTo,
       isPageEnabled: (page: PublicPageKey) => isPublicPageEnabled(visibility, page),
     }

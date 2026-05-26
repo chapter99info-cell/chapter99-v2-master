@@ -57,16 +57,24 @@ npm install
 cp .env.example .env.local
 ```
 
-### 2. Supabase Setup
-Run SQL files **in order** in Supabase SQL Editor:
+### 2. Supabase Setup (Trip2Talk V4 — fresh project)
+
+In Supabase Dashboard → **trip2talk-v4** → **SQL Editor**, run **one file at a time** in this order:
+
 ```
-supabase/00-schema-phase1.sql     ← Run first
-supabase/00-schema-phase2.sql
-supabase/00-schema-phase3-4.sql
-supabase/01-schema-phase5.sql
-supabase/02-schema-phase6.sql
-supabase/03-schema-phase7.sql     ← Run last
+supabase/001_missing_tables.sql   ← Chapter99 spa schema (optional if using spa only)
+supabase/002_rls_policies.sql
+supabase/003_seed_data.sql
+supabase/004_trip2talk_tables.sql ← Trip2Talk tours, CRM, client app tables
+supabase/005_trip2talk_rls.sql
+supabase/006_trip2talk_seed.sql   ← sample tour + guide content
 ```
+
+**Trip2Talk client routes:** `/onboard`, `/app`, `/app/social`, `/app/packing`, `/app/trip`  
+**Staff PIN:** `/` (PIN gate) → `1111` guide, `4444` cashier, `9999` owner  
+**Chapter99 spa staff (legacy):** `/chapter99/staff/*`
+
+**Legacy / incremental migrations:** numbered files in `supabase/` (e.g. `21`, `22`, `28`–`31`) are still used for upgrades on existing databases; the `001`–`003` bundle is for a new empty project only.
 
 ### 3. Environment Variables
 ```env

@@ -1,0 +1,22 @@
+/* Trip2Talk client app — Luxury Dark Gold */
+
+.client-app-root {
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #1c1c1c;
+  --color-accent: #c9a84c;
+  --color-accent-soft: #e8c96a;
+  --color-text: #f5f0e8;
+  --color-text-muted: #8a8070;
+  --color-border: #2a2520;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.client-app-root h1,
+.client-app-root h2,
+.client-app-root .font-display,
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Trip2Talk">
+  <circle cx="256" cy="256" r="256" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="232" fill="#0a0a0a"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#C9A84C" stroke-width="10"/>
+  <text x="256" y="228" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="700" fill="#C9A84C">Trip2</text>
+  <text x="256" y="310" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="700" fill="#E8C96A">Talk</text>
+</svg>

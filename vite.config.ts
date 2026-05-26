@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   build: {
+    outDir: 'dist',
     chunkSizeWarningLimit: 2500,
     rollupOptions: {
       output: {
@@ -30,36 +31,38 @@ export default defineConfig({
       registerType: 'autoUpdate',
       manifestFilename: 'manifest.json',
       includeAssets: [
-        'icons/mira-icon.svg',
-        'icons/pwa-192x192.png',
-        'icons/pwa-512x512.png',
+        'favicon-32.png',
+        'trip2talk-logo.png',
+        'manifest.json',
+        'icons/icon-192.png',
+        'icons/icon-512.png',
         'icons/apple-touch-icon.png',
       ],
       manifest: {
-        name: 'Mira Thai Massage',
-        short_name: 'Mira',
-        description: 'Mira Thai Massage — booking, queue & POS dashboard',
-        theme_color: '#1a3d2b',
-        background_color: '#1a3d2b',
+        name: 'Trip2Talk',
+        short_name: 'Trip2Talk',
+        description: 'Trip2Talk — Australian student tours',
+        theme_color: '#050508',
+        background_color: '#050508',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
           {
-            src: 'icons/pwa-192x192.png',
+            src: 'icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: 'icons/pwa-512x512.png',
+            src: 'icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: 'icons/pwa-512x512.png',
+            src: 'icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -67,6 +70,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['/push-handler.js'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf}'],
         navigateFallback: '/index.html',

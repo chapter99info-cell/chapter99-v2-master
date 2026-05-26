@@ -1,0 +1,29 @@
+.photo-gallery-neon {
+  min-height: 100%;
+  position: relative;
+}
+
+.photo-gallery-neon__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(5, 5, 8, 0.92);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-gallery-neon__scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 101;
+  pointer-events: none;
+  opacity: 0.25;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.4) 2px,
+    rgba(0, 0, 0, 0.4) 4px
+  );
+}

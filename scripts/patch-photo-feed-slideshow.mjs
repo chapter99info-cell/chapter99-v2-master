@@ -1,0 +1,391 @@
+/**
+ * Patches PhotoFeedFull.jsx UI tail: lightbox prev/next, dots, swipe, keyboard.
+ */
+import { readFileSync, writeFileSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const path = join(root, 'PhotoFeedFull.jsx')
+
+const UI_TAIL = `const DEST_META = {
+  NZ:  { label:"New Zealand", color:"#00875A", shadow:"rgba(0,135,90,0.4)"  },
+  TAS: { label:"Tasmania",    color:"#7C5CBF", shadow:"rgba(124,92,191,0.4)" },
+  AUS: { label:"Australia",   color:"#C05302", shadow:"rgba(192,83,2,0.4)"   },
+  SYD: { label:"Sydney",      color:"#1B7EC2", shadow:"rgba(27,126,194,0.4)" },
+};
+
+const FILTERS = [
+  {id:"ALL", label:"All"},
+  {id:"NZ",  label:"New Zealand"},
+  {id:"TAS", label:"Tasmania"},
+  {id:"AUS", label:"Australia"},
+  {id:"SYD", label:"Sydney"},
+];
+
+const SWIPE_MIN_PX = 48;
+
+export default function PhotoFeedFull() {
+  const [filter, setFilter] = useState("ALL");
+  const [liked, setLiked]   = useState({});
+  const [selIndex, setSelIndex] = useState(null);
+  const [captionCopied, setCaptionCopied] = useState(false);
+  const touchStartX = useRef(null);
+
+  const copyShareCaption = async (photo, countryLabel) => {
+    const text = buildGalleryShareCaption(photo, countryLabel);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCaptionCopied(true);
+      setTimeout(() => setCaptionCopied(false), 2000);
+    } catch {
+      window.prompt("Copy caption:", text);
+    }
+  };
+
+  const filtered = filter === "ALL" ? PHOTOS : PHOTOS.filter(p => p.dest === filter);
+  const col1 = filtered.filter((_, i) => i % 2 === 0);
+  const col2 = filtered.filter((_, i) => i % 2 !== 0);
+  const sel = selIndex !== null ? filtered[selIndex] : null;
+
+  const goPrev = () => {
+    if (!filtered.length) return;
+    setSelIndex((i) => (i === null ? 0 : (i - 1 + filtered.length) % filtered.length));
+  };
+
+  const goNext = () => {
+    if (!filtered.length) return;
+    setSelIndex((i) => (i === null ? 0 : (i + 1) % filtered.length));
+  };
+
+  useEffect(() => {
+    if (selIndex === null) return;
+    if (selIndex >= filtered.length) setSelIndex(null);
+  }, [filter, filtered.length, selIndex]);
+
+  useEffect(() => {
+    if (selIndex === null) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setSelIndex(null);
+      else if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selIndex, filtered.length]);
+
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+
+  const onTouchEnd = (e) => {
+    const start = touchStartX.current;
+    touchStartX.current = null;
+    if (start == null || filtered.length < 2) return;
+    const end = e.changedTouches[0]?.clientX ?? start;
+    const dx = end - start;
+    if (Math.abs(dx) < SWIPE_MIN_PX) return;
+    if (dx > 0) goPrev();
+    else goNext();
+  };
+
+  const navBtnStyle = {
+    position: "fixed",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "44px",
+    height: "44px",
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.2)",
+    color: "#fff",
+    fontSize: "22px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 102,
+  };
+
+  return (
+    <div style={{
+      fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      background:"#111113",
+      minHeight:"100svh",
+      maxWidth:"430px",
+      margin:"0 auto",
+      color:"#f0f0f0",
+    }}>
+
+      {/* TOPBAR */}
+      <div style={{
+        position:"sticky",top:0,zIndex:40,
+        background:"rgba(17,17,19,0.95)",
+        backdropFilter:"blur(16px)",
+        WebkitBackdropFilter:"blur(16px)",
+        borderBottom:"1px solid rgba(255,255,255,0.07)",
+        padding:"18px 16px 12px",
+      }}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"14px"}}>
+          <div>
+            <p style={{fontSize:"10px",color:"rgba(255,255,255,0.35)",letterSpacing:"0.1em",textTransform:"uppercase",margin:"0 0 3px",fontWeight:500}}>Trip2Talk · Gallery</p>
+            <p style={{fontSize:"26px",fontWeight:700,margin:0,color:"#fff",letterSpacing:"-0.8px"}}>Our Journeys</p>
+          </div>
+          <div style={{textAlign:"right",paddingTop:"2px"}}>
+            <p style={{fontSize:"22px",fontWeight:700,color:"#fff",margin:0}}>{filtered.length}</p>
+            <p style={{fontSize:"11px",color:"rgba(255,255,255,0.3)",margin:0}}>photos</p>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"2px",scrollbarWidth:"none"}}>
+          {FILTERS.map(f => {
+            const isActive = filter === f.id;
+            const dm = f.id !== "ALL" ? DEST_META[f.id] : null;
+            return (
+              <button key={f.id} onClick={() => setFilter(f.id)} style={{
+                flexShrink:0,
+                padding:"6px 14px",
+                borderRadius:"20px",
+                border: isActive ? "none" : "1px solid rgba(255,255,255,0.12)",
+                background: isActive ? (dm ? dm.color : "#fff") : "rgba(255,255,255,0.06)",
+                color: isActive ? "#fff" : "rgba(255,255,255,0.5)",
+                fontSize:"12px",
+                fontWeight: isActive ? 600 : 400,
+                cursor:"pointer",
+                transition:"all 0.2s",
+                fontFamily:"inherit",
+                boxShadow: isActive && dm ? \`0 2px 12px \${dm.shadow}\` : "none",
+              }}>{f.label}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* MASONRY */}
+      <div style={{padding:"10px 10px 100px"}}>
+        <div style={{display:"flex",gap:"8px",alignItems:"flex-start"}}>
+          {[col1, col2].map((col, ci) => (
+            <div key={ci} style={{flex:1,display:"flex",flexDirection:"column",gap:"8px"}}>
+              {col.map((item) => {
+                const idx = PHOTOS.indexOf(item);
+                const filteredIdx = filtered.indexOf(item);
+                const isLiked = liked[idx];
+                const dm = DEST_META[item.dest] || DEST_META.NZ;
+                return (
+                  <div key={idx} onClick={() => setSelIndex(filteredIdx)} style={{
+                    borderRadius:"16px",
+                    overflow:"hidden",
+                    cursor:"pointer",
+                    position:"relative",
+                    background:"#222",
+                    boxShadow:"0 4px 20px rgba(0,0,0,0.5)",
+                    transition:"transform 0.2s",
+                  }}>
+                    <img src={item.src} alt={item.en}
+                      style={{width:"100%",display:"block",objectFit:"cover"}}
+                      loading="lazy"
+                    />
+                    <div style={{
+                      position:"absolute",inset:0,
+                      background:"linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 45%, transparent 70%)",
+                    }}/>
+
+                    <div style={{
+                      position:"absolute",top:"10px",left:"10px",
+                      padding:"3px 10px",borderRadius:"20px",
+                      background: dm.color,
+                      fontSize:"10px",fontWeight:700,color:"#fff",
+                      letterSpacing:"0.04em",
+                      boxShadow:\`0 2px 10px \${dm.shadow}\`,
+                    }}>{dm.label}</div>
+
+                    <button onClick={e=>{e.stopPropagation();setLiked(p=>({...p,[idx]:!p[idx]}))}} style={{
+                      position:"absolute",top:"8px",right:"8px",
+                      width:"30px",height:"30px",borderRadius:"50%",
+                      background:"rgba(0,0,0,0.4)",
+                      backdropFilter:"blur(8px)",
+                      border:"1px solid rgba(255,255,255,0.15)",
+                      cursor:"pointer",
+                      fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center",
+                      color: isLiked ? "#ff4d6d" : "rgba(255,255,255,0.8)",
+                      transition:"all 0.2s",
+                    }}>{isLiked ? "♥" : "♡"}</button>
+
+                    <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px"}}>
+                      <p style={{color:"#fff",fontSize:"12px",fontWeight:600,margin:"0 0 2px",lineHeight:1.3}}>{item.en}</p>
+                      <p style={{color:"rgba(255,255,255,0.5)",fontSize:"10px",margin:0}}>{item.loc.split(" · ")[0]}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LIGHTBOX */}
+      {sel && selIndex !== null && (() => {
+        const dm = DEST_META[sel.dest] || DEST_META.NZ;
+        const multi = filtered.length > 1;
+        return (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Photo viewer"
+            onClick={() => setSelIndex(null)}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            style={{
+              position:"fixed",inset:0,zIndex:100,
+              background:"rgba(0,0,0,0.97)",
+              display:"flex",flexDirection:"column",
+              alignItems:"center",justifyContent:"center",
+              padding:"20px",overflowY:"auto",
+            }}
+          >
+            <button type="button" aria-label="Close" onClick={() => setSelIndex(null)} style={{
+              position:"fixed",top:"16px",right:"16px",
+              width:"36px",height:"36px",borderRadius:"50%",
+              background:"rgba(255,255,255,0.08)",
+              border:"1px solid rgba(255,255,255,0.15)",
+              color:"#fff",fontSize:"16px",cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              zIndex: 102,
+            }}>✕</button>
+
+            {multi && (
+              <p style={{
+                position:"fixed", top:"20px", left:"16px", margin:0, zIndex:102,
+                fontSize:"12px", fontWeight:600, color:"rgba(255,255,255,0.55)",
+              }}>{selIndex + 1} / {filtered.length}</p>
+            )}
+
+            {multi && (
+              <>
+                <button type="button" aria-label="Previous photo" onClick={(e)=>{e.stopPropagation();goPrev();}} style={{...navBtnStyle, left:"8px"}}>‹</button>
+                <button type="button" aria-label="Next photo" onClick={(e)=>{e.stopPropagation();goNext();}} style={{...navBtnStyle, right:"8px"}}>›</button>
+              </>
+            )}
+
+            <img src={sel.src} alt={sel.en} onClick={e=>e.stopPropagation()} style={{
+              width:"100%",maxWidth:"400px",borderRadius:"18px",
+              boxShadow:"0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)",
+            }}/>
+
+            {multi && (
+              <div onClick={e=>e.stopPropagation()} style={{
+                display:"flex", gap:"8px", marginTop:"12px", flexWrap:"wrap", justifyContent:"center",
+                maxWidth:"400px",
+              }}>
+                {filtered.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={\`Photo \${i + 1}\`}
+                    aria-current={i === selIndex ? "true" : undefined}
+                    onClick={() => setSelIndex(i)}
+                    style={{
+                      width: i === selIndex ? 9 : 7,
+                      height: i === selIndex ? 9 : 7,
+                      borderRadius:"50%",
+                      border:"none",
+                      padding:0,
+                      cursor:"pointer",
+                      background: i === selIndex ? "#fff" : "rgba(255,255,255,0.35)",
+                      transition:"all 0.15s",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div onClick={e=>e.stopPropagation()} style={{
+              marginTop:"16px",width:"100%",maxWidth:"400px",
+              background:"rgba(255,255,255,0.05)",
+              border:"1px solid rgba(255,255,255,0.08)",
+              borderRadius:"16px",padding:"16px 18px",
+            }}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"10px"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:"17px",fontWeight:700,color:"#fff",margin:"0 0 3px"}}>{sel.en}</p>
+                  <p style={{fontSize:"12px",color:"rgba(255,255,255,0.4)",margin:0}}>{sel.th}</p>
+                </div>
+                <div style={{
+                  padding:"4px 11px",borderRadius:"20px",
+                  background: dm.color,
+                  fontSize:"10px",fontWeight:700,color:"#fff",
+                  flexShrink:0,marginLeft:"10px",
+                  boxShadow:\`0 2px 10px \${dm.shadow}\`,
+                }}>{dm.label}</div>
+              </div>
+
+              <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"12px"}}>
+                <span style={{fontSize:"13px"}}>📍</span>
+                <p style={{fontSize:"12px",color:"rgba(255,255,255,0.45)",margin:0}}>{sel.loc}</p>
+              </div>
+
+              <div style={{borderTop:"1px solid rgba(255,255,255,0.07)",paddingTop:"12px"}}>
+                <p style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 8px",fontWeight:500}}>Camera Settings</p>
+                <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                  {sel.settings.split(" · ").map((s,i) => (
+                    <span key={i} style={{
+                      padding:"4px 10px",borderRadius:"6px",
+                      background:"rgba(255,255,255,0.06)",
+                      border:"1px solid rgba(255,255,255,0.1)",
+                      fontSize:"11px",fontWeight:500,
+                      color:"rgba(255,255,255,0.65)",
+                      fontFamily:"ui-monospace,monospace",
+                    }}>{s}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{borderTop:"1px solid rgba(255,255,255,0.07)",paddingTop:"12px",marginTop:"12px"}}>
+                <p style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 8px",fontWeight:500}}>Share caption</p>
+                <pre style={{
+                  margin:"0 0 10px",padding:"10px 12px",borderRadius:"10px",
+                  background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+                  fontSize:"11px",lineHeight:1.45,whiteSpace:"pre-wrap",wordBreak:"break-word",
+                  color:"rgba(255,255,255,0.7)",fontFamily:"inherit",
+                }}>{buildGalleryShareCaption(sel, dm.label)}</pre>
+                <button type="button" onClick={(e)=>{e.stopPropagation();copyShareCaption(sel,dm.label);}} style={{
+                  width:"100%",padding:"10px",borderRadius:"10px",border:"none",cursor:"pointer",
+                  background: captionCopied ? "rgba(0,135,90,0.9)" : dm.color,
+                  color:"#fff",fontSize:"12px",fontWeight:600,fontFamily:"inherit",
+                  boxShadow:\`0 2px 12px \${dm.shadow}\`,
+                }}>{captionCopied ? "Copied ✓" : "Copy caption for FB / IG"}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+`
+
+let s = readFileSync(path, 'utf8')
+const marker = '];\n\nconst DEST_META'
+let metaStart = s.indexOf(marker)
+if (metaStart >= 0) metaStart += 4 // keep "];\n\n"
+else {
+  metaStart = s.lastIndexOf('\n\nconst DEST_META')
+  if (metaStart < 0) {
+    console.error('Could not find PHOTOS end / DEST_META in PhotoFeedFull.jsx')
+    process.exit(1)
+  }
+  metaStart += 2 // keep "\n\n"
+}
+
+const importLine = 'import { useState, useEffect, useRef } from "react";'
+if (!s.startsWith(importLine)) {
+  s = s.replace(
+    'import { useState } from "react";',
+    importLine,
+  )
+}
+
+const out = s.slice(0, metaStart) + UI_TAIL
+writeFileSync(path, out, 'utf8')
+writeFileSync(join(root, 'src', 'pages', 'PhotoFeedFull.jsx'), out, 'utf8')
+console.log('Patched PhotoFeedFull.jsx (slideshow + installed to src/pages)')
