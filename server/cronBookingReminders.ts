@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from './supabaseServer'
 import { markReminderSent, sendBookingReminderSms } from './bookingNotificationsCore'
 
 export async function runCronBookingReminders(req: VercelRequest, res: VercelResponse) {

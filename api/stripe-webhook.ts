@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Stripe from 'stripe'
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from '../server/supabaseServer'
 import { Resend } from 'resend'
 import {
   buildGiftVoucherEmailHTML,

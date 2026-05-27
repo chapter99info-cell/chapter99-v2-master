@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from './supabaseServer'
 import { Resend } from 'resend'
 import twilio from 'twilio'
 import { RECEIPTS_FROM } from './emailConstants'

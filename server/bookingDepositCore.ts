@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from './supabaseServer'
 import type Stripe from 'stripe'
 import { sendBookingNotifications } from './bookingNotificationsCore'
 

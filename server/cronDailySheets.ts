@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from './supabaseServer'
 import { refreshDailySummaryFromTransactions } from './sheetsSyncCore'
 
 export async function runCronDailySheets(req: VercelRequest, res: VercelResponse) {

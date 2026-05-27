@@ -3,7 +3,7 @@
  * Send Google review request after POS checkout (email / SMS with 30-day rate limit).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from '../server/supabaseServer'
 import { Resend } from 'resend'
 import twilio from 'twilio'
 import { RECEIPTS_FROM } from '../server/emailConstants'

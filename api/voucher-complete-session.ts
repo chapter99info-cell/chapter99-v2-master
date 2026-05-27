@@ -3,7 +3,7 @@
  * After Stripe Checkout success — idempotent voucher creation + email
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceSupabase } from '../src/lib/supabase'
+import { getServiceSupabase } from '../server/supabaseServer'
 import {
   createStripeClient,
   getStripeSecret,
@@ -34,6 +34,7 @@ async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log(`[${ROUTE}] RESEND_API_KEY loaded:`, Boolean(process.env.RESEND_API_KEY))
     const secret = getStripeSecret(ROUTE)
     if (!secret) {
       return sendJsonError(res, 500, 'STRIPE_SECRET_KEY is not configured on the server')
@@ -51,7 +52,13 @@ async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
       return sendJsonError(res, 400, 'Payment not completed')
     }
 
-    const supabase = getServiceSupabase()
+    let supabase
+    try {
+      supabase = getServiceSupabase()
+    } catch (e) {
+      console.error(`[${ROUTE}] service supabase init failed`, e)
+      return sendJsonError(res, 500, 'Supabase service role not configured')
+    }
 
     const { data: existing } = await supabase
       .from('gift_vouchers')
@@ -102,6 +109,7 @@ async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
       .single()
 
     if (insertErr) {
+      console.error(`[${ROUTE}] voucher insert failed`, insertErr)
       return sendJsonError(res, 500, insertErr.message)
     }
 
@@ -111,11 +119,12 @@ async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
       .eq('id', shopId)
       .single()
 
-    if (process.env.RESEND_API_KEY) {
-      const resend = new Resend(process.env.RESEND_API_KEY)
+    const resendKey = process.env.RESEND_API_KEY?.trim() ?? ''
+    if (resendKey) {
+      const resend = new Resend(resendKey)
       const payload = {
         to: recipientEmail,
-        buyerName: recipientName,
+        buyerName: recipientName ?? 'Guest',
         voucherCode: voucher.code as string,
         amount,
         expiryDate,
@@ -126,16 +135,19 @@ async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
         logoUrl: shop?.logo_url as string | undefined,
       }
       try {
-        await resend.emails.send({
+        const result = await resend.emails.send({
           from: VOUCHERS_FROM,
           to: recipientEmail,
           subject: buildGiftVoucherEmailSubject(payload),
           html: buildGiftVoucherEmailHTML(payload),
           text: buildGiftVoucherEmailText(payload),
         })
+        console.log(`[${ROUTE}] email sent`, { id: result.data?.id })
       } catch (e) {
-        console.error('[voucher-complete] email', e)
+        console.error(`[${ROUTE}] email failed`, e)
       }
+    } else {
+      console.warn(`[${ROUTE}] RESEND_API_KEY missing — skipping voucher email`)
     }
 
     return res.status(200).json({
