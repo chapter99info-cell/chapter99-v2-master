@@ -7,20 +7,32 @@ const PLACEHOLDER_URL = 'https://placeholder.supabase.co'
 const PLACEHOLDER_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTI4MDAsImV4cCI6MTk2MDc2ODgwMH0.placeholder'
 
+/** Safe env read — never touch bare `process` in the browser bundle */
+function readNodeEnv(key: string): string {
+  try {
+    if (typeof process !== 'undefined' && process.env?.[key]) {
+      return process.env[key] as string
+    }
+  } catch {
+    /* ignore */
+  }
+  return ''
+}
+
 function readSupabaseUrl(): string {
-  const vite = import.meta.env?.VITE_SUPABASE_URL
+  const vite = import.meta.env.VITE_SUPABASE_URL
   if (typeof vite === 'string' && vite) return vite
-  return process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
+  return readNodeEnv('SUPABASE_URL') || readNodeEnv('VITE_SUPABASE_URL')
 }
 
 function readAnonKey(): string {
-  const vite = import.meta.env?.VITE_SUPABASE_ANON_KEY
+  const vite = import.meta.env.VITE_SUPABASE_ANON_KEY
   if (typeof vite === 'string' && vite) return vite
-  return process.env.VITE_SUPABASE_ANON_KEY ?? ''
+  return readNodeEnv('VITE_SUPABASE_ANON_KEY')
 }
 
 function readServiceRoleKey(): string {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+  return readNodeEnv('SUPABASE_SERVICE_ROLE_KEY')
 }
 
 let browserClient: SupabaseClient | null = null
