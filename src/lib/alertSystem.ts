@@ -3,12 +3,7 @@
 // Insurance / Visa / BAS / Inventory alerts
 // Runs via Supabase Edge Function or Vercel Cron
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-)
+import { supabase } from './supabase'
 
 export type AlertSeverity = 'critical' | 'warning' | 'notice'
 export type AlertType =

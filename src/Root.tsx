@@ -14,7 +14,7 @@ import {
   type AppProduct,
 } from './lib/productDomain'
 
-/** Chapter99 modules call createClient at import time — lazy-load so Trip2Talk /app can mount */
+/** Chapter99 staff bundle is heavy — lazy-load so Trip2Talk /app can mount quickly */
 const Chapter99StaffApp = lazy(() => import('./Chapter99StaffApp'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const BookPage = lazy(() => import('./pages/BookPage'))

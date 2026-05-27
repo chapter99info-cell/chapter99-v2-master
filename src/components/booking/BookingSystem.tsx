@@ -3,7 +3,7 @@
 // Conflict-free with 5-min slot lock
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'
 import {
   BOOKABLE_STAFF_ROLES,
   fetchDayBookings,
@@ -13,11 +13,6 @@ import {
 } from '../../lib/bookingAvailability'
 import { fetchShop, resolveShopNotificationEmail } from '../../lib/shopService'
 import { sendOwnerBookingNotificationEmail } from '../../lib/notifyService'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
 
 type BookingSource = 'online' | 'walkin' | 'phone'
 type BookingStep = 'service' | 'datetime' | 'preferences' | 'confirm' | 'done'

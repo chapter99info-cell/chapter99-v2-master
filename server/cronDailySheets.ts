@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import { refreshDailySummaryFromTransactions } from './sheetsSyncCore'
 
 export async function runCronDailySheets(req: VercelRequest, res: VercelResponse) {
@@ -7,10 +7,7 @@ export async function runCronDailySheets(req: VercelRequest, res: VercelResponse
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  )
+  const supabase = getServiceSupabase()
 
   const dateStr = new Date().toLocaleDateString('en-AU', {
     timeZone: 'Australia/Sydney',

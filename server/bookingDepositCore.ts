@@ -1,4 +1,5 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import type Stripe from 'stripe'
 import { sendBookingNotifications } from './bookingNotificationsCore'
 
@@ -28,10 +29,7 @@ export interface ShopDepositRow {
 }
 
 export function supabaseAdmin(): SupabaseClient {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  if (!url || !key) throw new Error('Supabase service role not configured')
-  return createClient(url, key)
+  return getServiceSupabase()
 }
 
 export function isStripeEnabledForShop(shop: ShopDepositRow): boolean {

@@ -2,14 +2,9 @@
 // Background Sync: IndexedDB → Supabase
 // Runs when network is restored
 
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from './supabase'
 import { getPendingSync, markSynced, db } from './posDb'
 import type { Transaction } from '../types/pos'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
 
 const MAX_RETRIES = 5
 

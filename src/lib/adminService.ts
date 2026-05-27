@@ -2,15 +2,9 @@
 // Super Admin Data Service (PIN 3501)
 // Fetches all shops — bypasses RLS via service role
 
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from './supabase'
 import type { ShopOverview, MRRSummary, SuperAdminStats } from '../types/admin'
 import { normalizeShopPlan, PLAN_MONTHLY_FEES } from '../types/plan'
-
-// Service role client — full access to all shops
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-)
 
 // ── Fetch all shops with stats ────────────────────────────────
 export async function fetchAllShops(): Promise<ShopOverview[]> {

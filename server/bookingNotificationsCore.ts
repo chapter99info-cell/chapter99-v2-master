@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import { Resend } from 'resend'
 import twilio from 'twilio'
 import { RECEIPTS_FROM } from './emailConstants'
@@ -16,10 +16,7 @@ import {
 } from './bookingOwnerNotificationEmailTemplate'
 
 function supabaseAdmin() {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  if (!url || !key) throw new Error('Supabase service role not configured')
-  return createClient(url, key)
+  return getServiceSupabase()
 }
 
 function formatAuSmsTo(to: string): string {

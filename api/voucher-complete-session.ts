@@ -3,7 +3,7 @@
  * After Stripe Checkout success — idempotent voucher creation + email
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import {
   createStripeClient,
   getStripeSecret,
@@ -51,10 +51,7 @@ async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
       return sendJsonError(res, 400, 'Payment not completed')
     }
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
-      process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? ''
-    )
+    const supabase = getServiceSupabase()
 
     const { data: existing } = await supabase
       .from('gift_vouchers')

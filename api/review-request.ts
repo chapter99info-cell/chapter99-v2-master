@@ -3,7 +3,7 @@
  * Send Google review request after POS checkout (email / SMS with 30-day rate limit).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import { Resend } from 'resend'
 import twilio from 'twilio'
 import { RECEIPTS_FROM } from '../server/emailConstants'
@@ -43,11 +43,12 @@ function daysSince(iso: string): number {
   return (now - then) / (1000 * 60 * 60 * 24)
 }
 
-function getServiceSupabase() {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  if (!url || !key) return null
-  return createClient(url, key)
+function tryServiceSupabase() {
+  try {
+    return getServiceSupabase()
+  } catch {
+    return null
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -71,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Client email or phone required' })
   }
 
-  const supabase = getServiceSupabase()
+  const supabase = tryServiceSupabase()
   if (!supabase) {
     return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' })
   }

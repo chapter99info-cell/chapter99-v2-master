@@ -11,7 +11,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase, SHOP_ID } from './lib/supabase'
 import { fetchShop } from './lib/shopService'
 import { SHOP_UPDATED_EVENT } from './lib/shopLogo'
 import QueueBoard from './components/queue/QueueBoard'
@@ -31,14 +31,6 @@ import { PlanProvider, usePlan } from './contexts/PlanContext'
 import { PlanGatedTab, PlanGate } from './components/plan/PlanGatedTab'
 import type { PlanFeature } from './types/plan'
 import { useStaffShopId } from './hooks/useStaffShopId'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
-
-// Shop config — loaded from shop-XXX.json or Supabase
-const SHOP_ID = import.meta.env.VITE_SHOP_ID ?? 'shop-001'
 
 type PINLevel = 'staff' | 'cashier' | 'owner' | 'super_admin' | null
 

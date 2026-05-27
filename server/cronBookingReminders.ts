@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import { markReminderSent, sendBookingReminderSms } from './bookingNotificationsCore'
 
 export async function runCronBookingReminders(req: VercelRequest, res: VercelResponse) {
@@ -7,13 +7,12 @@ export async function runCronBookingReminders(req: VercelRequest, res: VercelRes
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  if (!url || !key) {
+  let sb
+  try {
+    sb = getServiceSupabase()
+  } catch {
     return res.status(500).json({ error: 'Supabase not configured' })
   }
-
-  const sb = createClient(url, key)
   const now = Date.now()
   const windowStart = new Date(now + 23 * 60 * 60 * 1000).toISOString()
   const windowEnd = new Date(now + 25 * 60 * 60 * 1000).toISOString()

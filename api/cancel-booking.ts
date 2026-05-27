@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 import { Resend } from 'resend'
 import twilio from 'twilio'
 import { RECEIPTS_FROM } from '../server/emailConstants'
@@ -7,10 +7,7 @@ import { cancelBookingById } from '../server/bookingNotificationsCore'
 import { refundBookingDepositIfEligible } from '../server/bookingDepositCore'
 
 function supabaseAdmin() {
-  return createClient(
-    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  )
+  return getServiceSupabase()
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

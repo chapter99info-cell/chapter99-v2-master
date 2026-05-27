@@ -3,17 +3,12 @@
 // Staff Briefing + Room Assignment + Walk-in
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'
 import { fetchRooms } from '../../lib/roomService'
 import { loadQueueCache, saveQueueCache } from '../../lib/queueCache'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import type { Room } from '../../types/room'
 import './QueueBoard.css'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
 
 const STATUS_CONFIG: Record<string, { label: string }> = {
   confirmed:   { label: 'Confirmed' },

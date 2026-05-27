@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '../src/lib/supabase'
 
 type AlertSeverity = 'critical' | 'warning' | 'notice'
 
@@ -25,10 +25,7 @@ export async function runCronAlerts(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-  )
+  const supabase = getServiceSupabase()
 
   const { data: shops, error: shopsErr } = await supabase
     .from('shops')
