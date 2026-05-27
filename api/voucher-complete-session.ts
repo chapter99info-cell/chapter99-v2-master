@@ -29,6 +29,8 @@ function oneYearFromToday(): string {
 const ROUTE = 'voucher-complete-session'
 
 async function voucherCompleteHandler(req: VercelRequest, res: VercelResponse) {
+  console.log('SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+
   if (req.method !== 'POST') {
     return sendJsonError(res, 405, 'Method not allowed')
   }
