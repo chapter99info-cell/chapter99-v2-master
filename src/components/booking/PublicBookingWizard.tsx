@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import {
@@ -27,7 +27,6 @@ import {
   formatBookingRef,
   formatSydneyDateLabel,
   getUpcomingDays,
-  groupServicesByCategory,
   pickFirstFreeTherapist,
   todaySydneyDateString,
   validateAuPhone,
@@ -61,6 +60,24 @@ function formatPrice(price: number, gstFree: boolean): string {
   return `$${price.toFixed(0)}${gstFree ? '' : ' incl. GST'}`
 }
 
+function normalizeServiceCategory(category: string | undefined): string {
+  const value = (category ?? '').trim()
+  return value || 'other'
+}
+
+function formatServiceCategoryTabLabel(category: string): string {
+  const key = normalizeServiceCategory(category)
+  if (key === 'other') return 'Other'
+  return key.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
+}
+
+const CATEGORY_TAB_LABEL_MAX = 14
+
+function truncateCategoryTabLabel(label: string, maxLen = CATEGORY_TAB_LABEL_MAX): string {
+  if (label.length <= maxLen) return label
+  return `${label.slice(0, maxLen)}…`
+}
+
 export default function PublicBookingWizard({
   shopId,
   shopSlug,
@@ -92,6 +109,7 @@ export default function PublicBookingWizard({
   const [depositAmount, setDepositAmount] = useState(0)
   const [payingDeposit, setPayingDeposit] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>('all')
 
   const depositRequired = requiresOnlineDeposit(shop)
   const selectedService = services.find(s => s.id === serviceId)
@@ -410,7 +428,34 @@ export default function PublicBookingWizard({
     }
   }
 
-  const grouped = groupServicesByCategory(services)
+  const serviceCategories = useMemo(() => {
+    const categories = new Set<string>()
+    for (const svc of services) {
+      categories.add(normalizeServiceCategory(svc.category))
+    }
+    return Array.from(categories).sort((a, b) => {
+      if (a === 'other') return 1
+      if (b === 'other') return -1
+      return formatServiceCategoryTabLabel(a).localeCompare(formatServiceCategoryTabLabel(b))
+    })
+  }, [services])
+
+  const filteredServices = useMemo(() => {
+    if (serviceCategoryFilter === 'all') return services
+    return services.filter(
+      svc => normalizeServiceCategory(svc.category) === serviceCategoryFilter
+    )
+  }, [services, serviceCategoryFilter])
+
+  useEffect(() => {
+    if (
+      serviceCategoryFilter !== 'all' &&
+      !serviceCategories.includes(serviceCategoryFilter)
+    ) {
+      setServiceCategoryFilter('all')
+    }
+  }, [serviceCategories, serviceCategoryFilter])
+
   const bookingRef = bookingId ? formatBookingRef(bookingId) : ''
   const dateLabel = formatSydneyDateLabel(date)
   const timeLabel = time ? formatTime12(time) : ''
@@ -461,11 +506,47 @@ export default function PublicBookingWizard({
           {services.length === 0 ? (
             <p>No services available for online booking right now.</p>
           ) : (
-            Array.from(grouped.entries()).map(([category, list]) => (
-              <div key={category}>
-                <h3 className="pbw-category">{category}</h3>
-                <div className="pbw-service-grid">
-                  {list.map(svc => (
+            <>
+              <div
+                className="pbw-service-category-tabs"
+                role="tablist"
+                aria-label="Service categories"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={serviceCategoryFilter === 'all'}
+                  className={`pbw-service-category-tab pbw-service-category-tab--all${serviceCategoryFilter === 'all' ? ' active' : ''}`}
+                  onClick={() => setServiceCategoryFilter('all')}
+                >
+                  ALL
+                </button>
+                <div className="pbw-service-category-tabs-scroll">
+                  {serviceCategories.map(cat => {
+                    const fullLabel = formatServiceCategoryTabLabel(cat)
+                    const shortLabel = truncateCategoryTabLabel(fullLabel)
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        role="tab"
+                        aria-selected={serviceCategoryFilter === cat}
+                        aria-label={fullLabel}
+                        title={fullLabel}
+                        className={`pbw-service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
+                        onClick={() => setServiceCategoryFilter(cat)}
+                      >
+                        {shortLabel}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="pbw-service-grid">
+                {filteredServices.length === 0 ? (
+                  <p className="pbw-services-empty">No services in this category.</p>
+                ) : (
+                  filteredServices.map(svc => (
                     <button
                       key={svc.id}
                       type="button"
@@ -491,10 +572,10 @@ export default function PublicBookingWizard({
                         </p>
                       </div>
                     </button>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
-            ))
+            </>
           )}
           <div className="pbw-actions">
             <button
