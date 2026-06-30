@@ -1,8 +1,9 @@
 import {
   isPlatformHost,
   normalizeHostname,
-  resolveSlugFromHostname,
+  resolveShopFromHostname,
 } from './lib/shopDomainMap'
+import { alertUnmappedShopDomain } from './lib/shopDomainAlert'
 
 export const config = {
   matcher: ['/((?!api/).*)'],
@@ -19,7 +20,17 @@ export default function middleware(request: Request) {
   }
 
   const mapJson = process.env.SHOP_DOMAIN_MAP
-  const slug = resolveSlugFromHostname(host, mapJson)
+  const resolved = resolveShopFromHostname(host, mapJson)
+
+  if (resolved.needsAlert) {
+    void alertUnmappedShopDomain({
+      host: resolved.host,
+      source: 'middleware',
+      path: url.pathname,
+    })
+  }
+
+  const slug = resolved.slug
   if (!slug || url.searchParams.get(SHOP_QUERY)?.trim()) {
     return fetch(request)
   }

@@ -37,7 +37,7 @@ export default function ShopCustomDomain({ shopId, shopSlug }: ShopCustomDomainP
       setDomain(normalized)
       setToast({
         message: normalized
-          ? 'Custom domain saved. Add it to SHOP_DOMAIN_MAP in Vercel if not already.'
+          ? 'Custom domain saved. Add it to shops.config.json in the repo and redeploy.'
           : 'Custom domain cleared',
         type: 'success',
       })
@@ -57,8 +57,8 @@ export default function ShopCustomDomain({ shopId, shopSlug }: ShopCustomDomainP
         Custom Domain
       </h3>
       <p className="sws-muted">
-        Hostname only (no https). Also add the same mapping in Vercel env{' '}
-        <code>SHOP_DOMAIN_MAP</code> (and <code>VITE_SHOP_DOMAIN_MAP</code> for the client build).
+        Hostname only (no https). Add the domain to <code>shops.config.json</code> in git (primary
+        map), commit, and redeploy. Optional Vercel <code>SHOP_DOMAIN_MAP</code> overrides only.
       </p>
       <div className="shop-custom-domain-field">
         <input

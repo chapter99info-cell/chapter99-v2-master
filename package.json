@@ -4,7 +4,9 @@
   "description": "Chapter99 V4 — Thai Massage & Spa PWA + POS — Australia",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/verify-shop-domains-production.mjs && tsc -b && vite build",
+    "test:shop-domains": "node scripts/verify-shop-domains-production.mjs",
+    "verify-shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "preview": "vite preview",
     "upload-backup": "node scripts/upload-backup-to-drive.mjs",
     "verify-vercel": "node scripts/verify-vercel-project.mjs",

@@ -1,0 +1,15 @@
+{
+  "shops": {
+    "mira": {
+      "name": "Mira Thai Massage",
+      "shopId": "shop-001",
+      "shopSlug": "mira",
+      "domains": [
+        "chapter99info.tech",
+        "www.chapter99info.tech",
+        "mirathaimassage.com.au",
+        "www.mirathaimassage.com.au"
+      ]
+    }
+  }
+}

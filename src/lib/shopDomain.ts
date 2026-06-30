@@ -1,16 +1,19 @@
 import {
+  buildShopDomainMap,
   isPlatformHost,
   normalizeCustomDomain,
   normalizeHostname,
   parseShopDomainMapJson,
-  resolveSlugFromHostname,
+  resolveShopFromHostname,
 } from '../../lib/shopDomainMap'
 
 export {
+  buildShopDomainMap,
   isPlatformHost,
   normalizeCustomDomain,
   normalizeHostname,
   parseShopDomainMapJson,
+  resolveShopFromHostname,
 }
 
 const CLIENT_MAP_JSON =
@@ -18,12 +21,19 @@ const CLIENT_MAP_JSON =
   (import.meta.env.SHOP_DOMAIN_MAP as string | undefined)
 
 export function getClientShopDomainMap(): Record<string, string> {
-  return parseShopDomainMapJson(CLIENT_MAP_JSON)
+  return buildShopDomainMap(CLIENT_MAP_JSON)
 }
 
 export function resolveSlugFromCurrentHost(): string | null {
   if (typeof window === 'undefined') return null
-  return resolveSlugFromHostname(window.location.hostname, CLIENT_MAP_JSON)
+  return resolveShopFromHostname(window.location.hostname, CLIENT_MAP_JSON).slug
+}
+
+export function resolveShopFromCurrentHost() {
+  if (typeof window === 'undefined') {
+    return { host: '', slug: null, source: 'platform' as const, needsAlert: false }
+  }
+  return resolveShopFromHostname(window.location.hostname, CLIENT_MAP_JSON)
 }
 
 export function isOnCustomShopDomain(): boolean {

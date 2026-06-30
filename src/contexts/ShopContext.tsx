@@ -11,7 +11,13 @@ import { useSearchParams } from 'react-router-dom'
 import { fetchShop, fetchShopBySlug } from '../lib/shopService'
 import { SHOP_UPDATED_EVENT } from '../lib/shopLogo'
 import { SHOP_ID } from '../lib/supabase'
-import { isOnCustomShopDomain, resolveEffectiveShopSlug } from '../lib/shopDomain'
+import {
+  isOnCustomShopDomain,
+  isPlatformHost,
+  resolveEffectiveShopSlug,
+  resolveShopFromCurrentHost,
+} from '../lib/shopDomain'
+import { reportUnmappedShopDomainClient } from '../lib/shopDomainAlertClient'
 import type { Shop } from '../types/pos'
 import type { BusinessType } from '../types/shop'
 
@@ -85,6 +91,19 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     window.addEventListener(SHOP_UPDATED_EVENT, onUpdated)
     return () => window.removeEventListener(SHOP_UPDATED_EVENT, onUpdated)
   }, [reloadShop])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || effectiveSlug) return
+    const host = window.location.hostname
+    if (isPlatformHost(host)) return
+    const resolved = resolveShopFromCurrentHost()
+    if (!resolved.needsAlert) return
+    reportUnmappedShopDomainClient({
+      host,
+      source: 'shop-context-fallback',
+      path: window.location.pathname,
+    })
+  }, [effectiveSlug])
 
   const shopSlug = effectiveSlug ?? shop?.slug ?? null
   const shopId = shop?.id ?? null

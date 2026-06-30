@@ -1,0 +1,44 @@
+name: Verify shop domain mapping
+
+# Blocks production deploy when mapping is incomplete or shopIds are invalid.
+# Enable branch protection on `main` → require this check before merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: verify-shop-domains-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-shop-domains:
+    name: Production domain → shopId mapping
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run shop domain mapping gate
+        env:
+          GITHUB_ACTIONS: true
+          # Must match chapter99-v4-complete Vercel project
+          VERCEL_PROJECT_ID: prj_HEo1m0nLxstIv0s1k5QGHcnr0DKz
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # Production env override (optional if shops.config.json is complete)
+          SHOP_DOMAIN_MAP: ${{ secrets.SHOP_DOMAIN_MAP }}
+          VITE_SHOP_DOMAIN_MAP: ${{ secrets.VITE_SHOP_DOMAIN_MAP }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/verify-shop-domains-production.mjs
