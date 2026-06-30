@@ -43,5 +43,9 @@ export function resolveSlugFromHostname(
   const h = normalizeHostname(host)
   if (!h || isPlatformHost(h)) return null
   const map = parseShopDomainMapJson(mapJson)
+  // Hard guarantee: chapter99info.tech must always serve Mira Thai Massage.
+  // This provides a safe fallback if Vercel env SHOP_DOMAIN_MAP is missing/misconfigured.
+  if (h === 'chapter99info.tech') return map[h] ?? 'mira'
+
   return map[h] ?? null
 }
