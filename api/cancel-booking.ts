@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getServiceSupabase } from '../server/supabaseServer'
 import { Resend } from 'resend'
-import twilio from 'twilio'
+import { sendShopSms } from '../server/smsGateway'
 import { RECEIPTS_FROM } from '../server/emailConstants'
 import { cancelBookingById } from '../server/bookingNotificationsCore'
 import { refundBookingDepositIfEligible } from '../server/bookingDepositCore'
@@ -118,15 +118,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    const sid = process.env.TWILIO_ACCOUNT_SID
-    const token = process.env.TWILIO_AUTH_TOKEN
-    const from = process.env.TWILIO_FROM_NUMBER
-    if (sid && token && from && shop?.phone) {
-      const tw = twilio(sid, token)
-      void tw.messages.create({
-        body: msg,
-        from,
-        to: shop.phone.startsWith('+') ? shop.phone : `+61${shop.phone.replace(/^0/, '')}`,
+    if (shop?.phone && shop?.id) {
+      void sendShopSms({
+        shopId: shop.id,
+        to: shop.phone,
+        priority: 'critical',
+        message: msg,
       })
     }
 

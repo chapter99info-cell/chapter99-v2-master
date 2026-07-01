@@ -21,7 +21,7 @@ export async function runCronBookingReminders(req: VercelRequest, res: VercelRes
     .from('bookings')
     .select(
       `
-      id, start_time,
+      id, shop_id, start_time,
       shops ( name, phone ),
       services ( name_en ),
       clients ( name, phone )
@@ -59,6 +59,7 @@ export async function runCronBookingReminders(req: VercelRequest, res: VercelRes
     })
 
     const ok = await sendBookingReminderSms({
+      shopId: row.shop_id as string,
       clientPhone: phone,
       clientName: client?.name ?? 'Guest',
       serviceName: svc?.name_en ?? 'your appointment',

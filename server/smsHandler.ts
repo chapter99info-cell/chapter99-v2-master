@@ -1,26 +1,37 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import twilio from 'twilio'
+import { sendShopSms, type SmsPriority } from './smsGateway'
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID!,
-  process.env.TWILIO_AUTH_TOKEN!
-)
-
-/** POST /api/sms — { to, message } */
+/** POST /api/sms — { to, message, shopId?, priority? } */
 export async function POST_sms(req: VercelRequest, res: VercelResponse) {
-  const { to, message } = req.body
+  const { to, message, shopId, priority } = req.body as {
+    to?: string
+    message?: string
+    shopId?: string
+    priority?: SmsPriority
+  }
+
   if (!to || !message) {
     return res.status(400).json({ error: 'Missing to or message' })
   }
-  try {
-    const msg = await client.messages.create({
-      body: message,
-      from: process.env.TWILIO_FROM_NUMBER!,
-      to: to.startsWith('+') ? to : `+61${to.replace(/^0/, '')}`,
-    })
-    return res.json({ success: true, sid: msg.sid })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'SMS failed'
-    return res.status(500).json({ error: message })
+
+  if (!shopId?.trim()) {
+    return res.status(400).json({ error: 'shopId required — SMS gated per shop' })
   }
+
+  const result = await sendShopSms({
+    shopId: shopId.trim(),
+    to,
+    message,
+    priority: priority ?? 'normal',
+  })
+
+  if (result.skipped) {
+    return res.json({ success: false, skipped: true, reason: result.reason })
+  }
+
+  if (!result.sent) {
+    return res.status(500).json({ error: result.reason ?? 'SMS failed' })
+  }
+
+  return res.json({ success: true, sid: result.sid })
 }

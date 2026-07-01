@@ -15,17 +15,21 @@ interface NotifyPayload {
   pdfUrl?: string
 }
 
-// Send SMS via Twilio
+// Send SMS via Twilio (shop-gated)
 export async function sendSMS(
   to: string,
-  message: string
+  message: string,
+  shopId: string,
+  priority: 'critical' | 'normal' | 'low' = 'normal'
 ): Promise<boolean> {
   const res = await fetch('/api/sms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to, message }),
+    body: JSON.stringify({ to, message, shopId, priority }),
   })
-  return res.ok
+  const data = (await res.json().catch(() => ({}))) as { skipped?: boolean; success?: boolean }
+  if (data.skipped) return false
+  return res.ok && data.success === true
 }
 
 // Send Email with PDF via Resend

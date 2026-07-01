@@ -328,3 +328,174 @@
   z-index: 300;
   box-shadow: var(--shadow-card);
 }
+
+/* ── Review page (/review/:bookingId) ───────────────────────── */
+.review-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #F8F5F0;
+}
+
+.review-card {
+  max-width: 420px;
+  width: 100%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.review-card h1 {
+  font-size: 22px;
+  color: #2D5016;
+  margin: 0 0 8px;
+}
+
+.review-sub {
+  color: #6B7280;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.review-stars {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.review-star-btn {
+  font-size: 36px;
+  background: none;
+  border: none;
+  color: #C8A84B;
+  cursor: pointer;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.review-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.review-submit-btn {
+  display: inline-block;
+  background: #2D5016;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  min-height: 48px;
+}
+
+.review-error {
+  color: #E24B4A;
+  font-size: 14px;
+}
+
+/* PART 8.4 — Senior-friendly accessible booking mode */
+.c99-accessible-mode {
+  font-size: 18px !important;
+}
+.c99-accessible-mode button,
+.c99-accessible-mode .public-btn,
+.c99-accessible-mode input,
+.c99-accessible-mode select {
+  min-height: 56px !important;
+  font-size: 18px !important;
+}
+.accessible-mode-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.accessible-call-btn {
+  flex: 1;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2D5016;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.accessible-toggle-btn {
+  min-height: 56px;
+  min-width: 72px;
+  border: 2px solid #2D5016;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Onboarding wizard */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.onboarding-modal {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 20px;
+}
+.onboarding-steps {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+.onboarding-step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.onboarding-step-dot.active { border-color: #2D5016; background: #2D5016; color: #fff; }
+.onboarding-step-dot.done { border-color: #2D5016; color: #2D5016; }
+.onboarding-body label { display: block; margin-bottom: 12px; }
+.onboarding-plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.onboarding-log { background: #111; color: #0f0; font-family: monospace; font-size: 12px; padding: 12px; max-height: 160px; overflow: auto; margin: 12px 0; }
+.onboarding-review { font-size: 12px; background: #f5f5f5; padding: 12px; overflow: auto; max-height: 200px; }
+.pos-offline-banner {
+  background: #F59E0B;
+  color: #1A1A1A;
+  text-align: center;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 14px;
+}

@@ -109,6 +109,10 @@ export interface Shop {
   stripePublicKey?: string
   /** Online booking deposit (requires Stripe add-on) */
   depositEnabled?: boolean
+  depositMode?: 'off' | 'all' | 'new_customers_only' | 'weekends_only'
+  depositAmount?: number
+  depositCancelHours?: number
+  depositNewCustomerThreshold?: number
   depositType?: 'percent' | 'fixed'
   depositPercent?: number
   depositFixedAmount?: number
@@ -129,6 +133,8 @@ export interface Shop {
   heroImageUrl?: string
   heroTitle?: string
   heroSubtitle?: string
+  /** Set true when real photography replaces AI placeholders (Super Admin) */
+  hasRealPhotos?: boolean
   aboutText?: string
   aboutPhone?: string
   aboutAddress?: string

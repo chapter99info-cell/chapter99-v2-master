@@ -42,6 +42,7 @@ export interface ShopRow {
   hero_image_url: string | null
   hero_title: string | null
   hero_subtitle: string | null
+  has_real_photos: boolean | null
   about_text: string | null
   about_phone: string | null
   about_address: string | null
@@ -54,6 +55,10 @@ export interface ShopRow {
   addon_website: boolean | null
   addon_reports: boolean | null
   deposit_enabled: boolean | null
+  deposit_mode: string | null
+  deposit_amount: number | null
+  deposit_cancel_hours: number | null
+  deposit_new_customer_threshold: number | null
   deposit_type: string | null
   deposit_percent: number | null
   deposit_fixed_amount: number | null
@@ -154,6 +159,7 @@ export function mapRowToShop(row: ShopRow): Shop {
     heroImageUrl: row.hero_image_url ?? undefined,
     heroTitle: row.hero_title ?? undefined,
     heroSubtitle: row.hero_subtitle ?? undefined,
+    hasRealPhotos: row.has_real_photos === true,
     aboutText: row.about_text ?? undefined,
     aboutPhone: row.about_phone ?? undefined,
     aboutAddress: row.about_address ?? undefined,
@@ -161,6 +167,10 @@ export function mapRowToShop(row: ShopRow): Shop {
     privacyPolicyUrl: row.privacy_policy_url ?? undefined,
     termsUrl: row.terms_url ?? undefined,
     depositEnabled: row.deposit_enabled === true,
+    depositMode: (row.deposit_mode as Shop['depositMode']) ?? (row.deposit_enabled ? 'all' : 'off'),
+    depositAmount: Number(row.deposit_amount ?? row.deposit_fixed_amount ?? 20),
+    depositCancelHours: row.deposit_cancel_hours ?? row.deposit_refund_hours ?? 24,
+    depositNewCustomerThreshold: row.deposit_new_customer_threshold ?? 1,
     depositType: row.deposit_type === 'fixed' ? 'fixed' : 'percent',
     depositPercent: row.deposit_percent ?? 20,
     depositFixedAmount: Number(row.deposit_fixed_amount ?? 20),

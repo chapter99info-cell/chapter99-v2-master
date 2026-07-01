@@ -4,6 +4,8 @@
   "description": "Chapter99 V4 — Thai Massage & Spa PWA + POS — Australia",
   "scripts": {
     "dev": "vite",
+    "prebuild": "tsx scripts/validate-shops.ts",
+    "validate-shops": "tsx scripts/validate-shops.ts",
     "build": "node scripts/verify-shop-domains-production.mjs && tsc -b && vite build",
     "test:shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "verify-shop-domains": "node scripts/verify-shop-domains-production.mjs",
@@ -14,6 +16,7 @@
     "deploy:trip2talk": "npm run verify-vercel && npm run build && npx vercel --prod --yes"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.1",
     "@react-pdf/renderer": "^3.4.0",
     "@supabase/supabase-js": "^2.43.0",
     "chart.js": "^4.5.1",
@@ -30,6 +33,7 @@
     "react-dom": "^18.3.1",
     "react-qr-code": "^2.0.21",
     "react-router-dom": "^6.23.0",
+    "recharts": "^2.15.4",
     "resend": "^3.2.0",
     "stripe": "^16.12.0",
     "twilio": "^5.0.0"
@@ -45,6 +49,7 @@
     "dotenv": "^17.4.2",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.4",
     "typescript": "^5.4.0",
     "vite": "^5.2.0",
     "vite-plugin-pwa": "^0.20.0"

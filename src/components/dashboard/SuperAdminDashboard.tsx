@@ -19,6 +19,8 @@ import ShopCustomDomain from '../admin/ShopCustomDomain'
 import { buildOriginForCustomDomain } from '../../lib/shopDomain'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
 import ShopDepositSettingsPanel from '../admin/ShopDepositSettings'
+import ShopSmsSettings from '../admin/ShopSmsSettings'
+import OnboardingWizard from '../admin/OnboardingWizard'
 import {
   PLAN_LABELS,
   PLAN_MONTHLY_FEES,
@@ -37,6 +39,7 @@ export default function SuperAdminDashboard() {
   const [revenueHistory, setRevenueHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddShop, setShowAddShop] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [showProposal, setShowProposal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
@@ -126,7 +129,7 @@ export default function SuperAdminDashboard() {
               shops={filtered}
               searchQuery={searchQuery}
               onSearch={setSearchQuery}
-              onAddShop={() => setShowAddShop(true)}
+              onAddShop={() => setShowOnboarding(true)}
               onSelectShop={id => {
                 setSelectedShopId(id)
                 setShopDetailFocus(null)
@@ -149,6 +152,15 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Modals */}
+      {showOnboarding && (
+        <OnboardingWizard
+          onClose={() => setShowOnboarding(false)}
+          onComplete={() => {
+            setShowOnboarding(false)
+            void loadData()
+          }}
+        />
+      )}
       {showAddShop && (
         <AddShopModal
           onClose={() => setShowAddShop(false)}
@@ -240,6 +252,7 @@ function ShopDetailView({
 }) {
   const [websiteOpen, setWebsiteOpen] = useState(true)
   const [depositOpen, setDepositOpen] = useState(false)
+  const [smsOpen, setSmsOpen] = useState(false)
   const [reportsOpen, setReportsOpen] = useState(false)
 
   useEffect(() => {
@@ -339,6 +352,14 @@ function ShopDetailView({
         onToggle={() => setDepositOpen(o => !o)}
       >
         <ShopDepositSettingsPanel shopId={shop.id} shopName={shop.name} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="📱 SMS Settings"
+        open={smsOpen}
+        onToggle={() => setSmsOpen(o => !o)}
+      >
+        <ShopSmsSettings shopId={shop.id} shopName={shop.name} />
       </CollapsibleSection>
 
       <div className="section-card shop-detail-staff-login">

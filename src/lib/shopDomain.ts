@@ -31,7 +31,7 @@ export function resolveSlugFromCurrentHost(): string | null {
 
 export function resolveShopFromCurrentHost() {
   if (typeof window === 'undefined') {
-    return { host: '', slug: null, source: 'platform' as const, needsAlert: false }
+    return { host: '', slug: null, shopId: null, source: 'platform' as const, needsAlert: false }
   }
   return resolveShopFromHostname(window.location.hostname, CLIENT_MAP_JSON)
 }

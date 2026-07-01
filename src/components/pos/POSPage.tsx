@@ -25,7 +25,8 @@ import { printReceipt } from '../../lib/thermalPrinter'
 import { downloadHealthFundPDF } from '../../lib/healthFundPDF'
 import { sendSMS, SMS, sendGiftVoucherEmail } from '../../lib/notifyService'
 import { sendReviewRequestAfterCheckout } from '../../lib/reviewRequestService'
-import { getSyncStatus } from '../../lib/syncService'
+import { deductInventoryForSale } from '../../lib/inventoryService'
+import { getSyncStatus, startSyncListener } from '../../lib/syncService'
 import { fetchShop } from '../../lib/shopService'
 import {
   downloadAndRecordReceipt,
@@ -39,6 +40,7 @@ import { useStaffShopId } from '../../hooks/useStaffShopId'
 import { SHOP_UPDATED_EVENT } from '../../lib/shopLogo'
 import GoogleReviewQR from './GoogleReviewQR'
 import { usePlan } from '../../hooks/usePlan'
+import { FeatureGateFromPlan } from '../shared/FeatureGate'
 import UpgradeModal from '../plan/UpgradeModal'
 import type { PlanFeature } from '../../types/plan'
 import Toast, { type ToastType } from '../ui/Toast'
@@ -248,12 +250,30 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
     }
   }, [serviceCategories, serviceCategoryFilter])
 
-  // Update sync status
+  // Update sync status + offline listener
   useEffect(() => {
     const update = async () => setSyncStatus(await getSyncStatus())
     update()
     const id = setInterval(update, 10000)
-    return () => clearInterval(id)
+    const stopSync = startSyncListener()
+    const onOnline = () => update()
+    const onSyncDone = (e: Event) => {
+      const synced = (e as CustomEvent<{ synced: number }>).detail?.synced ?? 0
+      if (synced > 0) {
+        setEmailToast({ message: `Synced ${synced} transaction(s)`, type: 'success' })
+        void update()
+      }
+    }
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOnline)
+    window.addEventListener('pos-sync-complete', onSyncDone)
+    return () => {
+      clearInterval(id)
+      stopSync()
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOnline)
+      window.removeEventListener('pos-sync-complete', onSyncDone)
+    }
   }, [])
 
   useEffect(() => {
@@ -528,6 +548,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
         voucherAmount: voucherDeduction > 0 ? voucherDeduction : undefined,
       }
       await saveTransaction(tx)
+      void deductInventoryForSale(shop.id, bill)
       setCurrentTx(tx)
       setStep('success')
 
@@ -538,7 +559,9 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
       if (clientPhone && can('sms')) {
         await sendSMS(
           clientPhone,
-          SMS.receiptConfirm(shop.name, formatAUD(payment.total))
+          SMS.receiptConfirm(shop.name, formatAUD(payment.total)),
+          shopId,
+          'normal'
         )
       }
 
@@ -734,6 +757,11 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
 
   return (
     <div className="pos-root">
+      {!syncStatus.isOnline && (
+        <div className="pos-offline-banner" role="status">
+          ⚠️ OFFLINE — Saving locally. Will sync when connection returns.
+        </div>
+      )}
       {/* Top Bar */}
       <div className="pos-topbar">
         <div className="pos-shopname">
@@ -1173,17 +1201,19 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
 
               {/* Health Fund button if HICAPS selected */}
               {(payMethod === 'hicaps' || paymentSplits.some(s => s.method === 'hicaps')) && (
-                <>
-                  <button
-                    type="button"
-                    className="hf-btn"
-                    disabled={healthFundLoading || !bill.length || !shop}
-                    onClick={handleHealthFund}
-                  >
-                    {healthFundLoading ? 'Generating PDF…' : '❤️ ออก Health Fund Receipt'}
-                  </button>
-                  {healthFundNote && <p className="success-note">{healthFundNote}</p>}
-                </>
+                <FeatureGateFromPlan feature="health_fund_receipt" hideIfLocked shopName={shop?.name}>
+                  <>
+                    <button
+                      type="button"
+                      className="hf-btn"
+                      disabled={healthFundLoading || !bill.length || !shop}
+                      onClick={handleHealthFund}
+                    >
+                      {healthFundLoading ? 'Generating PDF…' : '❤️ ออก Health Fund Receipt'}
+                    </button>
+                    {healthFundNote && <p className="success-note">{healthFundNote}</p>}
+                  </>
+                </FeatureGateFromPlan>
               )}
 
               {/* Void */}
@@ -1233,50 +1263,58 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
               </button>
             )}
             <button className="s-btn" onClick={handlePrint}>🖨 Print Receipt</button>
-            <button
-              type="button"
-              className="s-btn"
-              disabled={healthFundLoading || !shop}
-              onClick={handleHealthFund}
-            >
-              {healthFundLoading ? 'Generating…' : '❤️ Health Fund PDF'}
-            </button>
-            <button
-              type="button"
-              className="s-btn"
-              disabled={healthFundEmailLoading || !shop}
-              onClick={onHealthFundEmailClick}
-            >
-              {healthFundEmailLoading ? 'Sending…' : '📧 Email Health Fund PDF'}
-            </button>
+            <FeatureGateFromPlan feature="health_fund_receipt" hideIfLocked shopName={shop?.name}>
+              <>
+                <button
+                  type="button"
+                  className="s-btn"
+                  disabled={healthFundLoading || !shop}
+                  onClick={handleHealthFund}
+                >
+                  {healthFundLoading ? 'Generating…' : '❤️ Health Fund PDF'}
+                </button>
+                <button
+                  type="button"
+                  className="s-btn"
+                  disabled={healthFundEmailLoading || !shop}
+                  onClick={onHealthFundEmailClick}
+                >
+                  {healthFundEmailLoading ? 'Sending…' : '📧 Email Health Fund PDF'}
+                </button>
+              </>
+            </FeatureGateFromPlan>
             <button className="s-btn" onClick={reset}>ปิดบิล</button>
           </div>
-          {showHealthFundEmailInput && !healthFundEmailSent && (
-            <div className="success-email-prompt">
-              <input
-                type="email"
-                className="pos-input success-email-input"
-                placeholder="กรอก email ลูกค้า"
-                value={healthFundEmailDraft}
-                onChange={e => setHealthFundEmailDraft(e.target.value)}
-                autoComplete="email"
-              />
-              <button
-                type="button"
-                className="s-btn primary"
-                disabled={healthFundEmailLoading || !healthFundEmailDraft.trim()}
-                onClick={() => void submitHealthFundEmail(healthFundEmailDraft)}
-              >
-                {healthFundEmailLoading ? 'Sending…' : 'Send'}
-              </button>
-            </div>
-          )}
-          {healthFundEmailSent && (
-            <p className="success-email-sent">✅ ส่งแล้วไปที่ {healthFundEmailSent}</p>
-          )}
-          {healthFundNote && !healthFundEmailSent && (
-            <p className="success-note">{healthFundNote}</p>
-          )}
+          <FeatureGateFromPlan feature="health_fund_receipt" hideIfLocked shopName={shop?.name}>
+            <>
+              {showHealthFundEmailInput && !healthFundEmailSent && (
+                <div className="success-email-prompt">
+                  <input
+                    type="email"
+                    className="pos-input success-email-input"
+                    placeholder="กรอก email ลูกค้า"
+                    value={healthFundEmailDraft}
+                    onChange={e => setHealthFundEmailDraft(e.target.value)}
+                    autoComplete="email"
+                  />
+                  <button
+                    type="button"
+                    className="s-btn primary"
+                    disabled={healthFundEmailLoading || !healthFundEmailDraft.trim()}
+                    onClick={() => void submitHealthFundEmail(healthFundEmailDraft)}
+                  >
+                    {healthFundEmailLoading ? 'Sending…' : 'Send'}
+                  </button>
+                </div>
+              )}
+              {healthFundEmailSent && (
+                <p className="success-email-sent">✅ ส่งแล้วไปที่ {healthFundEmailSent}</p>
+              )}
+              {healthFundNote && !healthFundEmailSent && (
+                <p className="success-note">{healthFundNote}</p>
+              )}
+            </>
+          </FeatureGateFromPlan>
           </div>
           {shop?.googleReviewUrl?.trim() && (
             <GoogleReviewQR url={shop.googleReviewUrl} />

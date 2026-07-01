@@ -95,7 +95,7 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, ShopPlan> = {
   website_builder: 'pro',
   multi_shop: 'pro',
   stripe: 'growth',
-  sms: 'growth',
+  sms: 'pro',
 }
 
 export function normalizeShopPlan(value: string | null | undefined): ShopPlan {
@@ -121,6 +121,7 @@ export function canAccessFeature(state: ShopPlanState, feature: PlanFeature): bo
     case 'stripe':
       return state.addonStripe
     case 'sms':
+      // SMS is Super Admin toggle only — never included in tier features
       return state.addonSms
     case 'website_builder':
       return state.addonWebsite || state.plan === 'pro'

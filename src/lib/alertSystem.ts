@@ -15,6 +15,7 @@ export type AlertType =
   | 'low_revenue'
   | 'no_bookings'
   | 'google_review'
+  | 'low_inventory'
 
 export interface Alert {
   id: string
@@ -34,13 +35,14 @@ export interface Alert {
 export async function checkAllAlerts(shopId: string): Promise<Alert[]> {
   const alerts: Alert[] = []
 
-  const [staffAlerts, basAlerts, revenueAlerts] = await Promise.all([
+  const [staffAlerts, basAlerts, revenueAlerts, inventoryAlerts] = await Promise.all([
     checkStaffAlerts(shopId),
     checkBASAlerts(shopId),
     checkRevenueAlerts(shopId),
+    checkInventoryAlerts(shopId),
   ])
 
-  alerts.push(...staffAlerts, ...basAlerts, ...revenueAlerts)
+  alerts.push(...staffAlerts, ...basAlerts, ...revenueAlerts, ...inventoryAlerts)
 
   // Sort: critical first, then days remaining
   return alerts.sort((a, b) => {
@@ -192,6 +194,24 @@ async function checkRevenueAlerts(shopId: string): Promise<Alert[]> {
   return alerts
 }
 
+// ── Inventory Alerts ──────────────────────────────────────────
+async function checkInventoryAlerts(shopId: string): Promise<Alert[]> {
+  const { checkInventoryAlerts: fetchLow } = await import('./inventoryService')
+  const rows = await fetchLow(shopId)
+  const today = new Date().toISOString()
+
+  return rows.map(row => ({
+    id: row.id,
+    shopId,
+    type: 'low_inventory' as AlertType,
+    severity: row.severity === 'critical' ? 'critical' : 'warning',
+    title: row.title,
+    message: row.message,
+    createdAt: today,
+    dismissed: false,
+  }))
+}
+
 // ── Send Alert Notifications ──────────────────────────────────
 export async function sendAlertNotifications(
   shopId: string,
@@ -212,6 +232,8 @@ export async function sendAlertNotifications(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       to: ownerPhone,
+      shopId,
+      priority: 'normal',
       message: `Chapter99 Alert:\n${msg}\n\nLogin to manage: chapter99.com.au/admin`,
     }),
   })

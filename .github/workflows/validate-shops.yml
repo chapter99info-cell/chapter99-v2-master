@@ -1,0 +1,42 @@
+name: Validate shop registry
+
+# Fast gate — registry structure, domain conflicts, shops.config.json sync.
+# Full production mapping (Vercel + Supabase) runs in verify-shop-domains.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: validate-shops-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-shops:
+    name: SHOP_REGISTRY + domain conflicts
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate shop registry
+        env:
+          SHOP_DOMAIN_MAP: ${{ secrets.SHOP_DOMAIN_MAP }}
+          VITE_SHOP_DOMAIN_MAP: ${{ secrets.VITE_SHOP_DOMAIN_MAP }}
+        run: npm run validate-shops
+
+      - name: Confirm shops.config.json committed
+        run: git diff --exit-code shops.config.json

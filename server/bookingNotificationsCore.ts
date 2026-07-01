@@ -1,6 +1,5 @@
 import { getServiceSupabase } from './supabaseServer'
 import { Resend } from 'resend'
-import twilio from 'twilio'
 import { RECEIPTS_FROM } from './emailConstants'
 import {
   buildBookingConfirmationHTML,
@@ -57,6 +56,8 @@ export async function sendBookingNotifications(
 ): Promise<{ email: boolean; sms: boolean; ownerEmail: boolean; ownerSms: boolean }> {
   const ref = `BK-${input.bookingId.replace(/-/g, '').slice(0, 8).toUpperCase()}`
   const result = { email: false, sms: false, ownerEmail: false, ownerSms: false }
+
+  const { sendShopSms } = await import('./smsGateway')
 
   const emailPayload: BookingConfirmationEmailPayload = {
     to: input.clientEmail?.trim() ?? '',
@@ -125,42 +126,31 @@ export async function sendBookingNotifications(
     }
   }
 
-  const sid = process.env.TWILIO_ACCOUNT_SID
-  const token = process.env.TWILIO_AUTH_TOKEN
-  const from = process.env.TWILIO_FROM_NUMBER
-
-  if (sid && token && from && input.clientPhone) {
-    try {
-      const client = twilio(sid, token)
-      await client.messages.create({
-        body: `Hi ${input.clientName.split(' ')[0]}, your booking at ${input.shopName} is confirmed: ${input.serviceName} on ${input.dateLabel} at ${input.time}. Ref: ${ref}. To cancel call ${input.shopPhone || input.shopName}. Reply STOP to opt out.`,
-        from,
-        to: formatAuSmsTo(input.clientPhone),
-      })
-      result.sms = true
-    } catch (e) {
-      console.error('[booking-notifications] client sms', e)
-    }
+  if (input.clientPhone) {
+    const smsResult = await sendShopSms({
+      shopId: input.shopId,
+      to: input.clientPhone,
+      priority: 'critical',
+      message: `Hi ${input.clientName.split(' ')[0]}, your booking at ${input.shopName} is confirmed: ${input.serviceName} on ${input.dateLabel} at ${input.time}. Ref: ${ref}. To cancel call ${input.shopPhone || input.shopName}. Reply STOP to opt out.`,
+    })
+    result.sms = smsResult.sent
   }
 
-  if (sid && token && from && input.shopPhone) {
-    try {
-      const client = twilio(sid, token)
-      await client.messages.create({
-        body: `New booking: ${input.clientName} - ${input.serviceName} on ${input.dateLabel} at ${input.time}. Ref ${ref}`,
-        from,
-        to: formatAuSmsTo(input.shopPhone),
-      })
-      result.ownerSms = true
-    } catch (e) {
-      console.error('[booking-notifications] owner sms', e)
-    }
+  if (input.shopPhone) {
+    const ownerSms = await sendShopSms({
+      shopId: input.shopId,
+      to: input.shopPhone,
+      priority: 'critical',
+      message: `New booking: ${input.clientName} - ${input.serviceName} on ${input.dateLabel} at ${input.time}. Ref ${ref}`,
+    })
+    result.ownerSms = ownerSms.sent
   }
 
   return result
 }
 
 export async function sendBookingReminderSms(opts: {
+  shopId: string
   clientPhone: string
   clientName: string
   serviceName: string
@@ -169,26 +159,17 @@ export async function sendBookingReminderSms(opts: {
   shopName: string
   shopPhone?: string
 }): Promise<boolean> {
-  const sid = process.env.TWILIO_ACCOUNT_SID
-  const token = process.env.TWILIO_AUTH_TOKEN
-  const from = process.env.TWILIO_FROM_NUMBER
-  if (!sid || !token || !from) return false
-
+  const { sendShopSms } = await import('./smsGateway')
   const first = opts.clientName.split(' ')[0]
   const cancelPhone = opts.shopPhone?.trim() || opts.shopName
 
-  try {
-    const client = twilio(sid, token)
-    await client.messages.create({
-      body: `Hi ${first}, reminder: ${opts.serviceName} tomorrow at ${opts.time} at ${opts.shopName}. Cancel: ${cancelPhone}. Reply STOP to unsubscribe.`,
-      from,
-      to: formatAuSmsTo(opts.clientPhone),
-    })
-    return true
-  } catch (e) {
-    console.error('[booking-reminder] sms', e)
-    return false
-  }
+  const result = await sendShopSms({
+    shopId: opts.shopId,
+    to: opts.clientPhone,
+    priority: 'critical',
+    message: `Hi ${first}, reminder: ${opts.serviceName} tomorrow at ${opts.time} at ${opts.shopName}. Cancel: ${cancelPhone}. Reply STOP to unsubscribe.`,
+  })
+  return result.sent
 }
 
 export async function markReminderSent(bookingId: string): Promise<void> {

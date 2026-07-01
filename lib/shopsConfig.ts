@@ -1,45 +1,25 @@
 /**
- * Committed shop domain map — primary source of truth.
- * Vercel SHOP_DOMAIN_MAP / VITE_SHOP_DOMAIN_MAP override these entries only.
+ * Shop domain map for edge middleware and client — backed by src/config/shopRegistry.ts.
+ * shops.config.json is kept in sync via scripts/validate-shops.ts (prebuild).
  */
-import shopsConfigJson from '../shops.config.json'
+import {
+  buildRegistryDomainMap,
+  getShopsConfigFromRegistry,
+  type ShopRegistryEntry,
+  type ShopsConfigFile,
+} from '../src/config/shopRegistry'
 
-export interface ShopConfigEntry {
-  name?: string
-  shopId: string
-  shopSlug: string
-  domains: string[]
-}
+export type ShopConfigEntry = ShopRegistryEntry
 
-export interface ShopsConfigFile {
-  shops: Record<string, ShopConfigEntry>
-}
-
-function normalizeDomainKey(domain: string): string {
-  return domain
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/.*$/, '')
-}
+export { type ShopsConfigFile }
 
 export function getShopsConfigFile(): ShopsConfigFile {
-  return shopsConfigJson as ShopsConfigFile
+  return getShopsConfigFromRegistry()
 }
 
-/** Flat hostname → shopSlug map from shops.config.json */
+/** Flat hostname → shopSlug map from SHOP_REGISTRY */
 export function getBaseShopDomainMap(config: ShopsConfigFile = getShopsConfigFile()): Record<string, string> {
-  const map: Record<string, string> = {}
-  for (const entry of Object.values(config.shops ?? {})) {
-    const slug = entry.shopSlug?.trim().toLowerCase()
-    if (!slug) continue
-    for (const domain of entry.domains ?? []) {
-      const host = normalizeDomainKey(domain)
-      if (host) map[host] = slug
-    }
-  }
-  return map
+  return buildRegistryDomainMap(config.shops)
 }
 
 /** All configured hostnames (normalized), for build-time Vercel domain checks */

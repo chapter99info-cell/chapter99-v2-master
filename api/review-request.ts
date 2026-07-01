@@ -5,7 +5,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getServiceSupabase } from '../server/supabaseServer'
 import { Resend } from 'resend'
-import twilio from 'twilio'
+import { sendShopSms } from '../server/smsGateway'
 import { RECEIPTS_FROM } from '../server/emailConstants'
 import {
   buildReviewRequestHTML,
@@ -196,24 +196,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!to) {
       return res.status(400).json({ error: 'Phone required for SMS preview' })
     }
-    const sid = process.env.TWILIO_ACCOUNT_SID
-    const token = process.env.TWILIO_AUTH_TOKEN
-    const from = process.env.TWILIO_FROM_NUMBER
-    if (!sid || !token || !from) {
-      return res.status(500).json({ error: 'Twilio is not configured' })
-    }
-    const client = twilio(sid, token)
-    try {
-      await client.messages.create({
-        body: buildReviewRequestSms(shopName, reviewUrl),
-        from,
-        to,
-      })
+    const smsResult = await sendShopSms({
+      shopId,
+      to,
+      priority: 'low',
+      message: buildReviewRequestSms(shopName, reviewUrl),
+    })
+    if (smsResult.skipped) {
+      results.sms = false
+    } else if (smsResult.sent) {
       results.sms = true
-    } catch (err) {
-      console.error('[review-request] sms failed', err)
-      const message = err instanceof Error ? err.message : 'SMS failed'
-      return res.status(500).json({ error: message })
+    } else {
+      return res.status(500).json({ error: smsResult.reason ?? 'SMS failed' })
     }
   }
 

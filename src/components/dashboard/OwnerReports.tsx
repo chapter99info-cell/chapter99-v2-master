@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { formatAUD } from '../../lib/posCalc'
 import {
   type ReportPeriod,
@@ -9,16 +9,29 @@ import {
   exportCommissionCsv,
   getMonthBounds,
   getExportRangeBounds,
+  fetchReportsDashboard,
 } from '../../lib/reportService'
 import ReportsDashboard from './ReportsDashboard'
+import { useFeatureTier } from '../shared/FeatureGate'
+import { canAccessFeature } from '../../lib/featureGate'
+import { buildWhatsAppUpgradeUrl } from '../../lib/featureGate'
 import './OwnerReports.css'
+
+const VisualAnalytics = lazy(() => import('./VisualAnalytics'))
 
 interface OwnerReportsProps {
   shopId: string
 }
 
 export default function OwnerReports({ shopId }: OwnerReportsProps) {
+  const featureTier = useFeatureTier()
+  const hasCharts = canAccessFeature(featureTier, 'advanced_reports') && featureTier === 'business'
   const [period, setPeriod] = useState<ReportPeriod>('today')
+  const [numbersOnly, setNumbersOnly] = useState<{
+    revenue: number
+    commission: number
+    profit: number
+  } | null>(null)
   const [performance, setPerformance] = useState<Awaited<ReturnType<typeof fetchTherapistPerformance>>>([])
   const [perfLoading, setPerfLoading] = useState(true)
   const [perfError, setPerfError] = useState('')
@@ -75,6 +88,27 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
     }
   }, [shopId, commissionMonth])
 
+  useEffect(() => {
+    if (hasCharts) return
+    let cancelled = false
+    fetchReportsDashboard(shopId, period)
+      .then(data => {
+        if (!cancelled) {
+          setNumbersOnly({
+            revenue: data.metrics.revenue,
+            commission: data.metrics.commission,
+            profit: data.metrics.profit,
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setNumbersOnly(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [shopId, period, hasCharts])
+
   const handleRevenueExport = async () => {
     setExportLoading(true)
     try {
@@ -109,8 +143,59 @@ export default function OwnerReports({ shopId }: OwnerReportsProps) {
 
   return (
     <div className="owner-reports">
-      {/* Analytics dashboard — real Supabase data for this shop */}
-      <ReportsDashboard shopId={shopId} period={period} onPeriodChange={setPeriod} />
+      {hasCharts ? (
+        <>
+          <ReportsDashboard shopId={shopId} period={period} onPeriodChange={setPeriod} />
+          <Suspense fallback={<p className="reports-muted">Loading charts…</p>}>
+            <VisualAnalytics shopId={shopId} />
+          </Suspense>
+        </>
+      ) : (
+        <>
+          <header className="rd-topbar">
+            <h2 className="rd-title">รายงานตัวเลข</h2>
+            <div className="rd-period-tabs" role="tablist">
+              {(['today', 'week', 'month'] as ReportPeriod[]).map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`rd-period-btn${period === p ? ' active' : ''}`}
+                  onClick={() => setPeriod(p)}
+                >
+                  {p === 'today' ? 'วันนี้' : p === 'week' ? 'สัปดาห์' : 'เดือน'}
+                </button>
+              ))}
+            </div>
+          </header>
+          {numbersOnly && (
+            <div className="rd-metrics">
+              <div className="rd-metric-card">
+                <span className="rd-metric-label">รายรับ</span>
+                <span className="rd-metric-value">{formatAUD(numbersOnly.revenue)}</span>
+              </div>
+              <div className="rd-metric-card">
+                <span className="rd-metric-label">รายจ่าย</span>
+                <span className="rd-metric-value expense">{formatAUD(numbersOnly.commission)}</span>
+              </div>
+              <div className="rd-metric-card">
+                <span className="rd-metric-label">กำไรสุทธิ</span>
+                <span className="rd-metric-value profit">{formatAUD(numbersOnly.profit)}</span>
+              </div>
+            </div>
+          )}
+          <div className="va-upgrade-prompt">
+            <p>📊 Visual charts (line, bar, heatmap, pie) available on Business plan.</p>
+            <a
+              href={buildWhatsAppUpgradeUrl('advanced_reports')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="reports-export-btn"
+            >
+              Upgrade to Business
+            </a>
+          </div>
+        </>
+      )}
 
       <div className="reports-legacy">
         <h3 className="reports-legacy-title">Export & detailed tables</h3>

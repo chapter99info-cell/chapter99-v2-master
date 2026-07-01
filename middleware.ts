@@ -2,7 +2,7 @@ import {
   isPlatformHost,
   normalizeHostname,
   resolveShopFromHostname,
-} from './lib/shopDomainMap'
+} from './src/config/shopRegistry'
 import { alertUnmappedShopDomain } from './lib/shopDomainAlert'
 
 export const config = {
@@ -28,6 +28,9 @@ export default function middleware(request: Request) {
       source: 'middleware',
       path: url.pathname,
     })
+    const notFound = new URL('/shop-not-found', url.origin)
+    notFound.searchParams.set('host', host)
+    return Response.redirect(notFound.toString(), 302)
   }
 
   const slug = resolved.slug

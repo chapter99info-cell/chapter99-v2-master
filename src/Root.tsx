@@ -25,6 +25,8 @@ const PublicVoucherPage = lazy(() => import('./pages/PublicVoucherPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
 const CancelBookingPage = lazy(() => import('./pages/CancelBookingPage'))
+const ReviewPage = lazy(() => import('./pages/ReviewPage'))
+const ShopNotFoundPage = lazy(() => import('./pages/ShopNotFoundPage'))
 
 function PageFallback() {
   return (
@@ -55,6 +57,7 @@ function Chapter99PublicRoutes() {
       />
       <Route path="book" element={<LazyPage Page={BookPage} />} />
       <Route path="cancel" element={<LazyPage Page={CancelBookingPage} />} />
+      <Route path="review/:bookingId" element={<LazyPage Page={ReviewPage} />} />
       <Route path="privacy" element={<LazyPage Page={PrivacyPolicyPage} />} />
       <Route path="terms" element={<LazyPage Page={TermsOfServicePage} />} />
       <Route
@@ -115,6 +118,7 @@ function Chapter99Routes() {
   return (
     <>
       {Chapter99PublicRoutes()}
+      <Route path="/shop-not-found" element={<LazyPage Page={ShopNotFoundPage} />} />
       <Route path="/spa" element={<Navigate to="/" replace />} />
       <Route
         path="/chapter99/staff/*"
@@ -124,6 +128,7 @@ function Chapter99Routes() {
           </Suspense>
         }
       />
+      <Route path="/shop-not-found" element={<LazyPage Page={ShopNotFoundPage} />} />
       <Route path="/onboard" element={<ExternalOriginRedirect origin={TRIP2TALK_ORIGIN} />} />
       <Route path="/app/*" element={<ExternalOriginRedirect origin={TRIP2TALK_ORIGIN} />} />
       <Route path="/staff/*" element={<ExternalOriginRedirect origin={TRIP2TALK_ORIGIN} />} />
@@ -149,6 +154,7 @@ function DevRoutes() {
         />
         <Route path="/book" element={<LazyPage Page={BookPage} />} />
         <Route path="/cancel" element={<LazyPage Page={CancelBookingPage} />} />
+        <Route path="/review/:bookingId" element={<LazyPage Page={ReviewPage} />} />
         <Route path="/privacy" element={<LazyPage Page={PrivacyPolicyPage} />} />
         <Route path="/terms" element={<LazyPage Page={TermsOfServicePage} />} />
         <Route

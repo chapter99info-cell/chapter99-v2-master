@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useShopContext } from '../contexts/ShopContext'
 import { useShopPages } from '../hooks/useShopPages'
+import PhotoUpsellBanner from '../components/shared/PhotoUpsellBanner'
 import './PublicSite.css'
 
 export default function HomePage() {
@@ -17,6 +18,7 @@ export default function HomePage() {
 
   return (
     <div className="public-page">
+      <PhotoUpsellBanner />
       <section
         className={`public-hero${heroImage ? ' public-hero--image' : ''}`}
         style={

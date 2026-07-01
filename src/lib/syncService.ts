@@ -92,11 +92,20 @@ export function startSyncListener(): () => void {
     console.log('[Sync] Network restored — syncing...')
     syncPending().then(({ synced, failed }) => {
       console.log(`[Sync] Done: ${synced} synced, ${failed} failed`)
+      if (synced > 0) {
+        window.dispatchEvent(new CustomEvent('pos-sync-complete', { detail: { synced } }))
+      }
     })
   }
   window.addEventListener('online', handler)
   // Also sync on load if online
-  if (navigator.onLine) syncPending()
+  if (navigator.onLine) {
+    syncPending().then(({ synced }) => {
+      if (synced > 0) {
+        window.dispatchEvent(new CustomEvent('pos-sync-complete', { detail: { synced } }))
+      }
+    })
+  }
   // Return cleanup function
   return () => window.removeEventListener('online', handler)
 }
