@@ -28,16 +28,4 @@ export function reportUnmappedShopDomainClient(payload: {
         'Add it to shops.config.json and redeploy.'
     )
   }
-
-  void fetch('/api/shop-domain-alert', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      host,
-      source: payload.source,
-      path: payload.path ?? window.location.pathname,
-    }),
-  }).catch(() => {
-    /* non-blocking */
-  })
 }

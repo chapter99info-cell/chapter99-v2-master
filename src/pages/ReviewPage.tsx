@@ -40,7 +40,7 @@ export default function ReviewPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/review-submit', {
+      const res = await fetch('/api/review/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

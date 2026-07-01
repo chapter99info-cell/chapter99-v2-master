@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceSupabase } from '../server/supabaseServer'
+import { getServiceSupabase } from './supabaseServer'
 
 interface ReviewSubmitBody {
   bookingId: string
@@ -7,7 +7,7 @@ interface ReviewSubmitBody {
   message?: string
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function reviewSubmitHandler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
 
   if (req.method !== 'POST') {
@@ -39,10 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(404).json({ error: 'Booking not found' })
   }
 
-  await sb
-    .from('bookings')
-    .update({ review_rating: rating })
-    .eq('id', bookingId)
+  await sb.from('bookings').update({ review_rating: rating }).eq('id', bookingId)
 
   const shop = booking.shops as { google_review_url?: string | null } | null
   const googleReviewUrl = shop?.google_review_url?.trim() ?? ''

@@ -26,7 +26,7 @@ export async function sendReviewRequestAfterCheckout(
   }
 
   try {
-    const res = await fetch('/api/review-request', {
+    const res = await fetch('/api/review/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -57,7 +57,7 @@ export async function sendReviewRequestPreview(
   toPhone?: string
 ): Promise<ReviewRequestResult> {
   try {
-    const res = await fetch('/api/review-request', {
+    const res = await fetch('/api/review/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

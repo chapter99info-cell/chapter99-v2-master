@@ -7,7 +7,7 @@ import {
   sendJsonError,
   stripeErrorMessage,
 } from '../server/apiUtils'
-import { createBookingDepositCheckout } from '../server/bookingDepositCore'
+import { completeBookingDepositSession, createBookingDepositCheckout } from '../server/bookingDepositCore'
 import { withJsonApi } from '../server/jsonApi'
 
 const ROUTE = 'booking-deposit'
@@ -23,11 +23,21 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = parseJsonBody<{
+    sessionId?: string
     bookingId?: string
     shopId?: string
     shopSlug?: string
     clientEmail?: string
   }>(req)
+
+  const stripe = createStripeClient(secret)
+  const origin = getRequestOrigin(req)
+
+  if (body.sessionId?.trim()) {
+    const session = await stripe.checkout.sessions.retrieve(body.sessionId.trim())
+    const result = await completeBookingDepositSession(session, origin)
+    return res.status(200).json({ success: true, ...result })
+  }
 
   const bookingId = body.bookingId?.trim()
   const shopId = body.shopId?.trim()
@@ -37,9 +47,6 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if (!bookingId || !shopId || !shopSlug || !clientEmail) {
     return sendJsonError(res, 400, 'bookingId, shopId, shopSlug, and clientEmail are required')
   }
-
-  const stripe = createStripeClient(secret)
-  const origin = getRequestOrigin(req)
 
   const result = await createBookingDepositCheckout({
     stripe,

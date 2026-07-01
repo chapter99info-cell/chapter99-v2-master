@@ -3,17 +3,17 @@
  * Send Google review request after POS checkout (email / SMS with 30-day rate limit).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceSupabase } from '../server/supabaseServer'
+import { getServiceSupabase } from './supabaseServer'
 import { Resend } from 'resend'
-import { sendShopSms } from '../server/smsGateway'
-import { RECEIPTS_FROM } from '../server/emailConstants'
+import { sendShopSms } from './smsGateway'
+import { RECEIPTS_FROM } from './emailConstants'
 import {
   buildReviewRequestHTML,
   buildReviewRequestSms,
   buildReviewRequestSubject,
   buildReviewRequestText,
   type ReviewRequestChannel,
-} from '../server/reviewRequestEmailTemplate'
+} from './reviewRequestEmailTemplate'
 
 const RATE_LIMIT_DAYS = 30
 
@@ -51,7 +51,7 @@ function tryServiceSupabase() {
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function reviewRequestHandler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
 
   if (req.method !== 'POST') {

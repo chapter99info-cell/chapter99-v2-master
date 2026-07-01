@@ -132,7 +132,7 @@ export default function PublicBookingWizard({
     if (depositSuccess !== '1' || !sessionId) return
 
     setLoading(true)
-    fetch('/api/booking-deposit-complete', {
+    fetch('/api/booking-deposit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId }),
