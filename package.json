@@ -6,7 +6,7 @@
     "dev": "vite",
     "prebuild": "tsx scripts/validate-shops.ts",
     "validate-shops": "tsx scripts/validate-shops.ts",
-    "build": "node scripts/verify-shop-domains-production.mjs && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "test:shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "verify-shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "preview": "vite preview",
