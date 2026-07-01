@@ -51,16 +51,20 @@ function formatAuSmsTo(to: string): string {
 }
 
 export async function fetchShopSmsConfig(shopId: string): Promise<ShopSmsConfig | null> {
-  const sb = getServiceSupabase()
-  const { data, error } = await sb
-    .from('shops')
-    .select('sms_enabled, sms_package')
-    .eq('id', shopId)
-    .maybeSingle()
-  if (error || !data) return null
-  return {
-    sms_enabled: data.sms_enabled === true,
-    sms_package: String(data.sms_package ?? 'none'),
+  try {
+    const sb = getServiceSupabase()
+    const { data, error } = await sb
+      .from('shops')
+      .select('sms_enabled, sms_package')
+      .eq('id', shopId)
+      .maybeSingle()
+    if (error || !data) return null
+    return {
+      sms_enabled: data.sms_enabled === true,
+      sms_package: String(data.sms_package ?? 'none'),
+    }
+  } catch {
+    return null
   }
 }
 
