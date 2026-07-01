@@ -43,6 +43,7 @@ export const SHOP_REGISTRY: Record<string, ShopRegistryEntry> = {
       'www.chapter99info.tech',
       'mirathaimassage.com.au',
       'www.mirathaimassage.com.au',
+      'chapter99thaimass-v20.vercel.app',
     ],
     tier: 'professional',
     active: true,
@@ -134,13 +135,18 @@ export function resolveShopFromHostname(
   envMapJson?: string
 ): ShopDomainResolveResult {
   const h = normalizeHostname(host)
-  if (!h || isPlatformHost(h)) {
-    return { host: h ?? '', slug: null, shopId: null, source: 'platform', needsAlert: false }
+  if (!h) {
+    return { host: '', slug: null, shopId: null, source: 'platform', needsAlert: false }
   }
 
   const baseMap = buildRegistryDomainMap()
   const envMap = parseShopDomainMapJson(envMapJson)
-  const slug = envMap[h] ?? baseMap[h] ?? null
+  const map = { ...baseMap, ...envMap }
+
+  const slug =
+    envMap[h] ??
+    baseMap[h] ??
+    (h === 'chapter99thaimass-v20.vercel.app' ? (map[h] ?? 'mira') : null)
 
   if (slug) {
     const shop = getShopBySlug(slug)
@@ -151,6 +157,10 @@ export function resolveShopFromHostname(
       source: envMap[h] ? 'env-override' : 'registry',
       needsAlert: false,
     }
+  }
+
+  if (isPlatformHost(h)) {
+    return { host: h, slug: null, shopId: null, source: 'platform', needsAlert: false }
   }
 
   return { host: h, slug: null, shopId: null, source: 'none', needsAlert: true }

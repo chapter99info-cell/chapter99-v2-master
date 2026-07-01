@@ -1,5 +1,4 @@
 import {
-  isPlatformHost,
   normalizeHostname,
   resolveShopFromHostname,
 } from './src/config/shopRegistry'
@@ -15,12 +14,12 @@ export default function middleware(request: Request) {
   const url = new URL(request.url)
   const host = normalizeHostname(url.hostname)
 
-  if (isPlatformHost(host)) {
-    return fetch(request)
-  }
-
   const mapJson = process.env.SHOP_DOMAIN_MAP
   const resolved = resolveShopFromHostname(host, mapJson)
+
+  if (resolved.source === 'platform') {
+    return fetch(request)
+  }
 
   if (resolved.needsAlert) {
     void alertUnmappedShopDomain({
