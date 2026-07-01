@@ -278,31 +278,40 @@ async function main() {
       'VERCEL_TOKEN is required in CI/Vercel to verify every production domain is mapped (GitHub secret + Vercel env)'
     )
   } else if (vercelToken) {
-    log(`Fetching Vercel domains for project ${projectId}…`)
-    const vercelDomains = await fetchVercelProjectDomains(projectId, vercelToken)
-    const customHosts = [
-      ...new Set(vercelDomains.map(normalizeHostname).filter((h) => h && !isPlatformHost(h))),
-    ]
+    try {
+      log(`Fetching Vercel domains for project ${projectId}…`)
+      const vercelDomains = await fetchVercelProjectDomains(projectId, vercelToken)
+      const customHosts = [
+        ...new Set(vercelDomains.map(normalizeHostname).filter((h) => h && !isPlatformHost(h))),
+      ]
 
-    const missingOnMap = customHosts.filter((h) => !mergedMap.has(h))
-    if (missingOnMap.length > 0) {
-      for (const host of missingOnMap.sort()) {
-        errors.push(
-          `Vercel production domain "${host}" is NOT in shop domain map — add to shops.config.json`
-        )
+      const missingOnMap = customHosts.filter((h) => !mergedMap.has(h))
+      if (missingOnMap.length > 0) {
+        for (const host of missingOnMap.sort()) {
+          errors.push(
+            `Vercel production domain "${host}" is NOT in shop domain map — add to shops.config.json`
+          )
+        }
+      } else {
+        log(`  Vercel: all ${customHosts.length} custom domain(s) are mapped`)
       }
-    } else {
-      log(`  Vercel: all ${customHosts.length} custom domain(s) are mapped`)
-    }
 
-    const extraOnMap = [...mergedMap.keys()].filter(
-      (h) => !isPlatformHost(h) && !customHosts.includes(h) && isCI
-    )
-    if (extraOnMap.length > 0 && process.env.SHOP_DOMAIN_STRICT_VERCEL === '1') {
-      for (const host of extraOnMap.sort()) {
-        errors.push(
-          `Domain "${host}" is in mapping but not attached to Vercel project (orphan config)`
-        )
+      const extraOnMap = [...mergedMap.keys()].filter(
+        (h) => !isPlatformHost(h) && !customHosts.includes(h) && isCI
+      )
+      if (extraOnMap.length > 0 && process.env.SHOP_DOMAIN_STRICT_VERCEL === '1') {
+        for (const host of extraOnMap.sort()) {
+          errors.push(
+            `Domain "${host}" is in mapping but not attached to Vercel project (orphan config)`
+          )
+        }
+      }
+    } catch (err) {
+      const msg = err?.message || String(err)
+      if (isVercel && /403|401|forbidden|not authorized|invalidtoken/i.test(msg)) {
+        log(`  Vercel: skipped custom domain API check (token lacks project scope on new deploy)`)
+      } else {
+        errors.push(msg)
       }
     }
   }
