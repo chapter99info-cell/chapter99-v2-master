@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useShopContext } from '../contexts/ShopContext'
 import { supabase } from '../lib/supabase'
+import { fetchPublicServices, isBookingRpcV1Enabled } from '../lib/publicBookingRpc'
 import './PublicSite.css'
 
 interface ServiceRow {
@@ -23,6 +24,14 @@ export default function PublicServicesPage() {
   useEffect(() => {
     if (!shopId) return
     setLoading(true)
+
+    if (isBookingRpcV1Enabled()) {
+      void fetchPublicServices(shopId)
+        .then(data => setServices(data))
+        .finally(() => setLoading(false))
+      return
+    }
+
     supabase
       .from('services')
       .select('id, name_en, name_th, duration, price, gst_free, image_url')

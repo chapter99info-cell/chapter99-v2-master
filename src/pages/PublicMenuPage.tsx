@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useShopContext } from '../contexts/ShopContext'
 import { supabase } from '../lib/supabase'
+import { fetchPublicServices, isBookingRpcV1Enabled } from '../lib/publicBookingRpc'
 import './PublicSite.css'
 
 interface MenuServiceRow {
@@ -45,6 +46,36 @@ export default function PublicMenuPage() {
     if (!shopId) return
     let cancelled = false
     setLoading(true)
+
+    if (isBookingRpcV1Enabled()) {
+      void fetchPublicServices(shopId)
+        .then(data => {
+          if (cancelled) return
+          setServices(
+            data.map(row => ({
+              id: row.id,
+              name_en: row.name_en,
+              name_th: row.name_th,
+              duration: row.duration,
+              price: row.price,
+              gst_free: row.gst_free,
+              image_url: row.image_url,
+              category: row.category,
+              sort_order: row.sort_order ?? null,
+            }))
+          )
+        })
+        .catch(err => {
+          if (!cancelled) console.error('[PublicMenuPage] load services failed', err)
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+
     supabase
       .from('services')
       .select(

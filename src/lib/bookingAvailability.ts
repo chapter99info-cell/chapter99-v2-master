@@ -1,8 +1,16 @@
 // Chapter99 — booking slot availability (per-therapist)
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  fetchPublicDayBookings,
+  fetchPublicTherapistIds,
+  isBookingRpcV1Enabled,
+} from './publicBookingRpc'
 
 export const INACTIVE_BOOKING_STATUSES = ['cancelled', 'no_show'] as const
+
+/** `public` = customer /book wizard; `staff` = staff BookingWizard (legacy direct queries). */
+export type BookingDataSource = 'public' | 'staff'
 
 /** Staff who can take appointments (online booking staff list) */
 export const BOOKABLE_STAFF_ROLES = ['therapist', 'owner', 'manager'] as const
@@ -302,8 +310,13 @@ export function slotWindow(date: string, timeHHMM: string, durationMin: number):
 
 export async function fetchTherapistIds(
   supabase: SupabaseClient,
-  shopId: string
+  shopId: string,
+  source: BookingDataSource = 'staff'
 ): Promise<string[]> {
+  if (source === 'public' && isBookingRpcV1Enabled()) {
+    return fetchPublicTherapistIds(shopId)
+  }
+
   const { data, error } = await supabase
     .from('staff')
     .select('id')
@@ -318,8 +331,13 @@ export async function fetchTherapistIds(
 export async function fetchDayBookings(
   supabase: SupabaseClient,
   shopId: string,
-  date: string
+  date: string,
+  source: BookingDataSource = 'staff'
 ): Promise<DayBooking[]> {
+  if (source === 'public' && isBookingRpcV1Enabled()) {
+    return fetchPublicDayBookings(shopId, date)
+  }
+
   const { dayStart, dayEnd } = dayBoundsSydney(date)
 
   const { data, error } = await supabase
@@ -340,11 +358,12 @@ export async function assertSlotAvailable(
   date: string,
   timeHHMM: string,
   durationMin: number,
-  staffId?: string | null
+  staffId?: string | null,
+  source: BookingDataSource = 'staff'
 ): Promise<SlotAvailabilityResult> {
   const [therapistIds, bookings] = await Promise.all([
-    fetchTherapistIds(supabase, shopId),
-    fetchDayBookings(supabase, shopId, date),
+    fetchTherapistIds(supabase, shopId, source),
+    fetchDayBookings(supabase, shopId, date, source),
   ])
   const { slotStart, slotEnd } = slotWindow(date, timeHHMM, durationMin)
   return evaluateSlotAvailability(bookings, slotStart, slotEnd, therapistIds, staffId)

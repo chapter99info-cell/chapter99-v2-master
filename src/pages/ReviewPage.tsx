@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import {
+  fetchPublicReviewContext,
+  isBookingRpcV1Enabled,
+} from '../lib/publicBookingRpc'
 import { normalizeGoogleReviewUrl } from '../lib/reviewUrl'
 
 type Step = 'rating' | 'complaint' | 'thanks' | 'redirect'
@@ -21,6 +25,15 @@ export default function ReviewPage() {
       setLoading(false)
       return
     }
+
+    if (isBookingRpcV1Enabled()) {
+      void fetchPublicReviewContext(bookingId).then(result => {
+        if (result.ok && result.shopName) setShopName(result.shopName)
+        setLoading(false)
+      })
+      return
+    }
+
     void supabase
       .from('bookings')
       .select('id, shops ( name )')

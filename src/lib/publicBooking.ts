@@ -33,6 +33,7 @@ export interface PublicServiceRow {
   gst_free: boolean
   category: string
   image_url: string | null
+  sort_order?: number | null
 }
 
 export interface SlotOption {

@@ -8,6 +8,12 @@ import {
   slotWindow,
   type DayBooking,
 } from '../../lib/bookingAvailability'
+import {
+  createPublicBooking,
+  fetchPublicServices,
+  fetchPublicTherapists,
+  isBookingRpcV1Enabled,
+} from '../../lib/publicBookingRpc'
 import { resolveShopNotificationEmail } from '../../lib/shopService'
 import { sendBookingNotifications } from '../../lib/notifyService'
 import {
@@ -204,6 +210,21 @@ export default function PublicBookingWizard({
   }, [searchParams, setSearchParams])
 
   useEffect(() => {
+    const useRpc = isBookingRpcV1Enabled()
+
+    if (useRpc) {
+      void Promise.all([
+        fetchPublicServices(shopId),
+        fetchPublicTherapists(shopId),
+        fetchTherapistIds(supabase, shopId, 'public'),
+      ]).then(([serviceRows, therapistRows, therapistIdList]) => {
+        setServices(serviceRows)
+        setTherapists(therapistRows)
+        setTherapistIds(therapistIdList)
+      })
+      return
+    }
+
     supabase
       .from('services')
       .select('id, name_en, name_th, duration, price, gst_free, category, image_url')
@@ -227,7 +248,7 @@ export default function PublicBookingWizard({
 
   const loadDay = useCallback(async () => {
     if (!date || !selectedService) return
-    const bookings = await fetchDayBookings(supabase, shopId, date)
+    const bookings = await fetchDayBookings(supabase, shopId, date, 'public')
     setDayBookings(bookings)
     setSlotOptions(
       buildSlotOptions(date, selectedService.duration, bookings, therapistIds)
@@ -272,7 +293,7 @@ export default function PublicBookingWizard({
     const start = new Date(`${date}T${time}:00+10:00`)
     const end = new Date(start.getTime() + selectedService.duration * 60_000)
 
-    const freshBookings = await fetchDayBookings(supabase, shopId, date)
+    const freshBookings = await fetchDayBookings(supabase, shopId, date, 'public')
     const picked = pickFirstFreeTherapist(
       freshBookings,
       therapists,
@@ -305,7 +326,8 @@ export default function PublicBookingWizard({
       date,
       time,
       selectedService.duration,
-      staffId
+      staffId,
+      'public'
     )
     if (!localCheck.available) {
       setLoading(false)
@@ -314,57 +336,92 @@ export default function PublicBookingWizard({
       return
     }
 
-    const { data: clientRow, error: clientErr } = await supabase
-      .from('clients')
-      .insert({
-        shop_id: shopId,
-        name: fullName,
-        phone: phone.trim(),
-        email: email.trim(),
-      })
-      .select('id')
-      .single()
-
-    if (clientErr || !clientRow) {
-      setLoading(false)
-      setError(clientErr?.message ?? 'Could not save your details.')
-      return
-    }
-
     const cfg = shopDepositSettings(shop)
     const deposit = depositRequired
       ? calculateDepositAmount(selectedService.price, cfg)
       : 0
 
-    const { data: booking, error: bookErr } = await supabase
-      .from('bookings')
-      .insert({
-        shop_id: shopId,
-        client_id: clientRow.id,
-        service_id: serviceId,
-        staff_id: staffId,
-        therapist_name: therapistName,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        status: depositRequired ? 'pending_deposit' : 'confirmed',
-        source: 'online',
-        medical_notes: notes.trim() || null,
-        deposit_amount: depositRequired ? deposit : null,
-        deposit_paid: false,
-        terms_agreed: true,
-        terms_agreed_at: new Date().toISOString(),
+    let bookingIdResult: string
+
+    if (isBookingRpcV1Enabled()) {
+      const created = await createPublicBooking({
+        shopId,
+        serviceId,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        clientName: fullName,
+        clientPhone: phone.trim(),
+        clientEmail: email.trim(),
+        medicalNotes: notes.trim() || null,
+        termsAgreed: true,
+        depositRequired,
+        depositAmount: depositRequired ? deposit : null,
+        staffId,
+        therapistName,
       })
-      .select('id')
-      .single()
 
-    setLoading(false)
+      setLoading(false)
 
-    if (bookErr || !booking) {
-      setError(bookErr?.message ?? 'Booking failed. Please try again.')
-      return
+      if (!created.ok || !created.bookingId) {
+        setError(created.error ?? 'Booking failed. Please try again.')
+        if (created.code === 'SLOT_UNAVAILABLE') {
+          goTo('datetime')
+          await loadDay()
+        }
+        return
+      }
+
+      bookingIdResult = created.bookingId
+    } else {
+      const { data: clientRow, error: clientErr } = await supabase
+        .from('clients')
+        .insert({
+          shop_id: shopId,
+          name: fullName,
+          phone: phone.trim(),
+          email: email.trim(),
+        })
+        .select('id')
+        .single()
+
+      if (clientErr || !clientRow) {
+        setLoading(false)
+        setError(clientErr?.message ?? 'Could not save your details.')
+        return
+      }
+
+      const { data: booking, error: bookErr } = await supabase
+        .from('bookings')
+        .insert({
+          shop_id: shopId,
+          client_id: clientRow.id,
+          service_id: serviceId,
+          staff_id: staffId,
+          therapist_name: therapistName,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          status: depositRequired ? 'pending_deposit' : 'confirmed',
+          source: 'online',
+          medical_notes: notes.trim() || null,
+          deposit_amount: depositRequired ? deposit : null,
+          deposit_paid: false,
+          terms_agreed: true,
+          terms_agreed_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      setLoading(false)
+
+      if (bookErr || !booking) {
+        setError(bookErr?.message ?? 'Booking failed. Please try again.')
+        return
+      }
+
+      bookingIdResult = booking.id as string
     }
 
-    setBookingId(booking.id as string)
+    setBookingId(bookingIdResult)
 
     if (depositRequired) {
       setDepositAmount(deposit)
@@ -374,12 +431,12 @@ export default function PublicBookingWizard({
 
     const dateLabel = formatSydneyDateLabel(date)
     const timeLabel = formatTime12(time)
-    const cancelUrl = buildCancelUrl(shopSlug, booking.id as string)
+    const cancelUrl = buildCancelUrl(shopSlug, bookingIdResult)
     const ownerEmail = resolveShopNotificationEmail(shop)
 
     void sendBookingNotifications({
       shopId,
-      bookingId: booking.id as string,
+      bookingId: bookingIdResult,
       shopSlug,
       clientName: fullName,
       clientEmail: email.trim(),
