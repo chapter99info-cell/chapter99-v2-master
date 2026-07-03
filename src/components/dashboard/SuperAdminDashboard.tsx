@@ -20,6 +20,7 @@ import { buildOriginForCustomDomain } from '../../lib/shopDomain'
 import ShopPlanBilling from '../admin/ShopPlanBilling'
 import ShopDepositSettingsPanel from '../admin/ShopDepositSettings'
 import ShopSmsSettings from '../admin/ShopSmsSettings'
+import ShopFeatureToggles from '../admin/ShopFeatureToggles'
 import OnboardingWizard from '../admin/OnboardingWizard'
 import {
   PLAN_LABELS,
@@ -253,6 +254,7 @@ function ShopDetailView({
   const [websiteOpen, setWebsiteOpen] = useState(true)
   const [depositOpen, setDepositOpen] = useState(false)
   const [smsOpen, setSmsOpen] = useState(false)
+  const [featuresOpen, setFeaturesOpen] = useState(true)
   const [reportsOpen, setReportsOpen] = useState(false)
 
   useEffect(() => {
@@ -344,6 +346,14 @@ function ShopDetailView({
           <h4 className="shop-detail-subtitle">Plan & add-ons</h4>
           <ShopPlanBilling shopId={shop.id} shopName={shop.name} embedded />
         </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="🎛 Feature Toggles"
+        open={featuresOpen}
+        onToggle={() => setFeaturesOpen(o => !o)}
+      >
+        <ShopFeatureToggles shopId={shop.id} shopName={shop.name} plan={shop.plan} />
       </CollapsibleSection>
 
       <CollapsibleSection

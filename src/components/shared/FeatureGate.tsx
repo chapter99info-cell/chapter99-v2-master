@@ -10,6 +10,7 @@ import {
   type FeatureKey,
   type FeatureTier,
 } from '../../lib/featureGate'
+import { hasFeatureKey, shopFeatureContextFromPlanState } from '../../lib/shopFeatureAccess'
 
 export interface FeatureGateProps {
   plan: FeatureTier
@@ -26,8 +27,15 @@ export function FeatureGate({
   children,
   hideIfLocked = false,
   shopName,
-}: FeatureGateProps) {
-  if (canAccessFeature(plan, feature)) {
+  featureContext,
+}: FeatureGateProps & {
+  featureContext?: ReturnType<typeof shopFeatureContextFromPlanState>
+}) {
+  const allowed = featureContext
+    ? hasFeatureKey(featureContext, feature)
+    : canAccessFeature(plan, feature)
+
+  if (allowed) {
     return <>{children}</>
   }
 
@@ -77,11 +85,12 @@ export function FeatureGateFromPlan({
   hideIfLocked,
   shopName,
 }: Omit<FeatureGateProps, 'plan'>) {
-  const { plan, loading } = usePlan()
-  const tier = normalizeFeatureTier(plan)
+  const planState = usePlan()
+  const tier = normalizeFeatureTier(planState.plan)
+  const featureContext = shopFeatureContextFromPlanState(planState)
 
-  if (loading && hideIfLocked) return null
-  if (loading) {
+  if (planState.loading && hideIfLocked) return null
+  if (planState.loading) {
     return <p className="text-sm text-[#6B7280] p-4">Loading plan…</p>
   }
 
@@ -91,6 +100,7 @@ export function FeatureGateFromPlan({
       feature={feature}
       hideIfLocked={hideIfLocked}
       shopName={shopName}
+      featureContext={featureContext}
     >
       {children}
     </FeatureGate>
@@ -114,8 +124,13 @@ export function FeatureGatedTab({
   active,
   onSelect,
   shopName,
-}: FeatureGatedTabProps) {
-  const allowed = canAccessFeature(plan, feature)
+  featureContext,
+}: FeatureGatedTabProps & {
+  featureContext?: ReturnType<typeof shopFeatureContextFromPlanState>
+}) {
+  const allowed = featureContext
+    ? hasFeatureKey(featureContext, feature)
+    : canAccessFeature(plan, feature)
 
   if (allowed) {
     return (
@@ -145,6 +160,11 @@ export function FeatureGatedTab({
       </span>
     </button>
   )
+}
+
+export function useShopFeatureContext() {
+  const planState = usePlan()
+  return shopFeatureContextFromPlanState(planState)
 }
 
 export function useFeatureTier(): FeatureTier {

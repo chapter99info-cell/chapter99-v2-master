@@ -36,6 +36,9 @@ export function PlanProvider({ shopId = SHOP_ID, children }: { shopId?: string; 
     addonSms: false,
     addonWebsite: false,
     addonReports: false,
+    featureOverrides: {},
+    smsEnabled: false,
+    smsPackage: 'none',
   })
   const [loading, setLoading] = useState(true)
 

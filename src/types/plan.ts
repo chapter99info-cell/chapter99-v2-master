@@ -1,4 +1,9 @@
 /** Subscription plan tiers (shops.plan) */
+import {
+  hasPlanFeature,
+  shopFeatureContextFromPlanState,
+} from '../lib/shopFeatureAccess'
+
 export type ShopPlan = 'starter' | 'growth' | 'pro'
 
 export const SHOP_PLANS: ShopPlan[] = ['starter', 'growth', 'pro']
@@ -60,6 +65,9 @@ export interface ShopPlanAddons {
 
 export interface ShopPlanState extends ShopPlanAddons {
   plan: ShopPlan
+  featureOverrides?: Record<string, boolean>
+  smsEnabled?: boolean
+  smsPackage?: string | null
 }
 
 const STARTER_FEATURES: PlanFeature[] = ['booking', 'queue', 'pos', 'staff']
@@ -113,23 +121,7 @@ export function planRank(plan: ShopPlan): number {
 }
 
 export function canAccessFeature(state: ShopPlanState, feature: PlanFeature): boolean {
-  const tier = new Set(PLAN_TIER_FEATURES[state.plan])
-
-  if (tier.has(feature)) return true
-
-  switch (feature) {
-    case 'stripe':
-      return state.addonStripe
-    case 'sms':
-      // SMS is Super Admin toggle only — never included in tier features
-      return state.addonSms
-    case 'website_builder':
-      return state.addonWebsite || state.plan === 'pro'
-    case 'reports':
-      return state.addonReports || tier.has('reports')
-    default:
-      return false
-  }
+  return hasPlanFeature(shopFeatureContextFromPlanState(state), feature)
 }
 
 export function requiredPlanForFeature(feature: PlanFeature, state: ShopPlanState): ShopPlan {

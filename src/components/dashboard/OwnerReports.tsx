@@ -12,8 +12,8 @@ import {
   fetchReportsDashboard,
 } from '../../lib/reportService'
 import ReportsDashboard from './ReportsDashboard'
-import { useFeatureTier } from '../shared/FeatureGate'
-import { canAccessFeature } from '../../lib/featureGate'
+import { useFeatureTier, useShopFeatureContext } from '../shared/FeatureGate'
+import { hasFeatureKey } from '../../lib/shopFeatureAccess'
 import { buildWhatsAppUpgradeUrl } from '../../lib/featureGate'
 import './OwnerReports.css'
 
@@ -25,7 +25,9 @@ interface OwnerReportsProps {
 
 export default function OwnerReports({ shopId }: OwnerReportsProps) {
   const featureTier = useFeatureTier()
-  const hasCharts = canAccessFeature(featureTier, 'advanced_reports') && featureTier === 'business'
+  const featureContext = useShopFeatureContext()
+  const hasCharts =
+    hasFeatureKey(featureContext, 'advanced_reports') && featureTier === 'business'
   const [period, setPeriod] = useState<ReportPeriod>('today')
   const [numbersOnly, setNumbersOnly] = useState<{
     revenue: number
