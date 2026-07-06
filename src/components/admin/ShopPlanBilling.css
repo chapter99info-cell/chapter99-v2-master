@@ -86,6 +86,10 @@
   border-top: 1px solid var(--border);
 }
 
+.spb-actions .sws-btn {
+  min-width: 130px;
+}
+
 .spb-muted {
   font-size: 13px;
   color: var(--text-secondary, #666);

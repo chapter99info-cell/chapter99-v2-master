@@ -52,6 +52,22 @@
   padding: 8px 14px;
 }
 
+.shop-feature-toggles-toolbar.is-dirty .sws-btn-ghost {
+  background: #fff;
+  color: #1a3d2b;
+  border-color: #b8b0a0;
+}
+
+.shop-feature-toggles-toolbar.is-dirty .sws-btn-primary:disabled {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.shop-feature-toggles-footer .sws-btn-primary {
+  min-width: 160px;
+}
+
 .shop-feature-toggles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
