@@ -450,56 +450,59 @@ function ShopsTab({
         </button>
       </div>
 
-      <div className="shops-table">
-        <div className="table-header">
-          <span>ร้าน</span>
-          <span>Plan</span>
-          <span>MRR</span>
-          <span>คิวเดือนนี้</span>
-          <span>รายได้เดือนนี้</span>
-          <span>Alerts</span>
-          <span>Status</span>
-          <span>Actions</span>
-        </div>
-        {shops.map(shop => (
-          <div key={shop.id} className="table-row table-row-clickable">
-            <button
-              type="button"
-              className="shop-info shop-info-btn"
-              onClick={() => onSelectShop(shop.id)}
-            >
-              <div className="shop-name">{shop.name}</div>
-              <div className="shop-domain">
-                {shop.slug ? `?shop=${shop.slug}` : shop.domain}
-              </div>
-            </button>
-            <span className={`plan-tag plan-${shop.plan}`}>{PLAN_LABELS[shop.plan]}</span>
-            <span className="cell-mrr">{formatAUD(shop.mrr)}</span>
-            <span className="cell-num">{shop.bookingsThisMonth}</span>
-            <span className="cell-revenue">{formatAUD(shop.revenueThisMonth)}</span>
-            <span className={`cell-alerts${shop.criticalAlerts > 0 ? ' critical' : ''}`}>
-              {shop.alertCount > 0 ? `⚠️ ${shop.alertCount}` : '✅'}
-            </span>
-            <span className={`status-tag status-${shop.status}`}>
-              {shop.status}
-            </span>
-            <div className="cell-actions">
+      <div className="shops-table-scroll">
+        <div className="shops-table">
+          <div className="table-header">
+            <span>ร้าน</span>
+            <span>Plan</span>
+            <span>MRR</span>
+            <span>คิวเดือนนี้</span>
+            <span>รายได้เดือนนี้</span>
+            <span>Alerts</span>
+            <span>Status</span>
+            <span>Actions</span>
+          </div>
+          {shops.map(shop => (
+            <div key={shop.id} className="table-row table-row-clickable">
               <button
                 type="button"
-                className="action-btn"
-                onClick={() => onSelectShopWebsite(shop.id)}
+                className="shop-info shop-info-btn"
+                onClick={() => onSelectShop(shop.id)}
               >
-                🌐 Website
+                <div className="shop-name">{shop.name}</div>
+                <div className="shop-domain">
+                  {shop.slug ? `?shop=${shop.slug}` : shop.domain}
+                </div>
               </button>
-              <button
-                className={`action-btn ${shop.status === 'active' ? 'danger' : 'success'}`}
-                onClick={() => onToggle(shop.id, shop.status !== 'active')}
-              >
-                {shop.status === 'active' ? 'Suspend' : 'Activate'}
-              </button>
+              <span className={`plan-tag plan-${shop.plan}`}>{PLAN_LABELS[shop.plan]}</span>
+              <span className="cell-mrr">{formatAUD(shop.mrr)}</span>
+              <span className="cell-num">{shop.bookingsThisMonth}</span>
+              <span className="cell-revenue">{formatAUD(shop.revenueThisMonth)}</span>
+              <span className={`cell-alerts${shop.criticalAlerts > 0 ? ' critical' : ''}`}>
+                {shop.alertCount > 0 ? `⚠️ ${shop.alertCount}` : '✅'}
+              </span>
+              <span className={`status-tag status-${shop.status}`}>
+                {shop.status}
+              </span>
+              <div className="cell-actions">
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={() => onSelectShopWebsite(shop.id)}
+                >
+                  🌐 Website
+                </button>
+                <button
+                  type="button"
+                  className={`action-btn ${shop.status === 'active' ? 'danger' : 'success'}`}
+                  onClick={() => onToggle(shop.id, shop.status !== 'active')}
+                >
+                  {shop.status === 'active' ? 'Suspend' : 'Activate'}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
