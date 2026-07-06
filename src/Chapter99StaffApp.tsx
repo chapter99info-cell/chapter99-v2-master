@@ -35,6 +35,7 @@ import {
   FeatureGate,
   FeatureGatedTab,
   useFeatureTier,
+  useShopFeatureContext,
 } from './components/shared/FeatureGate'
 import type { FeatureKey } from './lib/featureGate'
 import { isFeatureKey } from './lib/featureGate'
@@ -228,6 +229,7 @@ function StaffDashboard({
 }) {
   const { planLabel } = usePlan()
   const featureTier = useFeatureTier()
+  const featureContext = useShopFeatureContext()
   const isOwner = session.level === 'owner'
   const badge = roleBadgeLabel(session.level)
 
@@ -280,6 +282,7 @@ function StaffDashboard({
                 active={activeTab === t.id}
                 onSelect={() => setActiveTab(t.id)}
                 shopName={shopBranding?.name}
+                featureContext={featureContext}
               />
             )
           }
@@ -315,6 +318,7 @@ function StaffDashboard({
                   active={activeTab === t.id}
                   onSelect={() => setActiveTab(t.id)}
                   shopName={shopBranding?.name}
+                  featureContext={featureContext}
                 />
               ) : (
                 <PlanGatedTab
@@ -346,7 +350,12 @@ function StaffDashboard({
           </>
         )}
         {activeTab === 'pos' && (
-          <FeatureGate plan={featureTier} feature="pos" shopName={shopBranding?.name}>
+          <FeatureGate
+            plan={featureTier}
+            feature="pos"
+            shopName={shopBranding?.name}
+            featureContext={featureContext}
+          >
             <POSPage loginPin={session.pin} />
           </FeatureGate>
         )}
@@ -357,7 +366,12 @@ function StaffDashboard({
           <AlertDashboard shopId={shopId} onMarkedRead={refreshUnreadAlerts} />
         )}
         {activeTab === 'staff' && isOwner && (
-          <FeatureGate plan={featureTier} feature="staff_management" shopName={shopBranding?.name}>
+          <FeatureGate
+            plan={featureTier}
+            feature="staff_management"
+            shopName={shopBranding?.name}
+            featureContext={featureContext}
+          >
             <StaffManager shopId={shopId} pinLevel="owner" />
           </FeatureGate>
         )}
@@ -373,19 +387,34 @@ function StaffDashboard({
           </PlanGate>
         )}
         {activeTab === 'reports' && isOwner && (
-          <FeatureGate plan={featureTier} feature="advanced_reports" shopName={shopBranding?.name}>
+          <FeatureGate
+            plan={featureTier}
+            feature="advanced_reports"
+            shopName={shopBranding?.name}
+            featureContext={featureContext}
+          >
             <Suspense fallback={<p className="reports-muted">Loading reports…</p>}>
               <OwnerReports shopId={shopId} />
             </Suspense>
           </FeatureGate>
         )}
         {activeTab === 'inventory' && isOwner && (
-          <FeatureGate plan={featureTier} feature="pos" shopName={shopBranding?.name}>
+          <FeatureGate
+            plan={featureTier}
+            feature="pos"
+            shopName={shopBranding?.name}
+            featureContext={featureContext}
+          >
             <InventoryManager shopId={shopId} />
           </FeatureGate>
         )}
         {activeTab === 'complaints' && isOwner && (
-          <FeatureGate plan={featureTier} feature="advanced_reports" shopName={shopBranding?.name}>
+          <FeatureGate
+            plan={featureTier}
+            feature="advanced_reports"
+            shopName={shopBranding?.name}
+            featureContext={featureContext}
+          >
             <ComplaintsPanel shopId={shopId} />
           </FeatureGate>
         )}

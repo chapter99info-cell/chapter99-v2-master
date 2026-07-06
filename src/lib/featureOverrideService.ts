@@ -4,17 +4,29 @@ import {
   type FeatureOverrideId,
 } from './shopFeatureAccess'
 
+function logFeatureOverrideError(action: string, error: unknown) {
+  if (import.meta.env.DEV) {
+    console.error(`[featureOverrideService] ${action}`, error)
+  }
+}
+
 export async function fetchShopFeatureOverrides(
   shopId: string
-): Promise<Record<string, boolean>> {
+): Promise<{ overrides: Record<string, boolean>; error?: string }> {
   const { data, error } = await supabase
     .from('shops')
     .select('feature_overrides')
     .eq('id', shopId)
     .maybeSingle()
 
-  if (error || !data) return {}
-  return parseFeatureOverrides(data.feature_overrides)
+  if (error) {
+    logFeatureOverrideError('fetchShopFeatureOverrides', error)
+    return { overrides: {}, error: error.message }
+  }
+  if (!data) {
+    return { overrides: {}, error: 'Shop not found' }
+  }
+  return { overrides: parseFeatureOverrides(data.feature_overrides) }
 }
 
 export async function saveShopFeatureOverrides(
@@ -26,7 +38,10 @@ export async function saveShopFeatureOverrides(
     .update({ feature_overrides: overrides })
     .eq('id', shopId)
 
-  if (error) return { ok: false, error: error.message }
+  if (error) {
+    logFeatureOverrideError('saveShopFeatureOverrides', error)
+    return { ok: false, error: error.message }
+  }
   return { ok: true }
 }
 
@@ -44,4 +59,12 @@ export async function setShopFeatureOverride(
   }
   const result = await saveShopFeatureOverrides(shopId, next)
   return { ...result, overrides: next }
+}
+
+export async function setAllShopFeatureOverrides(
+  shopId: string,
+  overrides: Record<string, boolean>
+): Promise<{ ok: boolean; error?: string; overrides: Record<string, boolean> }> {
+  const result = await saveShopFeatureOverrides(shopId, overrides)
+  return { ...result, overrides }
 }

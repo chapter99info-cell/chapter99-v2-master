@@ -18,14 +18,27 @@ import {
   type ShopPlanAddons,
 } from '../types/plan'
 
-/** Keys stored in shops.feature_overrides */
-export const FEATURE_OVERRIDE_IDS = [
+/** Staff-app / FeatureGate keys stored in shops.feature_overrides */
+export const STAFF_FEATURE_OVERRIDE_IDS = [
   'pos',
   'health_fund_receipt',
   'multi_room',
   'booking_online',
-  'sms_alerts',
   'gift_vouchers',
+  'staff_management',
+  'advanced_reports',
+  'online_deposit',
+  'landing_page',
+  'ai_images',
+  'edit_price_self_service',
+  'real_photography_upsell',
+  'website_builder',
+  'multi_shop',
+] as const
+
+/** Billing / marketing add-ons (Super Admin only) */
+export const BILLING_FEATURE_OVERRIDE_IDS = [
+  'sms_alerts',
   'sms_200',
   'sms_500',
   'sms_unlimited',
@@ -37,6 +50,12 @@ export const FEATURE_OVERRIDE_IDS = [
   'priority_support',
 ] as const
 
+/** Keys stored in shops.feature_overrides */
+export const FEATURE_OVERRIDE_IDS = [
+  ...STAFF_FEATURE_OVERRIDE_IDS,
+  ...BILLING_FEATURE_OVERRIDE_IDS,
+] as const
+
 export type FeatureOverrideId = (typeof FEATURE_OVERRIDE_IDS)[number]
 
 export const FEATURE_OVERRIDE_LABELS: Record<FeatureOverrideId, string> = {
@@ -44,8 +63,17 @@ export const FEATURE_OVERRIDE_LABELS: Record<FeatureOverrideId, string> = {
   health_fund_receipt: 'Health Fund Receipt',
   multi_room: 'Multi-room',
   booking_online: 'Booking Online',
-  sms_alerts: 'SMS Alerts',
   gift_vouchers: 'Gift Vouchers',
+  staff_management: 'Staff Management',
+  advanced_reports: 'Advanced Reports',
+  online_deposit: 'Online Deposit',
+  landing_page: 'Landing Page',
+  ai_images: 'AI Images',
+  edit_price_self_service: 'Self-service Price Edits',
+  real_photography_upsell: 'Real Photography',
+  website_builder: 'Website Builder',
+  multi_shop: 'Multi-shop',
+  sms_alerts: 'SMS Alerts',
   sms_200: 'SMS Extra 200',
   sms_500: 'SMS Extra 500',
   sms_unlimited: 'SMS Unlimited',
@@ -57,12 +85,54 @@ export const FEATURE_OVERRIDE_LABELS: Record<FeatureOverrideId, string> = {
   priority_support: 'Priority Support',
 }
 
+export const FEATURE_OVERRIDE_LABELS_TH: Partial<Record<FeatureOverrideId, string>> = {
+  pos: 'ระบบ POS',
+  health_fund_receipt: 'ใบเสร็จ Health Fund',
+  multi_room: 'จัดการห้อง/เตียง',
+  booking_online: 'จองออนไลน์',
+  gift_vouchers: 'บัตรของขวัญ',
+  staff_management: 'จัดการพนักงาน',
+  advanced_reports: 'รายงานขั้นสูง',
+  online_deposit: 'มัดจำออนไลน์',
+  landing_page: 'หน้าเว็บร้าน',
+  ai_images: 'รูป AI',
+  edit_price_self_service: 'แก้ราคาเอง',
+  real_photography_upsell: 'ถ่ายภาพจริง',
+  website_builder: 'Website Builder',
+  multi_shop: 'หลายสาขา',
+  sms_alerts: 'แจ้งเตือน SMS',
+}
+
+export const FEATURE_TOGGLE_GROUPS: {
+  title: string
+  titleTh: string
+  ids: readonly FeatureOverrideId[]
+}[] = [
+  {
+    title: 'Staff dashboard tabs',
+    titleTh: 'แท็บแดชบอร์ดพนักงาน',
+    ids: STAFF_FEATURE_OVERRIDE_IDS,
+  },
+  {
+    title: 'Billing & add-ons',
+    titleTh: 'แพ็กเกจเสริม / Add-ons',
+    ids: BILLING_FEATURE_OVERRIDE_IDS,
+  },
+]
+
 const FEATURE_KEY_TO_OVERRIDE: Partial<Record<FeatureKey, FeatureOverrideId>> = {
   pos: 'pos',
   health_fund_receipt: 'health_fund_receipt',
   multi_room: 'multi_room',
   booking_online: 'booking_online',
   gift_vouchers: 'gift_vouchers',
+  staff_management: 'staff_management',
+  advanced_reports: 'advanced_reports',
+  online_deposit: 'online_deposit',
+  landing_page: 'landing_page',
+  ai_images: 'ai_images',
+  edit_price_self_service: 'edit_price_self_service',
+  real_photography_upsell: 'real_photography_upsell',
 }
 
 /** Map legacy FeatureKey → billing plan feature (starter/growth/pro). */
@@ -79,9 +149,14 @@ const PLAN_FEATURE_TO_OVERRIDE: Partial<Record<PlanFeature, FeatureOverrideId>> 
   booking: 'booking_online',
   queue: 'booking_online',
   pos: 'pos',
+  staff: 'staff_management',
   gift_vouchers: 'gift_vouchers',
+  reports: 'advanced_reports',
+  customer_history: 'advanced_reports',
+  website_builder: 'website_builder',
+  multi_shop: 'multi_shop',
+  stripe: 'online_deposit',
   sms: 'sms_alerts',
-  multi_shop: 'extra_branch',
 }
 
 export interface ShopFeatureContext extends ShopPlanAddons {
@@ -114,6 +189,74 @@ function planTierIncludes(
   return false
 }
 
+function tierDefaultForOverrideId(
+  id: FeatureOverrideId,
+  tier: FeatureTier,
+  shopPlan: ShopPlan,
+  planState: ShopPlanAddons & { plan: ShopPlan },
+  context: ShopFeatureContext
+): boolean {
+  switch (id) {
+    case 'pos':
+      return planTierIncludes(shopPlan, 'pos', planState)
+    case 'health_fund_receipt':
+      return (
+        canAccessTierFeature(tier, 'health_fund_receipt') ||
+        planTierIncludes(shopPlan, 'pos', planState)
+      )
+    case 'multi_room':
+      return canAccessTierFeature(tier, 'multi_room')
+    case 'booking_online':
+      return planTierIncludes(shopPlan, 'booking', planState)
+    case 'gift_vouchers':
+      return planTierIncludes(shopPlan, 'gift_vouchers', planState)
+    case 'staff_management':
+      return (
+        canAccessTierFeature(tier, 'staff_management') ||
+        planTierIncludes(shopPlan, 'staff', planState)
+      )
+    case 'advanced_reports':
+      return (
+        canAccessTierFeature(tier, 'advanced_reports') ||
+        planTierIncludes(shopPlan, 'reports', planState)
+      )
+    case 'online_deposit':
+      return (
+        canAccessTierFeature(tier, 'online_deposit') ||
+        planTierIncludes(shopPlan, 'stripe', planState)
+      )
+    case 'website_builder':
+      return planTierIncludes(shopPlan, 'website_builder', planState)
+    case 'multi_shop':
+      return planTierIncludes(shopPlan, 'multi_shop', planState)
+    case 'landing_page':
+      return canAccessTierFeature(tier, 'landing_page')
+    case 'ai_images':
+      return canAccessTierFeature(tier, 'ai_images')
+    case 'edit_price_self_service':
+      return canAccessTierFeature(tier, 'edit_price_self_service')
+    case 'real_photography_upsell':
+      return canAccessTierFeature(tier, 'real_photography_upsell')
+    case 'sms_alerts':
+      return context.smsEnabled === true || context.addonSms === true
+    case 'sms_200':
+      return context.smsEnabled === true && context.smsPackage === 'sms_200'
+    case 'sms_500':
+      return context.smsEnabled === true && context.smsPackage === 'sms_500'
+    case 'sms_unlimited':
+      return context.smsEnabled === true && context.smsPackage === 'sms_unlimited'
+    case 'google_business_mgmt':
+    case 'social_media_mgmt':
+    case 'seo_local_pack':
+    case 'ai_content_monthly':
+    case 'extra_branch':
+    case 'priority_support':
+      return false
+    default:
+      return false
+  }
+}
+
 export function getFeatureOverride(
   context: ShopFeatureContext,
   id: FeatureOverrideId
@@ -137,39 +280,7 @@ export function planDefaultForFeature(
     addonWebsite: context.addonWebsite ?? false,
     addonReports: context.addonReports ?? false,
   }
-
-  switch (id) {
-    case 'pos':
-      return planTierIncludes(shopPlan, 'pos', planState)
-    case 'health_fund_receipt':
-      return (
-        canAccessTierFeature(tier, 'health_fund_receipt') ||
-        planTierIncludes(shopPlan, 'pos', planState)
-      )
-    case 'multi_room':
-      return canAccessTierFeature(tier, 'multi_room')
-    case 'booking_online':
-      return planTierIncludes(shopPlan, 'booking', planState)
-    case 'gift_vouchers':
-      return planTierIncludes(shopPlan, 'gift_vouchers', planState)
-    case 'sms_alerts':
-      return context.smsEnabled === true || context.addonSms === true
-    case 'sms_200':
-      return context.smsEnabled === true && context.smsPackage === 'sms_200'
-    case 'sms_500':
-      return context.smsEnabled === true && context.smsPackage === 'sms_500'
-    case 'sms_unlimited':
-      return context.smsEnabled === true && context.smsPackage === 'sms_unlimited'
-    case 'google_business_mgmt':
-    case 'social_media_mgmt':
-    case 'seo_local_pack':
-    case 'ai_content_monthly':
-    case 'extra_branch':
-    case 'priority_support':
-      return false
-    default:
-      return false
-  }
+  return tierDefaultForOverrideId(id, tier, shopPlan, planState, context)
 }
 
 /** Primary gate: override → plan default */
@@ -240,4 +351,12 @@ export function isFeatureOverrideId(value: string): value is FeatureOverrideId {
 
 export function tierLabelForPlan(plan: string): string {
   return PLAN_LABELS[normalizeShopPlan(plan)]
+}
+
+export function buildAllEnabledOverrides(): Record<string, boolean> {
+  const out: Record<string, boolean> = {}
+  for (const id of FEATURE_OVERRIDE_IDS) {
+    out[id] = true
+  }
+  return out
 }
