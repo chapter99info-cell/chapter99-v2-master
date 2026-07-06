@@ -19,6 +19,8 @@ const THEMES = [
   { id: 'traditional' as const, label: 'Traditional', colors: ['#7B5EA7', '#D4AF37'] },
   { id: 'minimal' as const, label: 'Minimal', colors: ['#6B7280', '#FFFFFF'] },
   { id: 'modern' as const, label: 'Modern', colors: ['#1A1A1A', '#FFFFFF'] },
+  { id: 'jasmine' as const, label: 'Jasmine Luxury', colors: ['#B8860B', '#D4AF37'] },
+  { id: 'koala' as const, label: 'Koala Wellness', colors: ['#3D6B4F', '#7A9E7E'] },
 ]
 
 type Step = 1 | 2 | 3 | 4 | 5

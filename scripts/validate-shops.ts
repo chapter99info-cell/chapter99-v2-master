@@ -24,7 +24,7 @@ import {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CONFIG_PATH = join(ROOT, 'shops.config.json')
 
-const THEME_IDS = ['elegant', 'traditional', 'minimal', 'modern'] as const
+const THEME_IDS = ['elegant', 'traditional', 'minimal', 'modern', 'jasmine', 'koala'] as const
 const REQUIRED_CORE_COMPONENTS = ['BookingButton', 'POSLink', 'StaffLoginButton'] as const
 
 function validateThemeCoreComponents(): string[] {

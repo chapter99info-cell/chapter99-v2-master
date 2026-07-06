@@ -1,5 +1,7 @@
 /** Client-safe onboarding helpers (no server imports) */
 
+import type { ThemeId } from './themeRegistry'
+
 export function slugify(name: string): string {
   return name
     .trim()
@@ -29,7 +31,7 @@ export interface OnboardingPayload {
   ownerPhone: string
   plan: 'starter' | 'professional' | 'business'
   photographyAddon: boolean
-  themeId: 'elegant' | 'traditional' | 'minimal' | 'modern'
+  themeId: ThemeId
   primaryColor: string
   domains: string[]
 }

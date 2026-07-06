@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "test:shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "verify-shop-domains": "node scripts/verify-shop-domains-production.mjs",
+    "test:booking-rpc": "node scripts/test-create-public-booking.mjs",
     "preview": "vite preview",
     "upload-backup": "node scripts/upload-backup-to-drive.mjs",
     "verify-vercel": "node scripts/verify-vercel-project.mjs",
