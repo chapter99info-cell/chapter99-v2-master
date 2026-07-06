@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   fetchShopPlanSettings,
   saveShopPlanSettings,
@@ -6,6 +6,7 @@ import {
 } from '../../lib/planService'
 import { SHOP_UPDATED_EVENT } from '../../lib/shopLogo'
 import { PLAN_LABELS, SHOP_PLANS, type ShopPlan } from '../../types/plan'
+import Toast, { type ToastType } from '../ui/Toast'
 import './ShopPlanBilling.css'
 
 interface ShopPlanBillingProps {
@@ -22,20 +23,31 @@ const ADDON_TOGGLES = [
   { key: 'addonReports' as const, label: 'Reports' },
 ]
 
+function settingsEqual(a: ShopPlanSettings, b: ShopPlanSettings): boolean {
+  return (
+    a.plan === b.plan &&
+    a.addonStripe === b.addonStripe &&
+    a.addonSms === b.addonSms &&
+    a.addonWebsite === b.addonWebsite &&
+    a.addonReports === b.addonReports
+  )
+}
+
 export default function ShopPlanBilling({ shopId, shopName, embedded }: ShopPlanBillingProps) {
-  const [settings, setSettings] = useState<ShopPlanSettings | null>(null)
+  const [saved, setSaved] = useState<ShopPlanSettings | null>(null)
+  const [draft, setDraft] = useState<ShopPlanSettings | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const settingsRef = useRef<ShopPlanSettings | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     fetchShopPlanSettings(shopId).then(data => {
       if (!cancelled) {
-        setSettings(data)
-        settingsRef.current = data
+        setSaved(data)
+        setDraft(data)
         setLoading(false)
       }
     })
@@ -44,38 +56,40 @@ export default function ShopPlanBilling({ shopId, shopName, embedded }: ShopPlan
     }
   }, [shopId])
 
-  const persist = useCallback(async (next: ShopPlanSettings) => {
-    settingsRef.current = next
-    setSettings(next)
-    setSaveState('saving')
+  const isDirty = saved && draft ? !settingsEqual(saved, draft) : false
+
+  const handleSave = useCallback(async () => {
+    if (!draft || !isDirty) return
+    setSaving(true)
     setSaveError('')
-    const result = await saveShopPlanSettings(next)
+    const result = await saveShopPlanSettings(draft)
+    setSaving(false)
     if (!result.ok) {
-      setSaveState('error')
-      setSaveError(result.error ?? 'Save failed')
+      const msg = result.error ?? 'บันทึกไม่สำเร็จ'
+      setSaveError(msg)
+      setToast({ message: msg, type: 'error' })
       return
     }
-    setSaveState('saved')
+    setSaved(draft)
+    setToast({ message: 'บันทึกแพ็กเกจและ add-ons แล้ว', type: 'success' })
     window.dispatchEvent(new Event(SHOP_UPDATED_EVENT))
-    window.setTimeout(() => setSaveState(s => (s === 'saved' ? 'idle' : s)), 2000)
-  }, [])
+  }, [draft, isDirty])
 
-  if (loading || !settings) {
+  if (loading || !draft) {
     return <p className="spb-muted">Loading plan settings…</p>
   }
 
   return (
     <section className={`spb-panel${embedded ? ' spb-panel-embedded' : ''}`}>
       <div className="spb-header">
-        <span className={`spb-plan-badge spb-plan-${settings.plan}`}>
-          {PLAN_LABELS[settings.plan]}
+        <span className={`spb-plan-badge spb-plan-${draft.plan}`}>
+          {PLAN_LABELS[draft.plan]}
         </span>
-        <span className={`spb-save-badge spb-save-${saveState}`}>
-          {saveState === 'saving' && 'Saving…'}
-          {saveState === 'saved' && 'Saved'}
-          {saveState === 'error' && 'Error'}
-          {saveState === 'idle' && 'Auto-save'}
-        </span>
+        {isDirty ? (
+          <span className="spb-save-badge spb-save-dirty">ยังไม่ได้บันทึก</span>
+        ) : (
+          <span className="spb-save-badge spb-save-saved">บันทึกแล้ว</span>
+        )}
       </div>
       {!embedded && (
         <p className="spb-muted">
@@ -91,8 +105,8 @@ export default function ShopPlanBilling({ shopId, shopName, embedded }: ShopPlan
         <select
           id="spb-plan-select"
           className="spb-select"
-          value={settings.plan}
-          onChange={e => persist({ ...settings, plan: e.target.value as ShopPlan })}
+          value={draft.plan}
+          onChange={e => setDraft({ ...draft, plan: e.target.value as ShopPlan })}
         >
           {SHOP_PLANS.map(p => (
             <option key={p} value={p}>
@@ -113,13 +127,36 @@ export default function ShopPlanBilling({ shopId, shopName, embedded }: ShopPlan
               <span>{label}</span>
               <input
                 type="checkbox"
-                checked={settings[key]}
-                onChange={e => persist({ ...settings, [key]: e.target.checked })}
+                checked={draft[key]}
+                onChange={e => setDraft({ ...draft, [key]: e.target.checked })}
               />
             </label>
           ))}
         </div>
       </div>
+
+      <div className="spb-actions">
+        <button
+          type="button"
+          className="sws-btn sws-btn-primary"
+          disabled={saving || !isDirty}
+          onClick={() => void handleSave()}
+        >
+          {saving ? 'กำลังบันทึก…' : 'บันทึกแพ็กเกจ'}
+        </button>
+        <button
+          type="button"
+          className="sws-btn sws-btn-ghost"
+          disabled={saving || !isDirty}
+          onClick={() => saved && setDraft(saved)}
+        >
+          ยกเลิก
+        </button>
+      </div>
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
     </section>
   )
 }

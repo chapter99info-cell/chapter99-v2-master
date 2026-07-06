@@ -10,10 +10,41 @@
 .shop-feature-toggles-toolbar {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e0ddd5;
+  padding: 12px 14px;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  background: #faf9f5;
+}
+
+.shop-feature-toggles-toolbar.is-dirty {
+  border-color: #c8a84b;
+  background: #fffbeb;
+}
+
+.shop-feature-save-all {
+  min-width: 140px;
+  font-weight: 700;
+}
+
+.shop-feature-dirty-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  margin-left: auto;
+}
+
+.shop-feature-toggles-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: 20px;
+  padding: 14px 0 4px;
+  border-top: 1px solid #e0ddd5;
+  background: linear-gradient(to top, #fff 80%, transparent);
+  display: flex;
+  justify-content: flex-end;
 }
 
 .shop-feature-toggles-toolbar .sws-btn {

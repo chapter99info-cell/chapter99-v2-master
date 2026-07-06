@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchShopPlanStateResult } from '../../lib/planService'
-import { setAllShopFeatureOverrides, setShopFeatureOverride } from '../../lib/featureOverrideService'
+import { setAllShopFeatureOverrides } from '../../lib/featureOverrideService'
 import {
   buildAllEnabledOverrides,
   FEATURE_OVERRIDE_LABELS,
@@ -31,17 +31,23 @@ function overrideModeFor(id: FeatureOverrideId, overrides: Record<string, boolea
   return overrides[id] ? 'on' : 'off'
 }
 
+function overridesEqual(a: Record<string, boolean>, b: Record<string, boolean>): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  for (const key of keys) {
+    if (a[key] !== b[key]) return false
+  }
+  return true
+}
+
 function FeatureToggleCard({
   id,
   context,
   overrides,
-  busy,
   onSetMode,
 }: {
   id: FeatureOverrideId
   context: ReturnType<typeof shopFeatureContextFromPlanState>
   overrides: Record<string, boolean>
-  busy: boolean
   onSetMode: (id: FeatureOverrideId, mode: OverrideMode) => void
 }) {
   const mode = overrideModeFor(id, overrides)
@@ -51,9 +57,7 @@ function FeatureToggleCard({
   const labelTh = FEATURE_OVERRIDE_LABELS_TH[id]
 
   return (
-    <article
-      className={`shop-feature-card${overridden ? ' is-overridden' : ''}${busy ? ' is-busy' : ''}`}
-    >
+    <article className={`shop-feature-card${overridden ? ' is-overridden' : ''}`}>
       <div className="shop-feature-card-head">
         <span className="shop-feature-card-label">{FEATURE_OVERRIDE_LABELS[id]}</span>
         {labelTh && <span className="shop-feature-card-label-th">{labelTh}</span>}
@@ -74,7 +78,6 @@ function FeatureToggleCard({
           type="button"
           className={mode === 'default' ? 'active' : ''}
           data-state="default"
-          disabled={busy}
           onClick={() => onSetMode(id, 'default')}
         >
           ตามแพ็กเกจ
@@ -83,7 +86,6 @@ function FeatureToggleCard({
           type="button"
           className={mode === 'on' ? 'active' : ''}
           data-state="on"
-          disabled={busy}
           onClick={() => onSetMode(id, 'on')}
         >
           บังคับเปิด
@@ -92,7 +94,6 @@ function FeatureToggleCard({
           type="button"
           className={mode === 'off' ? 'active' : ''}
           data-state="off"
-          disabled={busy}
           onClick={() => onSetMode(id, 'off')}
         >
           บังคับปิด
@@ -105,13 +106,15 @@ function FeatureToggleCard({
 export default function ShopFeatureToggles({ shopId, shopName, plan }: ShopFeatureTogglesProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [savingId, setSavingId] = useState<FeatureOverrideId | null>(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  const [savedOverrides, setSavedOverrides] = useState<Record<string, boolean>>({})
+  const [draftOverrides, setDraftOverrides] = useState<Record<string, boolean>>({})
   const [planState, setPlanState] = useState<
     Awaited<ReturnType<typeof fetchShopPlanStateResult>>['state'] | null
   >(null)
+
+  const isDirty = !overridesEqual(savedOverrides, draftOverrides)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -124,8 +127,10 @@ export default function ShopFeatureToggles({ shopId, shopName, plan }: ShopFeatu
         type: 'error',
       })
     }
+    const loaded = result.state.featureOverrides ?? {}
     setPlanState(result.state)
-    setOverrides(result.state.featureOverrides ?? {})
+    setSavedOverrides(loaded)
+    setDraftOverrides(loaded)
     setLoading(false)
   }, [shopId])
 
@@ -133,98 +138,115 @@ export default function ShopFeatureToggles({ shopId, shopName, plan }: ShopFeatu
     void load()
   }, [load])
 
-  const context = useMemo(() => {
+  const draftContext = useMemo(() => {
     if (!planState) return null
-    return shopFeatureContextFromPlanState(planState)
-  }, [planState])
+    return shopFeatureContextFromPlanState({
+      ...planState,
+      featureOverrides: draftOverrides,
+    })
+  }, [planState, draftOverrides])
 
-  function applySaveResult(
-    result: { ok: boolean; error?: string; overrides: Record<string, boolean> },
-    successMessage: string
-  ) {
+  function handleSetMode(id: FeatureOverrideId, mode: OverrideMode) {
+    const currentMode = overrideModeFor(id, draftOverrides)
+    if (currentMode === mode) return
+
+    setDraftOverrides(prev => {
+      const next = { ...prev }
+      if (mode === 'default') {
+        delete next[id]
+      } else {
+        next[id] = mode === 'on'
+      }
+      return next
+    })
+  }
+
+  function handleEnableAllDraft() {
+    setDraftOverrides(buildAllEnabledOverrides())
+  }
+
+  function handleResetAllDraft() {
+    setDraftOverrides({})
+  }
+
+  function handleDiscard() {
+    setDraftOverrides(savedOverrides)
+    setError('')
+  }
+
+  async function handleSaveAll() {
+    if (!isDirty) return
+    setSaving(true)
+    setError('')
+    const result = await setAllShopFeatureOverrides(shopId, draftOverrides)
+    setSaving(false)
+
     if (!result.ok) {
       const msg = result.error ?? 'บันทึกไม่สำเร็จ'
       setError(msg)
       setToast({ message: msg, type: 'error' })
       return
     }
-    setOverrides(result.overrides)
+
+    setSavedOverrides(result.overrides)
+    setDraftOverrides(result.overrides)
     setPlanState(prev => (prev ? { ...prev, featureOverrides: result.overrides } : prev))
     setError('')
-    setToast({ message: successMessage, type: 'success' })
+    setToast({ message: 'บันทึกการตั้งค่าฟีเจอร์ทั้งหมดแล้ว', type: 'success' })
     window.dispatchEvent(new Event(SHOP_UPDATED_EVENT))
   }
 
-  async function handleSetMode(id: FeatureOverrideId, mode: OverrideMode) {
-    const currentMode = overrideModeFor(id, overrides)
-    if (currentMode === mode) return
-
-    setSavingId(id)
-    setSaving(true)
-    setError('')
-
-    const enabled = mode === 'default' ? null : mode === 'on'
-    const result = await setShopFeatureOverride(shopId, id, enabled, overrides)
-
-    setSavingId(null)
-    setSaving(false)
-
-    applySaveResult(
-      result,
-      `${FEATURE_OVERRIDE_LABELS[id]} — ${
-        mode === 'default' ? 'รีเซ็ตตามแพ็กเกจแล้ว' : mode === 'on' ? 'บังคับเปิดแล้ว' : 'บังคับปิดแล้ว'
-      }`
-    )
-  }
-
-  async function handleEnableAll() {
-    setSaving(true)
-    setError('')
-    const next = buildAllEnabledOverrides()
-    const result = await setAllShopFeatureOverrides(shopId, next)
-    setSaving(false)
-    applySaveResult(result, 'เปิดฟีเจอร์ทั้งหมดแล้ว')
-  }
-
-  async function handleResetAll() {
-    setSaving(true)
-    setError('')
-    const result = await setAllShopFeatureOverrides(shopId, {})
-    setSaving(false)
-    applySaveResult(result, 'รีเซ็ตเป็นค่าแพ็กเกจแล้ว')
-  }
-
-  if (loading || !context || !planState) {
+  if (loading || !draftContext || !planState) {
     return <p className="sws-muted">Loading feature toggles…</p>
   }
 
   const planLabel = PLAN_LABELS[planState.plan] ?? tierLabelForPlan(plan)
-  const anyBusy = saving || savingId !== null
 
   return (
     <div className="shop-feature-toggles">
       <p className="sws-muted shop-feature-toggles-intro">
         Override individual features for <strong>{shopName}</strong> without changing plan tier (
-        {planLabel}). Changes save to Supabase and apply on the shop&apos;s next page load.
+        {planLabel}). ปรับหลายรายการได้ก่อน แล้วกด <strong>บันทึกทั้งหมด</strong> — มีผลหลังรีเฟรชแดชบอร์ดพนักงาน
       </p>
 
-      <div className="shop-feature-toggles-toolbar">
+      <div className={`shop-feature-toggles-toolbar${isDirty ? ' is-dirty' : ''}`}>
         <button
           type="button"
-          className="sws-btn sws-btn-primary"
-          disabled={anyBusy}
-          onClick={() => void handleEnableAll()}
+          className="sws-btn sws-btn-primary shop-feature-save-all"
+          disabled={saving || !isDirty}
+          onClick={() => void handleSaveAll()}
         >
-          เปิดทั้งหมด
+          {saving ? 'กำลังบันทึก…' : 'บันทึกทั้งหมด'}
         </button>
         <button
           type="button"
           className="sws-btn sws-btn-ghost"
-          disabled={anyBusy}
-          onClick={() => void handleResetAll()}
+          disabled={saving || !isDirty}
+          onClick={handleDiscard}
         >
-          รีเซ็ตเป็นค่าแพ็กเกจ
+          ยกเลิกการเปลี่ยนแปลง
         </button>
+        <button
+          type="button"
+          className="sws-btn sws-btn-ghost"
+          disabled={saving}
+          onClick={handleEnableAllDraft}
+        >
+          เปิดทั้งหมด (ร่าง)
+        </button>
+        <button
+          type="button"
+          className="sws-btn sws-btn-ghost"
+          disabled={saving}
+          onClick={handleResetAllDraft}
+        >
+          รีเซ็ตเป็นค่าแพ็กเกจ (ร่าง)
+        </button>
+        {isDirty && (
+          <span className="shop-feature-dirty-hint" role="status">
+            มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก
+          </span>
+        )}
       </div>
 
       {error && (
@@ -244,15 +266,27 @@ export default function ShopFeatureToggles({ shopId, shopName, plan }: ShopFeatu
               <FeatureToggleCard
                 key={id}
                 id={id}
-                context={context}
-                overrides={overrides}
-                busy={anyBusy && savingId === id}
+                context={draftContext}
+                overrides={draftOverrides}
                 onSetMode={handleSetMode}
               />
             ))}
           </div>
         </section>
       ))}
+
+      {isDirty && (
+        <div className="shop-feature-toggles-footer">
+          <button
+            type="button"
+            className="sws-btn sws-btn-primary shop-feature-save-all"
+            disabled={saving}
+            onClick={() => void handleSaveAll()}
+          >
+            {saving ? 'กำลังบันทึก…' : 'บันทึกทั้งหมด'}
+          </button>
+        </div>
+      )}
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
