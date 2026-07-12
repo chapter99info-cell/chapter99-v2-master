@@ -5,18 +5,28 @@ import {
 import { alertUnmappedShopDomain } from './lib/shopDomainAlert'
 
 export const config = {
-  // Skip API, static downloads (APK), and common static asset paths
-  matcher: [
-    '/((?!api/|downloads/|assets/|.*\\.(?:apk|txt|xml|ico|png|jpg|jpeg|webp|svg|css|js|map|webmanifest)$).*)',
-  ],
+  matcher: ['/((?!api/).*)'],
 }
 
 const SHOP_QUERY = 'shop'
+
+function isStaticPassThrough(path: string): boolean {
+  return (
+    path.startsWith('/downloads/') ||
+    path.startsWith('/assets/') ||
+    /\.(?:apk|txt|xml|ico|png|jpe?g|webp|svg|css|js|map|webmanifest)$/i.test(path)
+  )
+}
 
 export default function middleware(request: Request) {
   const url = new URL(request.url)
   const host = normalizeHostname(url.hostname)
   const path = url.pathname
+
+  // APK + other static files must not get ?shop= rewritten
+  if (isStaticPassThrough(path)) {
+    return fetch(request)
+  }
 
   if (path === '/shop-not-found' || path.startsWith('/shop-not-found/')) {
     return fetch(request)

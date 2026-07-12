@@ -1,33 +1,39 @@
 # Chapter99 Staff — install on Sunmi Mini (no computer)
 
-**Download link (after publish):**  
+Use the SAME APK for every shop. You pick the shop inside the app on first open.
+
+## Download links (open on the Mini)
+
+Preferred (GitHub — ready now):
+https://github.com/chapter99info-cell/chapter99-v2-master/releases/latest/download/chapter99-staff.apk
+
+Also (after site deploy):
 https://chapter99thaimass-v20.vercel.app/downloads/chapter99-staff.apk
 
-GitHub backup:  
+Release page (backup):
 https://github.com/chapter99info-cell/chapter99-v2-master/releases/latest
 
-## Install on the Sunmi Mini (browser only)
+## Install on the Sunmi Mini (browser only — no PC)
 
-1. On the Mini, open **Chrome** (or the built-in browser).
-2. Go to:  
-   `https://chapter99thaimass-v20.vercel.app/downloads/chapter99-staff.apk`
-3. The file downloads. Open **Downloads** (or the notification) and tap **chapter99-staff.apk**.
-4. If Android says you need permission:
-   - Tap **Settings** on the prompt  
-   - Turn **Allow from this source** ON for the browser  
+1. On the Mini, open Chrome (or the built-in browser).
+2. Type or paste one of the download links above and go.
+3. The APK downloads. Open Downloads (or tap the download notification) and tap chapter99-staff.apk.
+4. If Android asks for permission:
+   - Tap Settings on the prompt
+   - Turn Allow from this source ON for the browser
    - Go back and tap the APK again
-5. Tap **Install**, then **Open**.
-6. First launch: type your **shop code** once (example: `mira`) → **Save and open staff app**.
+5. Tap Install, then Open.
+6. First launch: type your shop code once (example: mira or princess) → Save and open staff app.
 7. Enter staff PIN and use POS as usual. Receipts print on the built-in printer after payment.
 
 ### Change shop later
-In the app, tap the **⋮** menu (top right) → **Change shop code**, enter the new slug, save.
+In the app, tap the ⋮ menu (top right) → Change shop code, enter the new code, save.
 
 ## Note about “Unauthorized app installation”
 
 Some Sunmi devices (channel / partner-locked) only allow apps from the Sunmi App Store. If install is blocked even after “unknown sources”:
 
-- On the partner/admin platform, enable **Allow third-party install** for that device, **or**
+- On the partner/admin platform, enable Allow third-party install for that device, or
 - Upload this APK to the Sunmi App Store for your account and install from there.
 
 Retail / unlocked Minis normally allow browser download + install as above.
