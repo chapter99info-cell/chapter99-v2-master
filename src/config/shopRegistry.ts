@@ -34,6 +34,17 @@ export interface ShopDomainResolveResult {
 
 /** Committed shops — preserve existing Mira config; add new shops via Onboarding Wizard only */
 export const SHOP_REGISTRY: Record<string, ShopRegistryEntry> = {
+  task4-verify-he37ik: {
+    name: "Task4 Verify he37ik",
+    shopId: "shop-task4-verify-he37ik-3kbc",
+    shopSlug: "task4-verify-he37ik",
+    domains: [
+      'task4-verify-he37ik.example.com.au',
+      'task4-verify-he37ik.example.com.au',
+    ],
+    tier: "professional",
+    active: true,
+  },
   mira: {
     name: 'Mira Thai Massage',
     shopId: 'shop-001',
