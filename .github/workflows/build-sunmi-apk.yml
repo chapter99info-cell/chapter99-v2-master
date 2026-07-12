@@ -58,14 +58,5 @@ jobs:
           files: public/downloads/chapter99-staff.apk
           make_latest: true
 
-      - name: Commit APK into repo for Vercel hosting
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/downloads/chapter99-staff.apk
-          if git diff --staged --quiet; then
-            echo "No APK change to commit"
-          else
-            git commit -m "chore: publish Chapter99 Staff APK for browser install [skip ci]"
-            git push
-          fi
+      # Vercel /downloads/chapter99-staff.apk redirects to this GitHub Release asset.
+      # No need to commit the binary into the repo.

@@ -2,6 +2,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    {
+      "source": "/downloads/chapter99-staff.apk",
+      "destination": "https://github.com/chapter99info-cell/chapter99-v2-master/releases/latest/download/chapter99-staff.apk",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/|downloads/).*)",
