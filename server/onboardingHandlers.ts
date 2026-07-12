@@ -52,6 +52,51 @@ export async function checkDomains(domains: string[]): Promise<{
   return { ok: conflicts.length === 0, conflicts }
 }
 
+function buildRegistryDomainLines(domains: string[]): string {
+  const seenDomains = new Set<string>()
+  return domains
+    .map(d =>
+      d
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/\/.*$/, '')
+    )
+    .filter(host => {
+      if (!host || seenDomains.has(host)) return false
+      seenDomains.add(host)
+      return true
+    })
+    .map(d => `      '${d}',`)
+    .join('\n')
+}
+
+function buildShopsConfigEntry(payload: OnboardingPayload, domains: string[]) {
+  return {
+    name: payload.name,
+    shopId: payload.shopId,
+    shopSlug: payload.shopSlug,
+    domains,
+  }
+}
+
+function parseNormalizedDomains(domains: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const d of domains) {
+    const host = d
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+    if (!host || seen.has(host)) continue
+    seen.add(host)
+    out.push(host)
+  }
+  return out
+}
+
+/** Commit shopRegistry.ts + shops.config.json in a single Git commit via Git Data API */
 export async function registerShopInRegistry(payload: OnboardingPayload): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.GITHUB_TOKEN?.trim()
   const repo = process.env.GITHUB_REPO?.trim() || 'chapter99info-cell/chapter99-v4-complete'
@@ -67,37 +112,54 @@ export async function registerShopInRegistry(payload: OnboardingPayload): Promis
     const [owner, repoName] = repo.split('/')
 
     const registryPath = 'src/config/shopRegistry.ts'
-    const { data: fileData } = await octokit.repos.getContent({
+    const configPath = 'shops.config.json'
+
+    const { data: refData } = await octokit.git.getRef({
+      owner,
+      repo: repoName,
+      ref: `heads/${branch}`,
+    })
+    const headSha = refData.object.sha
+
+    const { data: headCommit } = await octokit.git.getCommit({
+      owner,
+      repo: repoName,
+      commit_sha: headSha,
+    })
+
+    const { data: registryFile } = await octokit.repos.getContent({
       owner,
       repo: repoName,
       path: registryPath,
       ref: branch,
     })
-
-    if (!('content' in fileData) || !fileData.content) {
+    if (!('content' in registryFile) || !registryFile.content) {
       return { ok: false, error: 'Could not read shopRegistry.ts from GitHub' }
     }
 
-    const current = Buffer.from(fileData.content, 'base64').toString('utf8')
-    // Preserve apex + www literals (like Mira); strip protocol/path only — do NOT
-    // strip www or normalizeCustomDomain will collapse both to the same value.
-    const seenDomains = new Set<string>()
-    const domainLines = payload.domains
-      .map(d =>
-        d
-          .trim()
-          .toLowerCase()
-          .replace(/^https?:\/\//, '')
-          .replace(/\/.*$/, '')
-      )
-      .filter(host => {
-        if (!host || seenDomains.has(host)) return false
-        seenDomains.add(host)
-        return true
+    let configJson: { shops: Record<string, { name: string; shopId: string; shopSlug: string; domains: string[] }> } = {
+      shops: {},
+    }
+    try {
+      const { data: configFile } = await octokit.repos.getContent({
+        owner,
+        repo: repoName,
+        path: configPath,
+        ref: branch,
       })
-      .map(d => `      '${d}',`)
-      .join('\n')
+      if ('content' in configFile && configFile.content) {
+        configJson = JSON.parse(
+          Buffer.from(configFile.content, 'base64').toString('utf8')
+        ) as typeof configJson
+      }
+    } catch {
+      configJson = { shops: {} }
+    }
 
+    const domains = parseNormalizedDomains(payload.domains)
+    const domainLines = buildRegistryDomainLines(domains)
+
+    const current = Buffer.from(registryFile.content, 'base64').toString('utf8')
     const entry = `
   ${JSON.stringify(payload.shopSlug)}: {
     name: ${JSON.stringify(payload.name)},
@@ -112,17 +174,51 @@ ${domainLines}
 
     const insertAt = current.indexOf('export const SHOP_REGISTRY')
     const braceStart = current.indexOf('{', insertAt)
-    const updated =
+    const updatedRegistry =
       current.slice(0, braceStart + 1) + entry + current.slice(braceStart + 1)
 
-    await octokit.repos.createOrUpdateFileContents({
+    configJson.shops = {
+      [payload.shopSlug]: buildShopsConfigEntry(payload, domains),
+      ...configJson.shops,
+    }
+    const updatedConfig = `${JSON.stringify(configJson, null, 2)}\n`
+
+    const { data: registryBlob } = await octokit.git.createBlob({
       owner,
       repo: repoName,
-      path: registryPath,
+      content: Buffer.from(updatedRegistry).toString('base64'),
+      encoding: 'base64',
+    })
+    const { data: configBlob } = await octokit.git.createBlob({
+      owner,
+      repo: repoName,
+      content: Buffer.from(updatedConfig).toString('base64'),
+      encoding: 'base64',
+    })
+
+    const { data: newTree } = await octokit.git.createTree({
+      owner,
+      repo: repoName,
+      base_tree: headCommit.tree.sha,
+      tree: [
+        { path: registryPath, mode: '100644', type: 'blob', sha: registryBlob.sha },
+        { path: configPath, mode: '100644', type: 'blob', sha: configBlob.sha },
+      ],
+    })
+
+    const { data: newCommit } = await octokit.git.createCommit({
+      owner,
+      repo: repoName,
       message: `feat(onboarding): add shop ${payload.shopSlug}`,
-      content: Buffer.from(updated).toString('base64'),
-      sha: fileData.sha,
-      branch,
+      tree: newTree.sha,
+      parents: [headSha],
+    })
+
+    await octokit.git.updateRef({
+      owner,
+      repo: repoName,
+      ref: `heads/${branch}`,
+      sha: newCommit.sha,
     })
 
     return { ok: true }
@@ -167,6 +263,19 @@ export async function createShopInDb(payload: OnboardingPayload): Promise<{ ok: 
   return { ok: true }
 }
 
+/** One-shot cleanup for Task4 test shops — cascade deletes dependent rows via FKs */
+export async function deleteTestShops(): Promise<{
+  ok: boolean
+  deleted: string[]
+  error?: string
+}> {
+  const ids = ['shop-task4-e2e-heesw6-f3tb', 'shop-task4-e2e-hekoie-kw6e']
+  const sb = getServiceSupabase()
+  const { data, error } = await sb.from('shops').delete().in('id', ids).select('id')
+  if (error) return { ok: false, deleted: [], error: error.message }
+  return { ok: true, deleted: (data ?? []).map(r => String(r.id)) }
+}
+
 export async function triggerDeploy(): Promise<{ ok: boolean; error?: string }> {
   const hook = process.env.VERCEL_DEPLOY_HOOK_URL?.trim()
   if (!hook) {
@@ -188,5 +297,6 @@ export const onboardingHandlers = {
   checkDomains,
   registerShopInRegistry,
   createShopInDb,
+  deleteTestShops,
   triggerDeploy,
 }

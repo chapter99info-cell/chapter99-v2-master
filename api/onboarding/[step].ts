@@ -15,6 +15,7 @@ const STEPS: Record<string, (body: unknown) => Promise<unknown>> = {
     onboardingHandlers.createShopInDb(
       body as Parameters<typeof onboardingHandlers.createShopInDb>[0]
     ),
+  'delete-test-shops': async () => onboardingHandlers.deleteTestShops(),
   deploy: async () => onboardingHandlers.triggerDeploy(),
 }
 

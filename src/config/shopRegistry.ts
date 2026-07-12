@@ -34,28 +34,6 @@ export interface ShopDomainResolveResult {
 
 /** Committed shops — preserve existing Mira config; add new shops via Onboarding Wizard only */
 export const SHOP_REGISTRY: Record<string, ShopRegistryEntry> = {
-  "task4-e2e-hekoie": {
-    name: "Task4 E2E hekoie",
-    shopId: "shop-task4-e2e-hekoie-kw6e",
-    shopSlug: "task4-e2e-hekoie",
-    domains: [
-      'task4-e2e-hekoie.example.com.au',
-      'www.task4-e2e-hekoie.example.com.au',
-    ],
-    tier: "professional",
-    active: true,
-  },
-  'task4-e2e-heesw6': {
-    name: "Task4 E2E heesw6",
-    shopId: "shop-task4-e2e-heesw6-f3tb",
-    shopSlug: "task4-e2e-heesw6",
-    domains: [
-      'task4-e2e-heesw6.example.com.au',
-      'www.task4-e2e-heesw6.example.com.au',
-    ],
-    tier: "professional",
-    active: true,
-  },
   mira: {
     name: 'Mira Thai Massage',
     shopId: 'shop-001',
