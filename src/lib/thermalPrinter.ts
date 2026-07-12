@@ -1,6 +1,4 @@
-# Chapter99 V4 — Phase 5
-# Thermal Printer Service (80mm)
-# Priority: Sunmi JS bridge (Mini shell) → Web USB (Epson/Star/MUNBYN) → browser print
+// Thermal printer: Sunmi JS bridge → Web USB → browser print
 
 import type { Transaction, Shop } from '../types/pos'
 import { formatAUD } from './posCalc'
