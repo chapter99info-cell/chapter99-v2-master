@@ -35,7 +35,8 @@ export default function InstallPrompt() {
 
   const isDashboardRoute =
     location.pathname === '/' ||
-    location.pathname.startsWith('/staff')
+    location.pathname.startsWith('/staff') ||
+    location.pathname.startsWith('/chapter99/staff')
 
   useEffect(() => {
     if (!isMobileDevice() || isStandalone() || !isDashboardRoute) return
@@ -76,14 +77,14 @@ export default function InstallPrompt() {
   return (
     <div className="pwa-install-banner" role="dialog" aria-label="Install app">
       <div className="pwa-install-body">
-        <strong>Add Mira Thai Massage to your Home Screen</strong>
+        <strong>Add Chapter99 Staff to your Home Screen</strong>
         {iosHint ? (
           <p>
             Tap <span className="pwa-install-kbd">Share</span> then{' '}
             <span className="pwa-install-kbd">Add to Home Screen</span>.
           </p>
         ) : (
-          <p>Install for quick access like a native app.</p>
+          <p>Install for quick access like a native app — opens staff PIN login.</p>
         )}
       </div>
       <div className="pwa-install-actions">

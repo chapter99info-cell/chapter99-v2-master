@@ -39,15 +39,15 @@ export default defineConfig({
         'icons/apple-touch-icon.png',
       ],
       manifest: {
-        name: 'Trip2Talk',
-        short_name: 'Trip2Talk',
-        description: 'Trip2Talk — Australian student tours',
-        theme_color: '#050508',
-        background_color: '#050508',
+        name: 'Chapter99 Staff',
+        short_name: 'Chapter99',
+        description: 'Chapter99 staff POS, queue, and shop management',
+        theme_color: '#2D5016',
+        background_color: '#FFFFFF',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         scope: '/',
-        start_url: '/',
+        start_url: '/chapter99/staff',
         icons: [
           {
             src: 'icons/icon-192.png',
