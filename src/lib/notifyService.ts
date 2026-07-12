@@ -33,6 +33,9 @@ export async function sendSMS(
 }
 
 // Send Email with PDF via Resend
+/** Stay under Vercel serverless ~4.5MB body limit (base64 PDF + JSON overhead). */
+const MAX_EMAIL_JSON_CHARS = 3_200_000
+
 export async function sendReceiptEmail(
   tx: Transaction,
   shopName: string,
@@ -45,19 +48,32 @@ export async function sendReceiptEmail(
     return false
   }
 
-  try {
-    const res = await fetch('/api/email', {
+  const post = async (attachment?: string) => {
+    const payload = {
+      to,
+      subject: `Your receipt from ${shopName}`,
+      shopName,
+      transaction: tx,
+      pdfBase64: attachment,
+      emailKind: 'receipt' as const,
+    }
+    const body = JSON.stringify(payload)
+    if (attachment && body.length > MAX_EMAIL_JSON_CHARS) {
+      console.warn('[receipt-email] PDF too large for API body — sending HTML-only', {
+        transactionId: tx.id,
+        chars: body.length,
+      })
+      return post(undefined)
+    }
+    return fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to,
-        subject: `Your receipt from ${shopName}`,
-        shopName,
-        transaction: tx,
-        pdfBase64,
-        emailKind: 'receipt',
-      }),
+      body,
     })
+  }
+
+  try {
+    const res = await post(pdfBase64)
 
     const body = (await res.json().catch(() => ({}))) as {
       success?: boolean
@@ -68,6 +84,35 @@ export async function sendReceiptEmail(
     if (res.ok && body.success) {
       console.info('[receipt-email] sent', { to, transactionId: tx.id, resendId: body.id })
       return true
+    }
+
+    // 413 from platform — retry once without attachment
+    if (res.status === 413 && pdfBase64) {
+      console.warn('[receipt-email] 413 Payload Too Large — retrying without PDF', {
+        to,
+        transactionId: tx.id,
+      })
+      const retry = await post(undefined)
+      const retryBody = (await retry.json().catch(() => ({}))) as {
+        success?: boolean
+        id?: string
+        error?: string
+      }
+      if (retry.ok && retryBody.success) {
+        console.info('[receipt-email] sent HTML-only after 413', {
+          to,
+          transactionId: tx.id,
+          resendId: retryBody.id,
+        })
+        return true
+      }
+      console.error('[receipt-email] failed after 413 retry', {
+        to,
+        transactionId: tx.id,
+        status: retry.status,
+        error: retryBody.error ?? retry.statusText,
+      })
+      return false
     }
 
     console.error('[receipt-email] failed', {
@@ -99,19 +144,32 @@ export async function sendHealthFundEmail(
     return false
   }
 
-  try {
-    const res = await fetch('/api/email', {
+  const post = async (attachment?: string) => {
+    const payload = {
+      to,
+      subject: `Health Fund Receipt - ${shopName} ${tx.id}`,
+      shopName,
+      transaction: { ...tx, healthFundIssued: true },
+      pdfBase64: attachment,
+      emailKind: 'health_fund' as const,
+    }
+    const body = JSON.stringify(payload)
+    if (attachment && body.length > MAX_EMAIL_JSON_CHARS) {
+      console.warn('[health-fund-email] PDF too large — sending HTML-only', {
+        transactionId: tx.id,
+        chars: body.length,
+      })
+      return post(undefined)
+    }
+    return fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to,
-        subject: `Health Fund Receipt - ${shopName} ${tx.id}`,
-        shopName,
-        transaction: { ...tx, healthFundIssued: true },
-        pdfBase64,
-        emailKind: 'health_fund',
-      }),
+      body,
     })
+  }
+
+  try {
+    const res = await post(pdfBase64)
 
     const body = (await res.json().catch(() => ({}))) as {
       success?: boolean
@@ -122,6 +180,17 @@ export async function sendHealthFundEmail(
     if (res.ok && body.success) {
       console.info('[health-fund-email] sent', { to, transactionId: tx.id, resendId: body.id })
       return true
+    }
+
+    if (res.status === 413 && pdfBase64) {
+      console.warn('[health-fund-email] 413 — retrying without PDF', { transactionId: tx.id })
+      const retry = await post(undefined)
+      const retryBody = (await retry.json().catch(() => ({}))) as {
+        success?: boolean
+        id?: string
+        error?: string
+      }
+      if (retry.ok && retryBody.success) return true
     }
 
     console.error('[health-fund-email] failed', {

@@ -55,9 +55,10 @@ export async function buildReceiptPDF(
   // Logo
   const logoData = shop.logoUrl ? await loadShopLogoDataUrl(shop.logoUrl) : null
   const hasLogo = !!logoData
-  if (logoData) {
+      if (logoData) {
     try {
-      doc.addImage(logoData, 'PNG', margin, y, 28, 28)
+      const format = logoData.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
+      doc.addImage(logoData, format, margin, y, 28, 28)
     } catch {
       /* skip broken logo */
     }

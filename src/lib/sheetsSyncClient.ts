@@ -6,6 +6,7 @@ import type { BookingSheetRow } from './sheetConstants'
 async function postSheetsSync(body: Record<string, unknown>): Promise<{
   ok: boolean
   error?: string
+  skipped?: boolean
   title?: string
   sheetTitles?: string[]
 }> {
@@ -17,14 +18,25 @@ async function postSheetsSync(body: Record<string, unknown>): Promise<{
     })
     const data = (await res.json().catch(() => ({}))) as {
       error?: string
+      skipped?: boolean
+      success?: boolean
       title?: string
       sheetTitles?: string[]
     }
-    if (!res.ok) {
+    if (data.skipped) {
+      console.warn('[sheets-sync] skipped', data.error ?? 'not configured')
+      return { ok: false, skipped: true, error: data.error }
+    }
+    if (!res.ok || data.success === false) {
+      console.warn('[sheets-sync] failed', data.error ?? res.statusText)
       return { ok: false, error: data.error ?? res.statusText }
     }
     return { ok: true, title: data.title, sheetTitles: data.sheetTitles }
   } catch (err) {
+    console.warn(
+      '[sheets-sync] network error',
+      err instanceof Error ? err.message : 'Network error'
+    )
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Network error',

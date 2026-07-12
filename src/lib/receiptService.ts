@@ -1,4 +1,10 @@
 // Chapter99 V4 — Issue receipts: jsPDF, DB history, email
+//
+// Live `public.receipts` columns (euiwkvozrhnbxttfuchh) are narrower than
+// supabase/05-receipt-system.sql — map to what exists:
+//   id, shop_id, transaction_id, receipt_number, payment_method,
+//   created_at, customer_name, customer_email, total_amount
+// Do NOT query issued_at / client_* / email_sent / health_fund / transaction_data.
 
 import { supabase } from './supabase'
 import type { Transaction, Shop } from '../types/pos'
@@ -17,22 +23,25 @@ export interface IssueReceiptResult {
   error?: string
 }
 
-/** REC-YYYYMMDD-001 */
-export async function generateReceiptNumber(shopId: string): Promise<string> {
-  const now = new Date()
+function todayReceiptPrefix(now = new Date()): string {
   const y = now.getFullYear()
   const m = String(now.getMonth() + 1).padStart(2, '0')
   const d = String(now.getDate()).padStart(2, '0')
-  const prefix = `REC-${y}${m}${d}`
-  const dayStart = `${y}-${m}-${d}T00:00:00.000Z`
+  return `REC-${y}${m}${d}`
+}
+
+/** REC-YYYYMMDD-001 — sequence from receipt_number prefix (no issued_at column). */
+export async function generateReceiptNumber(shopId: string): Promise<string> {
+  const prefix = todayReceiptPrefix()
 
   const { count, error } = await supabase
     .from('receipts')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('shop_id', shopId)
-    .gte('issued_at', dayStart)
+    .like('receipt_number', `${prefix}-%`)
 
   if (error) {
+    console.warn('[receipts] generateReceiptNumber count failed', error.message)
     const fallback = String(Math.floor(Math.random() * 900) + 100)
     return `${prefix}-${fallback}`
   }
@@ -45,14 +54,19 @@ export async function getReceiptNumberForTransaction(
   shopId: string,
   transactionId: string
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('receipts')
     .select('receipt_number')
     .eq('shop_id', shopId)
     .eq('transaction_id', transactionId)
-    .order('issued_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  if (error) {
+    console.warn('[receipts] getReceiptNumberForTransaction failed', error.message)
+    return null
+  }
 
   return data?.receipt_number ?? null
 }
@@ -72,46 +86,46 @@ export async function saveReceiptRecord(
   receiptNumber: string,
   opts: { emailSent: boolean; healthFund?: boolean }
 ): Promise<void> {
-  const payload: Record<string, unknown> = {
+  void opts // email_sent / health_fund not on live schema yet
+
+  const payload = {
     shop_id: shop.id,
     transaction_id: tx.id,
     receipt_number: receiptNumber,
-    client_name: tx.clientName ?? null,
-    client_email: tx.clientEmail ?? null,
+    customer_name: tx.clientName ?? null,
+    customer_email: tx.clientEmail ?? null,
     payment_method: tx.paymentMethod,
-    total: tx.payment.total,
-    email_sent: opts.emailSent,
-    health_fund: opts.healthFund ?? tx.paymentMethod === 'hicaps',
-    issued_at: tx.paidAt ?? tx.createdAt,
-    transaction_data: {
-      items: tx.items,
-      payment: tx.payment,
-      paymentMethod: tx.paymentMethod,
-      transactionId: tx.id,
-      clientName: tx.clientName,
-      clientEmail: tx.clientEmail,
-    },
+    total_amount: tx.payment.total,
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('receipts')
     .select('id')
     .eq('shop_id', shop.id)
     .eq('transaction_id', tx.id)
     .maybeSingle()
 
+  if (lookupError) {
+    console.warn('[receipts] lookup failed', lookupError.message)
+  }
+
   if (existing?.id) {
-    await supabase
+    const { error } = await supabase
       .from('receipts')
       .update({
-        email_sent: opts.emailSent,
-        transaction_data: payload.transaction_data,
+        customer_name: payload.customer_name,
+        customer_email: payload.customer_email,
+        payment_method: payload.payment_method,
+        total_amount: payload.total_amount,
+        receipt_number: receiptNumber,
       })
       .eq('id', existing.id)
+    if (error) console.warn('[receipts] update failed', error.message)
     return
   }
 
-  await supabase.from('receipts').insert(payload)
+  const { error } = await supabase.from('receipts').insert(payload)
+  if (error) console.warn('[receipts] insert failed', error.message)
 }
 
 export async function downloadAndRecordReceipt(

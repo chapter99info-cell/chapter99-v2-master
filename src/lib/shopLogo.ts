@@ -57,8 +57,12 @@ function blobToPngDataUrl(blob: Blob): Promise<string | null> {
 
     img.onload = () => {
       try {
-        const w = img.naturalWidth || 200
-        const h = img.naturalHeight || 200
+        const maxEdge = 160
+        const w0 = img.naturalWidth || 200
+        const h0 = img.naturalHeight || 200
+        const scale = Math.min(1, maxEdge / Math.max(w0, h0))
+        const w = Math.max(1, Math.round(w0 * scale))
+        const h = Math.max(1, Math.round(h0 * scale))
         const canvas = document.createElement('canvas')
         canvas.width = w
         canvas.height = h
@@ -68,7 +72,8 @@ function blobToPngDataUrl(blob: Blob): Promise<string | null> {
           return
         }
         ctx.drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/png'))
+        // JPEG keeps email/PDF payloads small vs full-resolution PNG logos
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
       } catch {
         resolve(null)
       } finally {

@@ -55,6 +55,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing spreadsheetUrl' })
   }
 
+  // Optional integration — do not 500 the POS checkout path when unset
+  if (
+    !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ||
+    !process.env.GOOGLE_PRIVATE_KEY?.trim()
+  ) {
+    console.warn('[sheets-sync] skipped: GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_PRIVATE_KEY not set')
+    return res.status(200).json({
+      success: false,
+      skipped: true,
+      error: 'Google Sheets sync is not configured on this deployment',
+    })
+  }
+
   try {
     switch (action) {
       case 'test': {
@@ -100,6 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Sheets sync failed'
     console.error('[sheets-sync]', action, message)
-    return res.status(500).json({ error: message })
+    // Soft-fail for POS: credentials/share errors shouldn't block checkout UX
+    return res.status(200).json({ success: false, skipped: true, error: message })
   }
 }
