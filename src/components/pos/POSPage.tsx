@@ -552,6 +552,11 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
       setCurrentTx(tx)
       setStep('success')
 
+      // Auto-print receipt (Sunmi bridge → USB → browser fallback)
+      void printReceipt(tx, shop).catch(err => {
+        console.warn('[pos] auto receipt print failed', err)
+      })
+
       if (shop.googleSheetSyncEnabled && shop.googleSheetUrl) {
         void syncTransactionToSheet(shop.googleSheetUrl, shop.id, tx)
       }

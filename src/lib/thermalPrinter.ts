@@ -1,13 +1,25 @@
-// Chapter99 V4 — Phase 5
-// Thermal Printer Service (80mm)
-// Supports: Epson TM-T20III, Star TSP143, MUNBYN ITPP941
-// Uses: Web USB API or Star WebPRNT
+# Chapter99 V4 — Phase 5
+# Thermal Printer Service (80mm)
+# Priority: Sunmi JS bridge (Mini shell) → Web USB (Epson/Star/MUNBYN) → browser print
 
 import type { Transaction, Shop } from '../types/pos'
 import { formatAUD } from './posCalc'
 
 // 80mm thermal = 48 characters per line
 const LINE_WIDTH = 48
+
+/** Injected by android-sunmi-shell WebView (au.com.chapter99.sunmishell). */
+type Chapter99SunmiBridge = {
+  isAvailable: () => boolean
+  printText: (text: string) => boolean
+  printRawBase64?: (base64: string) => boolean
+}
+
+declare global {
+  interface Window {
+    Chapter99Sunmi?: Chapter99SunmiBridge
+  }
+}
 
 function center(text: string): string {
   const pad = Math.max(0, Math.floor((LINE_WIDTH - text.length) / 2))
@@ -81,6 +93,28 @@ export function buildReceiptText(tx: Transaction, shop: Shop): string {
   lines.push('')   // Feed before cut
 
   return lines.filter(l => l !== null).join('\n')
+}
+
+export function hasSunmiBridge(): boolean {
+  try {
+    const bridge = window.Chapter99Sunmi
+    return Boolean(bridge && typeof bridge.isAvailable === 'function' && bridge.isAvailable())
+  } catch {
+    return false
+  }
+}
+
+/** Print via Sunmi Mini shell JS bridge (AIDL print service). */
+export async function printViaSunmi(text: string): Promise<boolean> {
+  try {
+    if (!hasSunmiBridge()) return false
+    const ok = window.Chapter99Sunmi!.printText(text)
+    if (ok) console.info('[Printer] printed via Chapter99Sunmi bridge')
+    return ok === true
+  } catch (err) {
+    console.error('[Printer] Sunmi bridge error:', err)
+    return false
+  }
 }
 
 // Print via Web USB (direct to Epson/Star USB printer)
@@ -159,12 +193,18 @@ export function printViaBrowser(tx: Transaction, shop: Shop): void {
   win.document.close()
 }
 
-// Main print function — tries USB first, falls back to browser
+/**
+ * Main print — Sunmi bridge first, then Web USB, then browser dialog.
+ * Reuses buildReceiptText layout for all paths.
+ */
 export async function printReceipt(
   tx: Transaction,
   shop: Shop
 ): Promise<void> {
   const text = buildReceiptText(tx, shop)
+
+  if (await printViaSunmi(text)) return
+
   const usbOk = await printViaUSB(text)
   if (!usbOk) {
     printViaBrowser(tx, shop)
