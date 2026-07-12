@@ -79,9 +79,22 @@ export async function registerShopInRegistry(payload: OnboardingPayload): Promis
     }
 
     const current = Buffer.from(fileData.content, 'base64').toString('utf8')
+    // Preserve apex + www literals (like Mira); strip protocol/path only — do NOT
+    // strip www or normalizeCustomDomain will collapse both to the same value.
+    const seenDomains = new Set<string>()
     const domainLines = payload.domains
-      .map(d => normalizeCustomDomain(d))
-      .filter(Boolean)
+      .map(d =>
+        d
+          .trim()
+          .toLowerCase()
+          .replace(/^https?:\/\//, '')
+          .replace(/\/.*$/, '')
+      )
+      .filter(host => {
+        if (!host || seenDomains.has(host)) return false
+        seenDomains.add(host)
+        return true
+      })
       .map(d => `      '${d}',`)
       .join('\n')
 
@@ -127,6 +140,9 @@ export async function createShopInDb(payload: OnboardingPayload): Promise<{ ok: 
   } as const
 
   const primaryDomain = payload.domains.map(normalizeCustomDomain).find(Boolean) ?? null
+  // Live schema uses theme (e.g. 'theme-elegant') + theme_color (hex), not theme_id.
+  const theme = `theme-${payload.themeId}`
+  const themeColor = payload.primaryColor?.trim() || null
 
   const { error } = await sb.from('shops').insert({
     id: payload.shopId,
@@ -139,8 +155,8 @@ export async function createShopInDb(payload: OnboardingPayload): Promise<{ ok: 
     notification_email: payload.ownerEmail || null,
     plan: planMap[payload.plan],
     domain: primaryDomain,
-    theme_id: payload.themeId,
-    theme_primary_color: payload.primaryColor,
+    theme,
+    theme_color: themeColor,
     sms_enabled: false,
     sms_package: 'none',
     active: true,

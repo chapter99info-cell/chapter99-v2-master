@@ -104,11 +104,14 @@ export default function OnboardingWizard({ onClose, onComplete }: OnboardingWiza
     const raw = domainInput.trim()
     if (!raw) return
     const host = normalizeCustomDomain(raw)
-    if (!host || domains.includes(host)) return
-    const next = [...domains, host]
-    if (!host.startsWith('www.') && !next.includes(`www.${host}`)) {
-      next.push(`www.${host}`)
+    if (!host) return
+    // Keep apex + www as distinct literals (matches Mira registry). Dedupe exact strings.
+    const candidates = [host, `www.${host}`]
+    const next = [...domains]
+    for (const d of candidates) {
+      if (!next.includes(d)) next.push(d)
     }
+    if (next.length === domains.length) return
     setDomains(next)
     setDomainInput('')
     void checkDomainsLive(next)
