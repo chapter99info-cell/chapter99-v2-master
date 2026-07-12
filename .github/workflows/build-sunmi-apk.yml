@@ -44,7 +44,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: sunmi-staff-v1.0.1
+          tag_name: sunmi-staff-v1.0.2
           name: Chapter99 Staff — Sunmi Mini installer
           body: |
             Install on each Sunmi Mini from the device browser (no computer needed).
@@ -53,6 +53,8 @@ jobs:
             https://chapter99thaimass-v20.vercel.app/downloads/chapter99-staff.apk
 
             Or use the `.apk` attached to this release.
+
+            First open: type shop code once (e.g. mira). Change later via ⋮ → Change shop code.
           files: public/downloads/chapter99-staff.apk
           make_latest: true
 

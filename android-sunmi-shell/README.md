@@ -28,25 +28,24 @@ Windows:
 gradlew.bat :app:assembleDebug
 ```
 
-## Install / sideload on Sunmi Mini
+## Install on Sunmi Mini (recommended — no computer)
 
-1. On the Mini: enable **Developer options** → **USB debugging** (and allow install from USB/unknown sources if prompted).
-2. Connect USB (or copy APK to device storage).
-3. Sideload:
+Use the published APK from the device browser. Full steps:
+`public/downloads/INSTALL-SUNMI.txt`
+
+**Download:** https://chapter99thaimass-v20.vercel.app/downloads/chapter99-staff.apk
+
+1. Open that link in the Mini’s browser → download the APK.
+2. Open Downloads → tap the file → allow install from unknown sources if asked → Install → Open.
+3. First launch: type the **shop code** once (`mira`, `princess`, …). The app saves `?shop=<slug>` itself.
+
+Rebuild/publish APK: GitHub Actions → **Build Sunmi Staff APK** (workflow_dispatch).
+
+### Advanced: adb / USB (developers only)
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n au.com.chapter99.sunmishell/.MainActivity
 ```
-
-Shop-specific staff URL:
-
-```bash
-adb shell am start -n au.com.chapter99.sunmishell/.MainActivity \
-  --es staff_url "https://chapter99thaimass-v20.vercel.app/chapter99/staff?shop=mira"
-```
-
-4. Optionally pin the app as the home/kiosk app in Sunmi settings.
 
 ## End-to-end test
 
