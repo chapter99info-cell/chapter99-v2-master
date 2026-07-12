@@ -5,6 +5,8 @@ import { resolveShopFromHostname as resolveFromRegistry } from '../src/config/sh
 export {
   buildShopDomainMap,
   isPlatformHost,
+  isStaffPlatformHost,
+  STAFF_PLATFORM_HOSTS,
   normalizeCustomDomain,
   normalizeHostname,
   parseShopDomainMapJson,

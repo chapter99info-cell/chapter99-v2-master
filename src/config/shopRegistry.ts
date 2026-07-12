@@ -63,10 +63,22 @@ export function normalizeCustomDomain(input: string): string {
     .replace(/\/.*$/, '')
 }
 
+/**
+ * Shared staff / Super Admin hostnames (not a public shop site).
+ * www. is stripped by normalizeHostname before compare.
+ */
+export const STAFF_PLATFORM_HOSTS = ['chapter99solutions.com.au'] as const
+
+export function isStaffPlatformHost(host: string): boolean {
+  const h = normalizeHostname(host)
+  return (STAFF_PLATFORM_HOSTS as readonly string[]).includes(h)
+}
+
 export function isPlatformHost(host: string): boolean {
   const h = normalizeHostname(host)
   if (!h || h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local')) return true
   if (h.endsWith('.vercel.app')) return true
+  if (isStaffPlatformHost(h)) return true
   return false
 }
 

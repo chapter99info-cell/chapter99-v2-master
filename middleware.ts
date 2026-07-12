@@ -1,4 +1,5 @@
 import {
+  isStaffPlatformHost,
   normalizeHostname,
   resolveShopFromHostname,
 } from './src/config/shopRegistry'
@@ -40,6 +41,14 @@ export default function middleware(request: Request) {
   }
 
   if (path === '/shop-not-found' || path.startsWith('/shop-not-found/')) {
+    return fetch(request)
+  }
+
+  // Shared staff domain: no shop mapping — skip ?shop= rewrite; root → PIN login
+  if (isStaffPlatformHost(host)) {
+    if (path === '/' || path === '') {
+      return Response.redirect(new URL('/chapter99/staff', url.origin).toString(), 302)
+    }
     return fetch(request)
   }
 

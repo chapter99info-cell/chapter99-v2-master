@@ -1,6 +1,7 @@
 import {
   buildShopDomainMap,
   isPlatformHost,
+  isStaffPlatformHost,
   normalizeCustomDomain,
   normalizeHostname,
   parseShopDomainMapJson,
@@ -10,6 +11,7 @@ import {
 export {
   buildShopDomainMap,
   isPlatformHost,
+  isStaffPlatformHost,
   normalizeCustomDomain,
   normalizeHostname,
   parseShopDomainMapJson,
