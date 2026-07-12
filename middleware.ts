@@ -23,7 +23,18 @@ export default function middleware(request: Request) {
   const host = normalizeHostname(url.hostname)
   const path = url.pathname
 
-  // APK + other static files must not get ?shop= rewritten
+  // Staff APK: send browsers straight to the GitHub Release asset (no shop rewrite)
+  if (
+    path === '/downloads/chapter99-staff.apk' ||
+    path.endsWith('/chapter99-staff.apk')
+  ) {
+    return Response.redirect(
+      'https://github.com/chapter99info-cell/chapter99-v2-master/releases/latest/download/chapter99-staff.apk',
+      302,
+    )
+  }
+
+  // Other static files must not get ?shop= rewritten
   if (isStaticPassThrough(path)) {
     return fetch(request)
   }
