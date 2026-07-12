@@ -263,19 +263,6 @@ export async function createShopInDb(payload: OnboardingPayload): Promise<{ ok: 
   return { ok: true }
 }
 
-/** One-shot cleanup for Task4 test shops — cascade deletes dependent rows via FKs */
-export async function deleteTestShops(): Promise<{
-  ok: boolean
-  deleted: string[]
-  error?: string
-}> {
-  const ids = ['shop-task4-e2e-heesw6-f3tb', 'shop-task4-e2e-hekoie-kw6e']
-  const sb = getServiceSupabase()
-  const { data, error } = await sb.from('shops').delete().in('id', ids).select('id')
-  if (error) return { ok: false, deleted: [], error: error.message }
-  return { ok: true, deleted: (data ?? []).map(r => String(r.id)) }
-}
-
 export async function triggerDeploy(): Promise<{ ok: boolean; error?: string }> {
   const hook = process.env.VERCEL_DEPLOY_HOOK_URL?.trim()
   if (!hook) {
@@ -297,6 +284,5 @@ export const onboardingHandlers = {
   checkDomains,
   registerShopInRegistry,
   createShopInDb,
-  deleteTestShops,
   triggerDeploy,
 }
