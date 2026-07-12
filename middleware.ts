@@ -5,7 +5,10 @@ import {
 import { alertUnmappedShopDomain } from './lib/shopDomainAlert'
 
 export const config = {
-  matcher: ['/((?!api/).*)'],
+  // Skip API, static downloads (APK), and common static asset paths
+  matcher: [
+    '/((?!api/|downloads/|assets/|.*\\.(?:apk|txt|xml|ico|png|jpg|jpeg|webp|svg|css|js|map|webmanifest)$).*)',
+  ],
 }
 
 const SHOP_QUERY = 'shop'
