@@ -29,8 +29,25 @@ interface StaffRow {
   pin_hash?: string
 }
 
+/**
+ * Soft-delete sentinel for staff.pin_hash.
+ * Must already look like bcrypt ($2…). Live staff_pin_hash triggers re-crypt any
+ * plain marker (__deleted__, DELETED, etc.), so a plain string never sticks and
+ * the list filter never hides the row.
+ * Value = crypt('__deleted__', gen_salt('bf')) — not a valid 4-digit login PIN.
+ */
+const DELETED_PIN_MARKER =
+  '$2a$06$O48RG1gWMyRk6Vgs0fQsXuwcmpKNuVSVcW9xni7W2ABVF1he.D9ZG'
+
 function isDeletedStaff(row: StaffRow): boolean {
-  return row.pin_hash === DELETED_PIN_MARKER || row.pin_hash === 'DELETED'
+  const hash = row.pin_hash
+  if (!hash) return false
+  // Current sentinel + legacy plain markers (only if a DB never re-hashed them)
+  return (
+    hash === DELETED_PIN_MARKER ||
+    hash === '__deleted__' ||
+    hash === 'DELETED'
+  )
 }
 
 interface StaffForm {
@@ -48,9 +65,6 @@ interface StaffForm {
   employmentType: string
   startDate: string
 }
-
-/** Written to pin_hash on soft-delete; excluded from staff list and login. */
-const DELETED_PIN_MARKER = '__deleted__'
 
 const EMPTY_FORM: StaffForm = {
   nameEn: '',
@@ -277,39 +291,38 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
         .update({ active: false, pin_hash: DELETED_PIN_MARKER })
         .eq('id', id)
         .eq('shop_id', shopId)
-        .select('id')
+        .select('id, pin_hash')
 
-      if (!markError && marked?.length) {
-        setConfirmDelete(null)
-        setToast({ message: 'Staff member removed', type: 'success' })
-        await loadStaff()
+      if (markError) {
+        const msg =
+          markError.message.includes('policy') || markError.code === '42501'
+            ? `${markError.message} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
+            : markError.message
+        setLoadError(msg)
+        setToast({ message: msg, type: 'error' })
         return
       }
 
-      const { data: deactivated, error: deactivateError } = await supabase
-        .from('staff')
-        .update({ active: false })
-        .eq('id', id)
-        .eq('shop_id', shopId)
-        .select('id')
-
-      if (!deactivateError && deactivated?.length) {
-        setConfirmDelete(null)
-        setToast({ message: 'Staff member removed', type: 'success' })
-        await loadStaff()
+      if (!marked?.length) {
+        const msg =
+          'Delete did not apply — no matching staff row (check shop / permissions).'
+        setLoadError(msg)
+        setToast({ message: msg, type: 'error' })
         return
       }
 
-      const baseMsg =
-        deactivateError?.message ?? markError?.message ?? 'Could not delete staff member'
-      const msg =
-        baseMsg.includes('policy') ||
-        deactivateError?.code === '42501' ||
-        markError?.code === '42501'
-          ? `${baseMsg} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
-          : baseMsg
-      setLoadError(msg)
-      setToast({ message: msg, type: 'error' })
+      const savedHash = marked[0]?.pin_hash
+      if (savedHash !== DELETED_PIN_MARKER) {
+        const msg =
+          'Delete failed: PIN marker was altered by the database. Staff was not removed from the list.'
+        setLoadError(msg)
+        setToast({ message: msg, type: 'error' })
+        return
+      }
+
+      setConfirmDelete(null)
+      setToast({ message: 'Staff member removed', type: 'success' })
+      await loadStaff()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Delete failed'
       setLoadError(msg)
