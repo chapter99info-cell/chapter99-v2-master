@@ -1,0 +1,67 @@
+name: Build Sunmi Staff APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Generate Gradle Wrapper and build APK
+        working-directory: android-sunmi-shell
+        run: |
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/gradle.zip
+          sudo unzip -q /tmp/gradle.zip -d /opt
+          export PATH="/opt/gradle-8.7/bin:$PATH"
+          gradle wrapper --gradle-version 8.7
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Stage APK
+        run: |
+          mkdir -p public/downloads
+          cp android-sunmi-shell/app/build/outputs/apk/debug/app-debug.apk public/downloads/chapter99-staff.apk
+          ls -lh public/downloads/chapter99-staff.apk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chapter99-staff-apk
+          path: public/downloads/chapter99-staff.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sunmi-staff-v1.0.0
+          name: Chapter99 Staff — Sunmi Mini installer
+          body: |
+            Install on each Sunmi Mini from the device browser (no computer needed).
+
+            **Direct download:** use the `.apk` attached below, or after Vercel deploy:
+            https://chapter99thaimass-v20.vercel.app/downloads/chapter99-staff.apk
+          files: public/downloads/chapter99-staff.apk
+          make_latest: true
+
+      - name: Commit APK into repo for Vercel hosting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/downloads/chapter99-staff.apk
+          if git diff --staged --quiet; then
+            echo "No APK change to commit"
+          else
+            git commit -m "chore: publish Chapter99 Staff APK for browser install [skip ci]"
+            git push
+          fi

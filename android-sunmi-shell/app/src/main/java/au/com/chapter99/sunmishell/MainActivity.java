@@ -5,33 +5,43 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 import woyou.aidlservice.jiuiv5.IWoyouService;
 
 /**
- * Kiosk shell: loads Chapter99 staff PWA and bridges print calls to Sunmi's built-in printer.
- *
- * Override load URL with:
- *   adb shell am start -n au.com.chapter99.sunmishell/.MainActivity \
- *     --es staff_url "https://chapter99thaimass-v20.vercel.app/chapter99/staff?shop=mira"
+ * Kiosk shell: first-run shop code → staff PWA + Sunmi print bridge.
  */
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Chapter99Shell";
-    public static final String EXTRA_STAFF_URL = "staff_url";
-    public static final String DEFAULT_STAFF_URL =
+    private static final String PREFS = "shell";
+    private static final String KEY_SHOP_SLUG = "shop_slug";
+    private static final String KEY_STAFF_URL = "staff_url";
+    private static final String BASE_STAFF_URL =
             "https://chapter99thaimass-v20.vercel.app/chapter99/staff";
+    private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
 
     private WebView webView;
     private final SunmiPrinterBridge bridge = new SunmiPrinterBridge();
@@ -50,12 +60,75 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String slug = prefs.getString(KEY_SHOP_SLUG, null);
+        String staffUrl = prefs.getString(KEY_STAFF_URL, null);
+
+        // Intent override still works for advanced use; otherwise prefer saved shop.
+        String intentUrl = readIntentStaffUrl();
+        if (intentUrl != null) {
+            showWebApp(intentUrl);
+            return;
+        }
+
+        if (slug == null || slug.isEmpty() || staffUrl == null || staffUrl.isEmpty()) {
+            showSetupScreen();
+        } else {
+            showWebApp(staffUrl);
+        }
+    }
+
+    private String readIntentStaffUrl() {
+        Intent intent = getIntent();
+        if (intent == null) return null;
+        String fromExtra = intent.getStringExtra("staff_url");
+        if (fromExtra != null && fromExtra.startsWith("https://")) return fromExtra;
+        if (intent.getData() != null) {
+            String data = intent.getData().toString();
+            if (data.startsWith("https://")) return data;
+        }
+        return null;
+    }
+
+    private void showSetupScreen() {
+        setContentView(R.layout.activity_setup);
+        EditText input = findViewById(R.id.shopSlugInput);
+        TextView error = findViewById(R.id.setupError);
+        Button save = findViewById(R.id.saveShopBtn);
+
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String existing = prefs.getString(KEY_SHOP_SLUG, "");
+        if (existing != null && !existing.isEmpty()) {
+            input.setText(existing);
+        }
+
+        save.setOnClickListener(v -> {
+            String raw = input.getText() != null ? input.getText().toString().trim() : "";
+            String slug = raw.toLowerCase(Locale.US)
+                    .replaceAll("\\s+", "-")
+                    .replaceAll("[^a-z0-9-]", "");
+            if (!SLUG_PATTERN.matcher(slug).matches()) {
+                error.setVisibility(View.VISIBLE);
+                error.setText("Enter a simple shop code like mira or princess (letters, numbers, hyphens).");
+                return;
+            }
+            String url = BASE_STAFF_URL + "?shop=" + slug;
+            prefs.edit()
+                    .putString(KEY_SHOP_SLUG, slug)
+                    .putString(KEY_STAFF_URL, url)
+                    .apply();
+            Toast.makeText(this, "Saved shop: " + slug, Toast.LENGTH_SHORT).show();
+            showWebApp(url);
+        });
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void showWebApp(String url) {
         webView = new WebView(this);
         webView.setBackgroundColor(Color.WHITE);
         setContentView(webView);
@@ -81,23 +154,8 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(bridge, "Chapter99Sunmi");
         bindSunmiPrinter();
 
-        String url = resolveStaffUrl();
         Log.i(TAG, "Loading " + url);
         webView.loadUrl(url);
-    }
-
-    private String resolveStaffUrl() {
-        Intent intent = getIntent();
-        if (intent != null) {
-            String fromExtra = intent.getStringExtra(EXTRA_STAFF_URL);
-            if (fromExtra != null && fromExtra.startsWith("https://")) return fromExtra;
-            if (intent.getData() != null) {
-                String data = intent.getData().toString();
-                if (data.startsWith("https://")) return data;
-            }
-        }
-        return getSharedPreferences("shell", MODE_PRIVATE)
-                .getString("staff_url", DEFAULT_STAFF_URL);
     }
 
     private void bindSunmiPrinter() {
@@ -111,6 +169,29 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Failed to bind Sunmi print service (OK on non-Sunmi devices)", e);
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(0, 1, 0, "Change shop code");
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == 1) {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .remove(KEY_SHOP_SLUG)
+                    .remove(KEY_STAFF_URL)
+                    .apply();
+            if (webView != null) {
+                webView.destroy();
+                webView = null;
+            }
+            showSetupScreen();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -128,11 +209,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
-            // Kiosk: stay in app
             moveTaskToBack(true);
         }
     }
