@@ -99,7 +99,7 @@ export async function registerShopInRegistry(payload: OnboardingPayload): Promis
       .join('\n')
 
     const entry = `
-  ${payload.shopSlug}: {
+  ${JSON.stringify(payload.shopSlug)}: {
     name: ${JSON.stringify(payload.name)},
     shopId: ${JSON.stringify(payload.shopId)},
     shopSlug: ${JSON.stringify(payload.shopSlug)},
