@@ -5,8 +5,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import {
   DELETED_PIN_MARKER,
+  canDeleteStaffMember,
   evaluateSoftDeleteResult,
   isDeletedStaff,
+  isPrivilegedStaffRole,
 } from '../../lib/staffSoftDelete'
 import Toast, { type ToastType } from '../ui/Toast'
 import './StaffManager.css'
@@ -270,6 +272,64 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
     setLoadError('')
 
     try {
+      const target =
+        staffList.find(s => s.id === id) ??
+        (await (async () => {
+          const { data } = await supabase
+            .from('staff')
+            .select('id, role, active, pin_hash')
+            .eq('id', id)
+            .eq('shop_id', shopId)
+            .maybeSingle()
+          return data as
+            | { id: string; role: string; active: boolean; pin_hash?: string }
+            | null
+        })())
+
+      if (!target) {
+        const msg = 'Staff member not found.'
+        setLoadError(msg)
+        setToast({ message: msg, type: 'error' })
+        return
+      }
+
+      if (isPrivilegedStaffRole(target.role)) {
+        const { data: shopRows, error: adminError } = await supabase
+          .from('staff')
+          .select('id, role, active, pin_hash')
+          .eq('shop_id', shopId)
+
+        if (adminError) {
+          const msg = adminError.message
+          setLoadError(msg)
+          setToast({ message: msg, type: 'error' })
+          return
+        }
+
+        const admins = ((shopRows ?? []) as Array<{
+          id: string
+          role: string
+          active: boolean
+          pin_hash?: string
+        }>).filter(row => isPrivilegedStaffRole(row.role))
+
+        const guard = canDeleteStaffMember({
+          target: {
+            id: target.id,
+            role: target.role,
+            active: target.active,
+            pin_hash: target.pin_hash,
+          },
+          shopStaff: admins,
+        })
+
+        if (guard.allowed === false) {
+          setLoadError(guard.message)
+          setToast({ message: guard.message, type: 'error' })
+          return
+        }
+      }
+
       const { data: marked, error: markError } = await supabase
         .from('staff')
         .update({ active: false, pin_hash: DELETED_PIN_MARKER })

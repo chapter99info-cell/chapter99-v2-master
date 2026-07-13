@@ -10,9 +10,26 @@
 export const DELETED_PIN_MARKER =
   '$2a$06$O48RG1gWMyRk6Vgs0fQsXuwcmpKNuVSVcW9xni7W2ABVF1he.D9ZG'
 
+export const PRIVILEGED_STAFF_ROLES = ['owner', 'super_admin'] as const
+
 export type SoftDeleteRow = {
   id?: string
   pin_hash?: string | null
+}
+
+export type PrivilegedStaffRow = SoftDeleteRow & {
+  id: string
+  role: string
+  active?: boolean | null
+}
+
+export function normalizeStaffRole(role: string | null | undefined): string {
+  return (role ?? '').trim().toLowerCase()
+}
+
+export function isPrivilegedStaffRole(role: string | null | undefined): boolean {
+  const r = normalizeStaffRole(role)
+  return r === 'owner' || r === 'super_admin'
 }
 
 export function isDeletedPinHash(hash: string | null | undefined): boolean {
@@ -69,4 +86,40 @@ export function evaluateSoftDeleteResult(args: {
   }
 
   return { ok: true }
+}
+
+export type LastAdminGuard =
+  | { allowed: true }
+  | { allowed: false; message: string }
+
+/**
+ * Block deleting the last active owner/super_admin for a shop.
+ * Non-privileged roles are always allowed. shopStaff should be the shop's
+ * owner/super_admin rows (active + inactive); filtering is done here.
+ */
+export function canDeleteStaffMember(args: {
+  target: PrivilegedStaffRow
+  shopStaff: PrivilegedStaffRow[]
+}): LastAdminGuard {
+  if (!isPrivilegedStaffRole(args.target.role)) {
+    return { allowed: true }
+  }
+
+  const otherActiveAdmins = args.shopStaff.filter(row => {
+    if (row.id === args.target.id) return false
+    if (!isPrivilegedStaffRole(row.role)) return false
+    if (isDeletedStaff(row)) return false
+    if (row.active === false) return false
+    return true
+  })
+
+  if (otherActiveAdmins.length === 0) {
+    return {
+      allowed: false,
+      message:
+        'Cannot delete the last owner/super_admin for this shop. Add or activate another owner first.',
+    }
+  }
+
+  return { allowed: true }
 }

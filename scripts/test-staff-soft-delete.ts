@@ -5,6 +5,7 @@
  */
 import {
   DELETED_PIN_MARKER,
+  canDeleteStaffMember,
   evaluateSoftDeleteResult,
   isDeletedPinHash,
 } from '../src/lib/staffSoftDelete'
@@ -89,6 +90,68 @@ assert(
     error: null,
     rows: [{ id: '1', pin_hash: DELETED_PIN_MARKER }],
   }).ok === true
+)
+
+console.log('last owner/super_admin delete guard')
+
+assert(
+  'guard: therapist always allowed',
+  canDeleteStaffMember({
+    target: { id: 't1', role: 'therapist', active: true },
+    shopStaff: [{ id: 'o1', role: 'owner', active: true }],
+  }).allowed === true
+)
+
+assert(
+  'guard: block last active owner',
+  canDeleteStaffMember({
+    target: { id: 'o1', role: 'owner', active: true },
+    shopStaff: [{ id: 'o1', role: 'owner', active: true }],
+  }).allowed === false
+)
+
+assert(
+  'guard: block last active super_admin when owner suspended',
+  canDeleteStaffMember({
+    target: { id: 'sa1', role: 'super_admin', active: false },
+    shopStaff: [
+      { id: 'sa1', role: 'super_admin', active: false },
+      { id: 'o1', role: 'owner', active: false },
+    ],
+  }).allowed === false
+)
+
+assert(
+  'guard: allow owner when another active super_admin exists',
+  canDeleteStaffMember({
+    target: { id: 'o1', role: 'owner', active: true },
+    shopStaff: [
+      { id: 'o1', role: 'owner', active: true },
+      { id: 'sa1', role: 'super_admin', active: true },
+    ],
+  }).allowed === true
+)
+
+assert(
+  'guard: ignore soft-deleted other admin',
+  canDeleteStaffMember({
+    target: { id: 'o1', role: 'owner', active: true },
+    shopStaff: [
+      { id: 'o1', role: 'owner', active: true },
+      { id: 'sa1', role: 'super_admin', active: true, pin_hash: DELETED_PIN_MARKER },
+    ],
+  }).allowed === false
+)
+
+assert(
+  'guard: role case-insensitive SUPER_ADMIN',
+  canDeleteStaffMember({
+    target: { id: 'sa1', role: 'SUPER_ADMIN', active: true },
+    shopStaff: [
+      { id: 'sa1', role: 'SUPER_ADMIN', active: true },
+      { id: 'o1', role: 'Owner', active: true },
+    ],
+  }).allowed === true
 )
 
 if (failed) {
