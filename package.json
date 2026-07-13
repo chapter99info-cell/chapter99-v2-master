@@ -10,6 +10,7 @@
     "test:shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "verify-shop-domains": "node scripts/verify-shop-domains-production.mjs",
     "test:booking-rpc": "node scripts/test-create-public-booking.mjs",
+    "test:staff-soft-delete": "tsx scripts/test-staff-soft-delete.ts",
     "verify:feature-overrides": "node scripts/verify-shop-feature-overrides.mjs",
     "preview": "vite preview",
     "upload-backup": "node scripts/upload-backup-to-drive.mjs",

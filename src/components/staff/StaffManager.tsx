@@ -3,6 +3,11 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import {
+  DELETED_PIN_MARKER,
+  evaluateSoftDeleteResult,
+  isDeletedStaff,
+} from '../../lib/staffSoftDelete'
 import Toast, { type ToastType } from '../ui/Toast'
 import './StaffManager.css'
 
@@ -27,27 +32,6 @@ interface StaffRow {
   start_date: string | null
   active: boolean
   pin_hash?: string
-}
-
-/**
- * Soft-delete sentinel for staff.pin_hash.
- * Must already look like bcrypt ($2…). Live staff_pin_hash triggers re-crypt any
- * plain marker (__deleted__, DELETED, etc.), so a plain string never sticks and
- * the list filter never hides the row.
- * Value = crypt('__deleted__', gen_salt('bf')) — not a valid 4-digit login PIN.
- */
-const DELETED_PIN_MARKER =
-  '$2a$06$O48RG1gWMyRk6Vgs0fQsXuwcmpKNuVSVcW9xni7W2ABVF1he.D9ZG'
-
-function isDeletedStaff(row: StaffRow): boolean {
-  const hash = row.pin_hash
-  if (!hash) return false
-  // Current sentinel + legacy plain markers (only if a DB never re-hashed them)
-  return (
-    hash === DELETED_PIN_MARKER ||
-    hash === '__deleted__' ||
-    hash === 'DELETED'
-  )
 }
 
 interface StaffForm {
@@ -280,7 +264,7 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
 
   async function deleteStaff() {
     const id = confirmDelete
-    if (!id) return
+    if (!id || deleting) return
 
     setDeleting(true)
     setLoadError('')
@@ -293,30 +277,10 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
         .eq('shop_id', shopId)
         .select('id, pin_hash')
 
-      if (markError) {
-        const msg =
-          markError.message.includes('policy') || markError.code === '42501'
-            ? `${markError.message} — run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
-            : markError.message
-        setLoadError(msg)
-        setToast({ message: msg, type: 'error' })
-        return
-      }
-
-      if (!marked?.length) {
-        const msg =
-          'Delete did not apply — no matching staff row (check shop / permissions).'
-        setLoadError(msg)
-        setToast({ message: msg, type: 'error' })
-        return
-      }
-
-      const savedHash = marked[0]?.pin_hash
-      if (savedHash !== DELETED_PIN_MARKER) {
-        const msg =
-          'Delete failed: PIN marker was altered by the database. Staff was not removed from the list.'
-        setLoadError(msg)
-        setToast({ message: msg, type: 'error' })
+      const result = evaluateSoftDeleteResult({ error: markError, rows: marked })
+      if (result.ok === false) {
+        setLoadError(result.message)
+        setToast({ message: result.message, type: 'error' })
         return
       }
 

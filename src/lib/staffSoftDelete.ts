@@ -1,0 +1,72 @@
+/**
+ * Staff soft-delete helpers.
+ *
+ * Live staff_pin_hash may bcrypt-hash any non-bcrypt pin_hash. Soft-delete must
+ * therefore write a pre-hashed bcrypt sentinel so the marker survives the trigger
+ * and the staff list filter can hide the row.
+ */
+
+/** crypt('__deleted__', gen_salt('bf')) - not a valid 4-digit login PIN. */
+export const DELETED_PIN_MARKER =
+  '$2a$06$O48RG1gWMyRk6Vgs0fQsXuwcmpKNuVSVcW9xni7W2ABVF1he.D9ZG'
+
+export type SoftDeleteRow = {
+  id?: string
+  pin_hash?: string | null
+}
+
+export function isDeletedPinHash(hash: string | null | undefined): boolean {
+  if (!hash) return false
+  return (
+    hash === DELETED_PIN_MARKER ||
+    hash === '__deleted__' ||
+    hash === 'DELETED'
+  )
+}
+
+export function isDeletedStaff(row: SoftDeleteRow): boolean {
+  return isDeletedPinHash(row.pin_hash)
+}
+
+export type SoftDeleteEval =
+  | { ok: true }
+  | { ok: false; reason: 'error' | 'empty' | 'marker_altered'; message: string }
+
+/**
+ * Decide whether a soft-delete update actually stuck.
+ * Success toast must only fire when ok === true.
+ */
+export function evaluateSoftDeleteResult(args: {
+  error: { message: string; code?: string } | null
+  rows: SoftDeleteRow[] | null | undefined
+}): SoftDeleteEval {
+  const { error, rows } = args
+
+  if (error) {
+    const message =
+      error.message.includes('policy') || error.code === '42501'
+        ? `${error.message} - run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
+        : error.message
+    return { ok: false, reason: 'error', message }
+  }
+
+  if (!rows?.length) {
+    return {
+      ok: false,
+      reason: 'empty',
+      message:
+        'Delete did not apply - no matching staff row (check shop / permissions).',
+    }
+  }
+
+  if (rows[0]?.pin_hash !== DELETED_PIN_MARKER) {
+    return {
+      ok: false,
+      reason: 'marker_altered',
+      message:
+        'Delete failed: PIN marker was altered by the database. Staff was not removed from the list.',
+    }
+  }
+
+  return { ok: true }
+}
