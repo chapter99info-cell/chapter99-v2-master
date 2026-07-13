@@ -5,8 +5,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import {
   DELETED_PIN_MARKER,
+  canDeactivateStaffMember,
   canDeleteStaffMember,
   evaluateSoftDeleteResult,
+  friendlyStaffMutationError,
   isDeletedStaff,
   isPrivilegedStaffRole,
 } from '../../lib/staffSoftDelete'
@@ -255,8 +257,62 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
   }
 
   async function toggleActive(id: string, active: boolean) {
-    await supabase.from('staff').update({ active }).eq('id', id)
-    loadStaff()
+    // Activating is always allowed; only deactivating needs the last-admin guard.
+    if (active === false) {
+      const target = staffList.find(s => s.id === id)
+      if (target && isPrivilegedStaffRole(target.role)) {
+        const { data: shopRows, error: adminError } = await supabase
+          .from('staff')
+          .select('id, role, active, pin_hash')
+          .eq('shop_id', shopId)
+
+        if (adminError) {
+          const msg =
+            friendlyStaffMutationError(adminError) ?? adminError.message
+          setLoadError(msg)
+          setToast({ message: msg, type: 'error' })
+          return
+        }
+
+        const admins = ((shopRows ?? []) as Array<{
+          id: string
+          role: string
+          active: boolean
+          pin_hash?: string
+        }>).filter(row => isPrivilegedStaffRole(row.role))
+
+        const guard = canDeactivateStaffMember({
+          target: {
+            id: target.id,
+            role: target.role,
+            active: target.active,
+            pin_hash: target.pin_hash,
+          },
+          shopStaff: admins,
+        })
+
+        if (guard.allowed === false) {
+          setLoadError(guard.message)
+          setToast({ message: guard.message, type: 'error' })
+          return
+        }
+      }
+    }
+
+    const { error } = await supabase
+      .from('staff')
+      .update({ active })
+      .eq('id', id)
+      .eq('shop_id', shopId)
+
+    if (error) {
+      const msg = friendlyStaffMutationError(error) ?? error.message
+      setLoadError(msg)
+      setToast({ message: msg, type: 'error' })
+      return
+    }
+
+    await loadStaff()
   }
 
   function requestDeleteStaff(id: string) {
@@ -339,8 +395,10 @@ export default function StaffManager({ shopId, pinLevel }: StaffManagerProps) {
 
       const result = evaluateSoftDeleteResult({ error: markError, rows: marked })
       if (result.ok === false) {
-        setLoadError(result.message)
-        setToast({ message: result.message, type: 'error' })
+        const msg =
+          friendlyStaffMutationError(markError) ?? result.message
+        setLoadError(msg)
+        setToast({ message: msg, type: 'error' })
         return
       }
 

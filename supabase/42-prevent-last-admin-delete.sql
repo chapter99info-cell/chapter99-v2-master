@@ -1,5 +1,5 @@
--- Chapter99 — block soft-delete of the last active owner/super_admin per shop.
--- Run in Supabase SQL Editor (project euiwkvozrhnbxttfuchh).
+-- Chapter99 — block soft-delete OR deactivate of the last active owner/super_admin.
+-- Applied on live euiwkvozrhnbxttfuchh (pin_hash + active). Keep in sync with DB.
 -- Does NOT change staff_pin_hash / hash_staff_pin.
 
 create or replace function prevent_last_admin_staff_delete()
@@ -8,21 +8,20 @@ language plpgsql
 as $$
 declare
   other_count integer;
-  new_hash text := coalesce(new.pin_hash, '');
-  old_hash text := coalesce(old.pin_hash, '');
   deleted_sentinel constant text :=
     '$2a$06$O48RG1gWMyRk6Vgs0fQsXuwcmpKNuVSVcW9xni7W2ABVF1he.D9ZG';
   is_soft_delete boolean;
+  is_deactivate boolean;
 begin
   is_soft_delete :=
-    new_hash is distinct from old_hash
-    and (
-      new_hash = deleted_sentinel
-      or new_hash = '__deleted__'
-      or new_hash = 'DELETED'
-    );
+    coalesce(new.pin_hash, '') is distinct from coalesce(old.pin_hash, '')
+    and coalesce(new.pin_hash, '') in (deleted_sentinel, '__deleted__', 'DELETED');
 
-  if not is_soft_delete then
+  is_deactivate :=
+    coalesce(old.active, false) = true
+    and coalesce(new.active, false) = false;
+
+  if not is_soft_delete and not is_deactivate then
     return new;
   end if;
 
@@ -50,6 +49,6 @@ $$;
 
 drop trigger if exists staff_prevent_last_admin_delete on staff;
 create trigger staff_prevent_last_admin_delete
-  before update of pin_hash on staff
+  before update of pin_hash, active on staff
   for each row
   execute function prevent_last_admin_staff_delete();

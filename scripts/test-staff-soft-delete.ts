@@ -5,8 +5,11 @@
  */
 import {
   DELETED_PIN_MARKER,
+  LAST_ADMIN_BLOCK_MESSAGE,
+  canDeactivateStaffMember,
   canDeleteStaffMember,
   evaluateSoftDeleteResult,
+  friendlyStaffMutationError,
   isDeletedPinHash,
 } from '../src/lib/staffSoftDelete'
 
@@ -70,6 +73,20 @@ assert(
 )
 
 assert(
+  'evaluate: map P0001 last-admin to friendly message',
+  (() => {
+    const r = evaluateSoftDeleteResult({
+      error: {
+        message: "Can't remove the last owner/admin for this shop.",
+        code: 'P0001',
+      },
+      rows: null,
+    })
+    return r.ok === false && r.message === LAST_ADMIN_BLOCK_MESSAGE
+  })()
+)
+
+assert(
   'evaluate: never success on active-only fake path (no sentinel)',
   evaluateSoftDeleteResult({
     error: null,
@@ -92,7 +109,7 @@ assert(
   }).ok === true
 )
 
-console.log('last owner/super_admin delete guard')
+console.log('last owner/super_admin delete + deactivate guard')
 
 assert(
   'guard: therapist always allowed',
@@ -117,10 +134,7 @@ assert(
       target: { id: 'o1', role: 'owner', active: true },
       shopStaff: [{ id: 'o1', role: 'owner', active: true }],
     })
-    return (
-      g.allowed === false &&
-      g.message === "Can't remove the last owner/admin for this shop."
-    )
+    return g.allowed === false && g.message === LAST_ADMIN_BLOCK_MESSAGE
   })()
 )
 
@@ -166,6 +180,47 @@ assert(
       { id: 'o1', role: 'Owner', active: true },
     ],
   }).allowed === true
+)
+
+assert(
+  'deactivate: block last active owner (same helper)',
+  canDeactivateStaffMember({
+    target: { id: 'o1', role: 'owner', active: true },
+    shopStaff: [{ id: 'o1', role: 'owner', active: true }],
+  }).allowed === false
+)
+
+assert(
+  'deactivate: allow owner when another admin active',
+  canDeactivateStaffMember({
+    target: { id: 'o1', role: 'owner', active: true },
+    shopStaff: [
+      { id: 'o1', role: 'owner', active: true },
+      { id: 'sa1', role: 'super_admin', active: true },
+    ],
+  }).allowed === true
+)
+
+assert(
+  'deactivate: therapist always allowed',
+  canDeactivateStaffMember({
+    target: { id: 't1', role: 'therapist', active: true },
+    shopStaff: [{ id: 'o1', role: 'owner', active: true }],
+  }).allowed === true
+)
+
+assert(
+  'friendly: P0001 maps to toast copy',
+  friendlyStaffMutationError({
+    code: 'P0001',
+    message: "Can't remove the last owner/admin for this shop.",
+  }) === LAST_ADMIN_BLOCK_MESSAGE
+)
+
+assert(
+  'friendly: unrelated error stays null',
+  friendlyStaffMutationError({ code: '42501', message: 'permission denied' }) ===
+    null
 )
 
 if (failed) {

@@ -12,6 +12,9 @@ export const DELETED_PIN_MARKER =
 
 export const PRIVILEGED_STAFF_ROLES = ['owner', 'super_admin'] as const
 
+export const LAST_ADMIN_BLOCK_MESSAGE =
+  "Can't remove the last owner/admin for this shop."
+
 export type SoftDeleteRow = {
   id?: string
   pin_hash?: string | null
@@ -45,6 +48,23 @@ export function isDeletedStaff(row: SoftDeleteRow): boolean {
   return isDeletedPinHash(row.pin_hash)
 }
 
+/** Map DB trigger P0001 (and message) to the friendly last-admin toast. */
+export function friendlyStaffMutationError(
+  error: { message?: string; code?: string } | null | undefined
+): string | null {
+  if (!error?.message && !error?.code) return null
+  const msg = error.message ?? ''
+  const code = error.code ?? ''
+  if (
+    code === 'P0001' ||
+    msg.includes(LAST_ADMIN_BLOCK_MESSAGE) ||
+    /last owner\/admin/i.test(msg)
+  ) {
+    return LAST_ADMIN_BLOCK_MESSAGE
+  }
+  return null
+}
+
 export type SoftDeleteEval =
   | { ok: true }
   | { ok: false; reason: 'error' | 'empty' | 'marker_altered'; message: string }
@@ -60,6 +80,10 @@ export function evaluateSoftDeleteResult(args: {
   const { error, rows } = args
 
   if (error) {
+    const lastAdmin = friendlyStaffMutationError(error)
+    if (lastAdmin) {
+      return { ok: false, reason: 'error', message: lastAdmin }
+    }
     const message =
       error.message.includes('policy') || error.code === '42501'
         ? `${error.message} - run supabase/12-staff-manager-rls.sql in Supabase SQL Editor`
@@ -93,7 +117,7 @@ export type LastAdminGuard =
   | { allowed: false; message: string }
 
 /**
- * Block deleting the last active owner/super_admin for a shop.
+ * Block deleting OR deactivating the last active owner/super_admin for a shop.
  * Non-privileged roles are always allowed. shopStaff should be the shop's
  * owner/super_admin rows (active + inactive); filtering is done here.
  */
@@ -116,9 +140,12 @@ export function canDeleteStaffMember(args: {
   if (otherActiveAdmins.length === 0) {
     return {
       allowed: false,
-      message: "Can't remove the last owner/admin for this shop.",
+      message: LAST_ADMIN_BLOCK_MESSAGE,
     }
   }
 
   return { allowed: true }
 }
+
+/** Same rules as soft-delete — used by Suspend / deactivate. */
+export const canDeactivateStaffMember = canDeleteStaffMember
