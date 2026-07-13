@@ -111,6 +111,20 @@ assert(
 )
 
 assert(
+  'guard: last-admin error toast copy',
+  (() => {
+    const g = canDeleteStaffMember({
+      target: { id: 'o1', role: 'owner', active: true },
+      shopStaff: [{ id: 'o1', role: 'owner', active: true }],
+    })
+    return (
+      g.allowed === false &&
+      g.message === "Can't remove the last owner/admin for this shop."
+    )
+  })()
+)
+
+assert(
   'guard: block last active super_admin when owner suspended',
   canDeleteStaffMember({
     target: { id: 'sa1', role: 'super_admin', active: false },

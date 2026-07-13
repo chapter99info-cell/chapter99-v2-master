@@ -116,8 +116,7 @@ export function canDeleteStaffMember(args: {
   if (otherActiveAdmins.length === 0) {
     return {
       allowed: false,
-      message:
-        'Cannot delete the last owner/super_admin for this shop. Add or activate another owner first.',
+      message: "Can't remove the last owner/admin for this shop.",
     }
   }
 
