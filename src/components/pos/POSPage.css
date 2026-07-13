@@ -1,16 +1,49 @@
-/* POS — Zen Spa Premium (iPad-first) */
+/* POS — Zen Spa Premium (tablet-first, single viewport) */
+
+/* When POS is open, lock the staff shell to one viewport (no page scroll) */
+.app-root:has(.pos-root) {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.app-root:has(.pos-root) .app-header,
+.app-root:has(.pos-root) .app-tabs,
+.app-root:has(.pos-root) .app-tabs-owner {
+  flex-shrink: 0;
+}
+.app-content:has(.pos-root) {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
 
 /* Top Bar */
 .pos-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
+  padding: 8px 14px;
   background: var(--color-primary);
   color: #fff;
   border-bottom: 2px solid var(--color-accent);
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 100;
   box-shadow: 0 2px 12px rgba(27, 77, 62, 0.2);
 }
@@ -58,20 +91,21 @@
 /* Mode Tabs */
 .pos-tabs {
   display: flex;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 6px;
+  padding: 6px 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .pos-tab {
-  font-size: 13px;
-  padding: 8px 16px;
+  font-size: 12px;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-secondary);
   cursor: pointer;
-  min-height: 40px;
+  min-height: 34px;
   font-family: inherit;
   font-weight: 500;
   transition: all 0.15s;
@@ -83,24 +117,29 @@
   font-weight: 600;
 }
 
-/* Layout */
+/* Layout — fills remaining viewport; no page scroll */
 .pos-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 12px;
-  padding: 12px 16px;
-  height: calc(100vh - 98px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  gap: 8px;
+  padding: 8px 10px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   background: var(--bg);
 }
 .pos-left {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
 }
 .pos-right {
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Cards */
@@ -109,14 +148,27 @@
   border-radius: var(--radius);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-card);
-  padding: 16px;
+  padding: 10px 12px;
+}
+.customer-card {
+  flex-shrink: 0;
+  padding: 8px 10px;
+}
+.customer-card .card-label {
+  margin-bottom: 6px;
+}
+.customer-card .pos-input {
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  min-height: 36px;
+  font-size: 12px;
 }
 .card-label {
   font-size: 11px;
   color: #999;
   text-transform: uppercase;
   letter-spacing: .06em;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 /* Input */
@@ -138,24 +190,38 @@
 }
 
 .pos-customer-hint {
-  margin: -4px 0 10px;
-  font-size: 12px;
+  margin: -2px 0 6px;
+  font-size: 11px;
   color: var(--text-muted, #6b7280);
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
-/* Services picker */
+/* Services picker — sticky category row + internal scroll list */
 .services-picker-card {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
+  padding: 8px 10px;
+}
+
+.services-picker-sticky {
+  flex-shrink: 0;
+  background: var(--surface);
+  z-index: 2;
+  padding-bottom: 6px;
+}
+
+.services-picker-sticky .card-label {
+  margin-bottom: 6px;
 }
 
 .service-category-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 0;
   min-width: 0;
 }
 
@@ -170,7 +236,7 @@
   display: flex;
   flex: 1;
   min-width: 0;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   overflow-y: hidden;
   flex-wrap: nowrap;
@@ -185,17 +251,17 @@
 
 .service-category-tab {
   flex: 0 0 auto;
-  padding: 8px 14px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   color: #555;
   cursor: pointer;
   white-space: nowrap;
-  min-height: 40px;
-  max-width: 11rem;
+  min-height: 30px;
+  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: inherit;
@@ -209,15 +275,26 @@
   box-shadow: 0 0 0 2px rgba(15, 110, 86, 0.2);
 }
 
+.services-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  /* Tablet landscape default: 3 cols beside the bill */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-content: start;
 }
 
 .services-empty {
   grid-column: 1 / -1;
-  padding: 24px 12px;
+  padding: 16px 12px;
   text-align: center;
   font-size: 13px;
   color: #888;
@@ -228,16 +305,17 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 12px;
-  border-radius: var(--radius);
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
   cursor: pointer;
   text-align: left;
-  min-height: 88px;
-  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  /* Compact but still tappable on iPad */
+  min-height: 52px;
+  transition: transform 0.12s, border-color 0.12s, background 0.12s;
   -webkit-user-select: none;
   font-family: inherit;
 }
@@ -249,60 +327,72 @@
 .svc-card.added {
   background: var(--color-primary-light);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(27, 77, 62, 0.15);
+  box-shadow: 0 0 0 1px rgba(27, 77, 62, 0.2);
 }
 
 .svc-card-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1a1a1a;
-  line-height: 1.3;
-}
-
-.svc-card-price {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--teal);
+  color: #1a1a1a;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
 }
 
 .svc-card-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: auto;
+  gap: 3px;
+  margin-top: 0;
+  width: 100%;
+}
+
+.svc-card-price {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+.svc-card-sep {
+  font-size: 11px;
+  color: #bbb;
 }
 
 .svc-card-duration {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
 }
 
 .gst-free-tag {
-  font-size: 9px;
+  font-size: 8px;
   background: var(--green-light);
   color: var(--green);
-  padding: 1px 5px;
-  border-radius: 10px;
+  padding: 1px 4px;
+  border-radius: 8px;
+  margin-left: 2px;
 }
 
 .service-addon-chips {
   width: 100%;
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 0.5px solid #e8e5de;
 }
 
 .bill-addon-chips {
-  margin-top: 10px;
-  margin-bottom: 4px;
+  margin-top: 6px;
+  margin-bottom: 2px;
 }
 
 .service-addon-chips-label {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
   color: #666;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -310,21 +400,21 @@
 .service-addon-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
 }
 
 .service-addon-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 4px 8px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: #fff;
-  font-size: 13px;
+  font-size: 11px;
   font-family: inherit;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 28px;
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -359,23 +449,43 @@
   color: #444;
 }
 
-/* Bill */
-.bill-card { display: flex; flex-direction: column; }
-.bill-items { min-height: 80px; display: flex; flex-direction: column; gap: 6px; }
+/* Bill — items scroll; totals + payment stay pinned in panel */
+.bill-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px 10px;
+}
+.bill-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.bill-footer {
+  flex-shrink: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+.bill-items { min-height: 40px; display: flex; flex-direction: column; gap: 4px; }
 .bill-empty {
   font-size: 12px;
   color: #ccc;
   text-align: center;
-  padding: 24px 0;
+  padding: 12px 0;
 }
 .bill-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 5px 8px;
   background: #faf9f5;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 11px;
 }
 .bill-item-info { flex: 1; }
 .bill-item-name { font-weight: 500; color: #1a1a1a; }
@@ -395,43 +505,43 @@
 
 /* Totals */
 .totals-block {
-  border-top: 0.5px solid #e0ddd5;
-  margin-top: 10px;
-  padding-top: 10px;
+  border-top: none;
+  margin-top: 0;
+  padding-top: 4px;
 }
 .total-row {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   color: #555;
-  padding: 3px 0;
+  padding: 2px 0;
 }
 .total-row.surcharge { color: var(--coral); }
 .total-row.gst-free { color: var(--green); }
 .total-row.grand {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: #1a1a1a;
   border-top: 0.5px solid #e0ddd5;
-  margin-top: 6px;
-  padding-top: 8px;
+  margin-top: 4px;
+  padding-top: 6px;
 }
 
-/* Payment Methods */
+/* Payment Methods — compact for tablet viewport */
 .pay-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 5px;
 }
 .pay-btn {
-  padding: 12px 10px;
+  padding: 6px 6px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
   cursor: pointer;
   text-align: center;
-  min-height: 72px;
+  min-height: 52px;
   transition: all 0.15s;
   font-family: inherit;
 }
@@ -441,24 +551,24 @@
   background: var(--color-accent-light);
   box-shadow: var(--focus-ring);
 }
-.pay-icon { font-size: 20px; margin-bottom: 2px; }
-.pay-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
-.pay-sub { font-size: 10px; color: #999; margin-top: 1px; }
+.pay-icon { font-size: 16px; margin-bottom: 0; }
+.pay-label { font-size: 11px; font-weight: 500; color: #1a1a1a; }
+.pay-sub { font-size: 9px; color: #999; margin-top: 0; }
 .pay-btn.selected .pay-sub { color: #854F0B; }
 
 /* Buttons */
 .charge-btn {
   width: 100%;
-  padding: 16px;
-  margin-top: 10px;
+  padding: 10px;
+  margin-top: 6px;
   border-radius: var(--radius-sm);
   border: none;
   background: var(--teal);
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  min-height: 52px;
+  min-height: 44px;
   transition: background 0.15s;
 }
 .charge-btn:hover { background: var(--teal-dark); }
@@ -497,7 +607,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: calc(100vh - 98px);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 16px 12px 24px;
   gap: 12px;
 }
@@ -848,18 +960,106 @@
   min-height: 44px;
 }
 
-/* Mobile / Phone override */
-@media (max-width: 768px) {
+/* Phone — allow natural scroll; denser 2-col cards */
+@media (max-width: 640px) {
+  .app-root:has(.pos-root) {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    display: block;
+  }
+  .app-content:has(.pos-root) {
+    height: auto;
+    overflow: visible;
+    display: block;
+    padding: 12px;
+  }
+  .pos-root {
+    height: auto;
+    overflow: visible;
+  }
   .pos-layout {
     grid-template-columns: 1fr;
     height: auto;
     overflow: visible;
+    flex: none;
+  }
+  .pos-left,
+  .pos-right {
+    overflow: visible;
+  }
+  .services-picker-card,
+  .bill-card {
+    flex: none;
+    overflow: visible;
+  }
+  .services-grid-scroll,
+  .bill-scroll {
+    overflow: visible;
+    max-height: none;
+  }
+  .services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .svc-card {
+    min-height: 72px;
+    padding: 10px 12px;
+  }
+  .svc-card-name {
+    font-size: 13px;
+  }
+  .svc-card-price {
+    font-size: 13px;
   }
 }
 
-/* Desktop — 3-column service grid */
-@media (min-width: 1024px) {
+/* Tablet (iPad) — compact cards, more columns, less scrolling */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .svc-card {
+    min-height: 52px;
+    padding: 6px 8px;
+  }
+  .svc-card-name {
+    font-size: 12px;
+  }
+  .svc-card-price,
+  .svc-card-duration,
+  .svc-card-sep {
+    font-size: 11px;
+  }
+  .services-grid {
+    gap: 6px;
+  }
+}
+
+/* Tablet portrait — stack panels; 4 compact columns across full width */
+@media (min-width: 641px) and (max-width: 1024px) and (orientation: portrait) {
+  .pos-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  }
+  .services-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Tablet landscape / narrow desktop — 3 cols beside bill */
+@media (min-width: 641px) and (max-width: 1024px) and (orientation: landscape) {
   .services-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .pos-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  }
+}
+
+/* Wide desktop — denser service grid */
+@media (min-width: 1100px) {
+  .services-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .svc-card {
+    min-height: 56px;
   }
 }

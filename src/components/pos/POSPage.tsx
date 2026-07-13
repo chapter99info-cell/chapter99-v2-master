@@ -88,6 +88,12 @@ const LOCKED_FEATURE_LABELS: Record<PlanFeature, string> = {
   sms: 'SMS notifications',
 }
 
+/**
+ * POS SMS phone field — off until Twilio SMS add-on is sold/configured per shop.
+ * TODO: gate by shop plan / DB once SMS add-on billing exists (replace this constant).
+ */
+const POS_SMS_FIELD_ENABLED = false
+
 interface POSPageProps {
   /** PIN entered at staff login (shown in header). */
   loginPin?: string
@@ -819,7 +825,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
           {/* Left — Services + Client */}
           <div className="pos-left">
             {/* Client Info (Walk-in) */}
-            <div className="pos-card">
+            <div className="pos-card customer-card">
                 <div className="card-label">ข้อมูลลูกค้า (optional)</div>
                 <input
                   className="pos-input"
@@ -837,14 +843,16 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                 {lastVisitHint && (
                   <p className="pos-customer-hint">{lastVisitHint}</p>
                 )}
-                <input
-                  className="pos-input"
-                  placeholder={can('sms') ? 'เบอร์โทร (SMS)' : 'เบอร์โทร (SMS — upgrade to unlock)'}
-                  value={clientPhone}
-                  onChange={e => setClientPhone(e.target.value)}
-                  disabled={!can('sms')}
-                  title={!can('sms') ? 'SMS requires Growth plan or SMS add-on' : undefined}
-                />
+                {POS_SMS_FIELD_ENABLED && (
+                  <input
+                    className="pos-input"
+                    placeholder={can('sms') ? 'เบอร์โทร (SMS)' : 'เบอร์โทร (SMS — upgrade to unlock)'}
+                    value={clientPhone}
+                    onChange={e => setClientPhone(e.target.value)}
+                    disabled={!can('sms')}
+                    title={!can('sms') ? 'SMS requires Growth plan or SMS add-on' : undefined}
+                  />
+                )}
                 {therapists.length > 0 && (
                   <select
                     className="pos-input"
@@ -866,69 +874,76 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
 
             {/* Services Grid */}
             <div className="pos-card services-picker-card">
-              <div className="card-label">เลือกบริการ</div>
-              {!servicesLoading && services.length > 0 && (
-                <div className="service-category-tabs" role="tablist" aria-label="Service categories">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={serviceCategoryFilter === 'all'}
-                    className={`service-category-tab service-category-tab--all${serviceCategoryFilter === 'all' ? ' active' : ''}`}
-                    onClick={() => setServiceCategoryFilter('all')}
-                  >
-                    ALL
-                  </button>
-                  <div className="service-category-tabs-scroll">
-                    {serviceCategories.map(cat => {
-                      const fullLabel = formatServiceCategoryTabLabel(cat)
-                      const shortLabel = truncateCategoryTabLabel(fullLabel)
+              <div className="services-picker-sticky">
+                <div className="card-label">เลือกบริการ</div>
+                {!servicesLoading && services.length > 0 && (
+                  <div className="service-category-tabs" role="tablist" aria-label="Service categories">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={serviceCategoryFilter === 'all'}
+                      className={`service-category-tab service-category-tab--all${serviceCategoryFilter === 'all' ? ' active' : ''}`}
+                      onClick={() => setServiceCategoryFilter('all')}
+                    >
+                      ALL
+                    </button>
+                    <div className="service-category-tabs-scroll">
+                      {serviceCategories.map(cat => {
+                        const fullLabel = formatServiceCategoryTabLabel(cat)
+                        const shortLabel = truncateCategoryTabLabel(fullLabel)
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            role="tab"
+                            aria-selected={serviceCategoryFilter === cat}
+                            aria-label={fullLabel}
+                            title={fullLabel}
+                            className={`service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
+                            onClick={() => setServiceCategoryFilter(cat)}
+                          >
+                            {shortLabel}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="services-grid-scroll">
+                <div className="services-grid">
+                  {servicesLoading ? (
+                    <p className="services-empty">กำลังโหลดบริการ…</p>
+                  ) : services.length === 0 ? (
+                    <p className="services-empty">
+                      ยังไม่มีบริการที่เปิดใช้งาน — เพิ่มในหน้า Services (Owner)
+                    </p>
+                  ) : filteredServices.length === 0 ? (
+                    <p className="services-empty">ไม่มีบริการในหมวดนี้</p>
+                  ) : (
+                    filteredServices.map(svc => {
+                      const added = bill.some(i => i.serviceId === svc.id)
                       return (
                         <button
-                          key={cat}
+                          key={svc.id}
                           type="button"
-                          role="tab"
-                          aria-selected={serviceCategoryFilter === cat}
-                          aria-label={fullLabel}
-                          title={fullLabel}
-                          className={`service-category-tab${serviceCategoryFilter === cat ? ' active' : ''}`}
-                          onClick={() => setServiceCategoryFilter(cat)}
+                          className={`svc-card${added ? ' added' : ''}`}
+                          onClick={() => toggleService(svc)}
                         >
-                          {shortLabel}
+                          <div className="svc-card-name">{svc.name}</div>
+                          <div className="svc-card-meta">
+                            <span className="svc-card-price">{formatAUD(svc.price)}</span>
+                            <span className="svc-card-sep" aria-hidden>
+                              ·
+                            </span>
+                            <span className="svc-card-duration">{svc.duration} min</span>
+                            {svc.gstFree && <span className="gst-free-tag">GST-free</span>}
+                          </div>
                         </button>
                       )
-                    })}
-                  </div>
+                    })
+                  )}
                 </div>
-              )}
-              <div className="services-grid">
-                {servicesLoading ? (
-                  <p className="services-empty">กำลังโหลดบริการ…</p>
-                ) : services.length === 0 ? (
-                  <p className="services-empty">
-                    ยังไม่มีบริการที่เปิดใช้งาน — เพิ่มในหน้า Services (Owner)
-                  </p>
-                ) : filteredServices.length === 0 ? (
-                  <p className="services-empty">ไม่มีบริการในหมวดนี้</p>
-                ) : (
-                  filteredServices.map(svc => {
-                    const added = bill.some(i => i.serviceId === svc.id)
-                    return (
-                      <button
-                        key={svc.id}
-                        type="button"
-                        className={`svc-card${added ? ' added' : ''}`}
-                        onClick={() => toggleService(svc)}
-                      >
-                        <div className="svc-card-name">{svc.name}</div>
-                        <div className="svc-card-price">{formatAUD(svc.price)}</div>
-                        <div className="svc-card-meta">
-                          <span className="svc-card-duration">{svc.duration} min</span>
-                          {svc.gstFree && <span className="gst-free-tag">GST-free</span>}
-                        </div>
-                      </button>
-                    )
-                  })
-                )}
               </div>
             </div>
           </div>
@@ -938,6 +953,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
             <div className="pos-card bill-card">
               <div className="card-label">บิลปัจจุบัน</div>
 
+              <div className="bill-scroll">
               {/* Bill Items */}
               <div className="bill-items">
                 {bill.length === 0 ? (
@@ -994,7 +1010,9 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                   </div>
                 </div>
               )}
+              </div>
 
+              <div className="bill-footer">
               {/* Totals */}
               {payment && (
                 <div className="totals-block">
@@ -1227,6 +1245,7 @@ export default function POSPage({ loginPin }: POSPageProps = {}) {
                   🗑 Void / Clear Bill
                 </button>
               )}
+              </div>
             </div>
           </div>
         </div>
