@@ -49,18 +49,10 @@ function PublicLayoutInner() {
           </NavLink>
           {pagesReady && pageServicesEnabled && (
             <NavLink
-              to={withShopQuery('/menu')}
+              to={withShopQuery(shop?.businessType === 'restaurant' ? '/menu' : '/services')}
               className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
             >
-              Menu
-            </NavLink>
-          )}
-          {pagesReady && pageServicesEnabled && shop?.businessType !== 'restaurant' && (
-            <NavLink
-              to={withShopQuery('/services')}
-              className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
-            >
-              Services
+              {shop?.businessType === 'restaurant' ? 'Menu' : 'Services'}
             </NavLink>
           )}
           {pagesReady && pageVouchersEnabled && (
