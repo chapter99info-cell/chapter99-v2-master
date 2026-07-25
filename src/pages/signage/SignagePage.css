@@ -1,0 +1,194 @@
+/* Fully Kiosk / Fire Stick — fullscreen, no chrome, no scrollbars */
+
+html:has(.signage-root),
+body:has(.signage-root),
+#root:has(.signage-root) {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.signage-root {
+  --signage-theme: #0f6e56;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: Georgia, 'Times New Roman', serif;
+  user-select: none;
+  cursor: none;
+  pointer-events: none;
+}
+
+.signage-boot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.signage-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* CSS rotation for Fire OS (transform + axis swap) */
+.signage-rot-90 .signage-stage,
+.signage-rot-270 .signage-stage {
+  width: 100vh;
+  height: 100vw;
+  top: 50%;
+  left: 50%;
+}
+
+.signage-rot-90 .signage-stage {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.signage-rot-180 .signage-stage {
+  transform: rotate(180deg);
+}
+
+.signage-rot-270 .signage-stage {
+  transform: translate(-50%, -50%) rotate(270deg);
+}
+
+.signage-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.signage-video-slot {
+  opacity: 0;
+  transition: opacity 250ms ease-in-out;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.signage-video-slot.is-active {
+  opacity: 1;
+  z-index: 1;
+}
+
+.signage-video-empty {
+  background: radial-gradient(ellipse at 30% 20%, #1a3d2b, #050805 70%);
+}
+
+.signage-overlay {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  width: min(420px, 38vw);
+  height: 100%;
+  padding: 36px 28px 28px;
+  box-sizing: border-box;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.55) 18%,
+    rgba(0, 0, 0, 0.82) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.signage-overlay-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.signage-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.signage-overlay-head h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.signage-overlay-head p {
+  margin: 6px 0 0;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.signage-price-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  font-family: system-ui, sans-serif;
+}
+
+.signage-price-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.signage-price-names {
+  min-width: 0;
+}
+
+.signage-price-names strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.signage-price-names span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.signage-price-meta {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.signage-price-amt {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--signage-theme) 65%, white);
+}
+
+.signage-price-dur {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.65;
+}

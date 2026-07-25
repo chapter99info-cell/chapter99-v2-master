@@ -27,6 +27,7 @@ import RevenueSummary from './components/dashboard/RevenueSummary'
 import GiftVoucherList from './components/dashboard/GiftVoucherList'
 import InventoryManager from './components/inventory/InventoryManager'
 import ComplaintsPanel from './components/owner/ComplaintsPanel'
+import DigitalSignageStaffPanel from './components/staff/DigitalSignageStaffPanel'
 const OwnerReports = lazy(() => import('./components/dashboard/OwnerReports'))
 import { countUnreadNotifications } from './lib/notificationService'
 import { PlanProvider, usePlan } from './contexts/PlanContext'
@@ -66,7 +67,12 @@ function roleBadgeLabel(level: PINLevel): string | undefined {
 }
 
 export default function App() {
-  const { shopId, resolving: shopResolving, resolveError: shopResolveError } = useStaffShopId()
+  const {
+    shopId,
+    shopSlug,
+    resolving: shopResolving,
+    resolveError: shopResolveError,
+  } = useStaffShopId()
   const [session, setSession] = useState<Session>({ level: null })
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
@@ -194,6 +200,7 @@ export default function App() {
     <PlanProvider shopId={shopId}>
       <StaffDashboard
         shopId={shopId}
+        shopSlug={shopSlug}
         session={session}
         shopBranding={shopBranding}
         activeTab={activeTab}
@@ -210,6 +217,7 @@ type OwnerTabDef = { id: string; label: string; feature?: PlanFeature | FeatureK
 
 function StaffDashboard({
   shopId,
+  shopSlug,
   session,
   shopBranding,
   activeTab,
@@ -219,6 +227,7 @@ function StaffDashboard({
   onLogout,
 }: {
   shopId: string
+  shopSlug: string | null
   session: Session
   shopBranding: { name: string; logoUrl?: string } | null
   activeTab: string
@@ -249,6 +258,7 @@ function StaffDashboard({
     { id: 'inventory', label: '📦 Inventory', feature: 'pos' },
     { id: 'complaints', label: '💬 Complaints', feature: 'advanced_reports' },
     { id: 'website', label: '🌐 Website', feature: 'website_builder' },
+    { id: 'tv-signage', label: '📺 Digital Signage' },
     { id: 'settings', label: '⚙️ Settings' },
   ]
 
@@ -428,6 +438,9 @@ function StaffDashboard({
               </p>
             </div>
           </PlanGate>
+        )}
+        {activeTab === 'tv-signage' && isOwner && (
+          <DigitalSignageStaffPanel shopId={shopId} />
         )}
         {activeTab === 'settings' && isOwner && <ShopSettings shopId={shopId} />}
       </div>

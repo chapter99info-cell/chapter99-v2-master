@@ -177,6 +177,37 @@ git push origin main
 | iPhone | Staff queue view |
 | Desktop | Super Admin dashboard |
 | Any browser | Customer booking page |
+| Amazon Fire Stick + Fully Kiosk | In-store digital signage (`/signage/:shopId`) |
+
+### Fire Stick digital signage (Fully Kiosk)
+
+Display URL (replace shop id):
+
+```
+https://<your-domain>/signage/shop-001
+```
+
+Health probe (plain JSON + console heartbeat):
+
+```
+https://<your-domain>/signage/shop-001/health
+```
+
+**One-time setup**
+
+1. On the Fire Stick, install **Downloader** from the Amazon Appstore.
+2. In Downloader, open the Fully Kiosk Browser APK URL (from fully-kiosk.com) and sideload it.
+3. Open Fully Kiosk → set **Start URL** to `/signage/<shopId>`.
+4. Enable **Start on Boot** / Autostart so the stick recovers after power loss.
+5. Kiosk lockdown (recommended):
+   - Pin / lock to Fully Kiosk as the launcher (or enable Kiosk Mode).
+   - Disable status bar / soft keys if available.
+   - Keep screen awake; disable screensaver.
+   - Optional: remote admin password for Fully.
+6. Run migration `supabase/49-signage.sql` in the POS Supabase project, then insert active rows into `signage_assets` (`shop_id`, `video_url`, `sort_order`, `active`).
+7. Set `shops.signage_rotation` to `0`, `90`, `180`, or `270` if the TV is mounted sideways (CSS rotation — Fire OS rotation is unreliable).
+
+Videos are precached by the service worker (`signage-cache-sw.js`) for offline-first playback. Prices update via Supabase Realtime on `services`, with a 5-minute poll fallback.
 
 ---
 

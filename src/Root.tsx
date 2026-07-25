@@ -18,6 +18,10 @@ const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
 const CancelBookingPage = lazy(() => import('./pages/CancelBookingPage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 const ShopNotFoundPage = lazy(() => import('./pages/ShopNotFoundPage'))
+const TvToSignageRedirect = lazy(() => import('./pages/signage/TvToSignageRedirect'))
+const SignagePage = lazy(() => import('./pages/signage/SignagePage'))
+const SignageHealthPage = lazy(() => import('./pages/signage/SignageHealthPage'))
+const SignageManagerPage = lazy(() => import('./pages/admin/SignageManager'))
 
 function PageFallback() {
   return (
@@ -90,6 +94,46 @@ export default function Root() {
         </Route>
         <Route path="/shop-not-found" element={<LazyPage Page={ShopNotFoundPage} />} />
         <Route path="/spa" element={<Navigate to="/" replace />} />
+        <Route
+          path="/tv-kiosk"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <TvToSignageRedirect />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/tv/:slug"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <TvToSignageRedirect />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/signage/:shopId/health"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <SignageHealthPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/signage/:shopId"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <SignagePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/signage-manager/:shopId"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <SignageManagerPage />
+            </Suspense>
+          }
+        />
         <Route
           path="/chapter99/staff/*"
           element={

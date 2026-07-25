@@ -70,7 +70,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        importScripts: ['/push-handler.js'],
+        importScripts: ['/push-handler.js', '/signage-cache-sw.js'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf}'],
         navigateFallback: '/index.html',
