@@ -1,12 +1,20 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import LegalFooterLink from '../components/legal/LegalFooterLink'
 import { ShopProvider, useShopContext } from '../contexts/ShopContext'
 import { useShopPages } from '../hooks/useShopPages'
 import { resolvePrivacyPolicyHref, resolveTermsHref } from '../lib/legalUrls'
+import { isThemeId } from '../lib/themeRegistry'
 import './PublicLayout.css'
 
 function PublicLayoutInner() {
   const { shop, loading, error, withShopQuery } = useShopContext()
+  const location = useLocation()
+  // The landing-page themes (theme-thaibody, etc.) are designed as complete,
+  // self-contained one-page sites with their own nav/footer baked in — showing
+  // this shared site-wide header + footer on top of them just duplicates that
+  // chrome. Only suppress it on the exact home route; Book/Menu/Services/etc.
+  // still get the normal header so there's a way to navigate around from there.
+  const isThemedHome = location.pathname === '/' && !!shop?.themeId && isThemeId(shop.themeId)
   const {
     ready: pagesReady,
     pageHomeEnabled,
@@ -23,59 +31,61 @@ function PublicLayoutInner() {
 
   return (
     <div className="public-site">
-      <header className="public-header">
-        <Link to={brandPath} className="public-brand">
-          {logoUrl ? (
-            <img src={logoUrl} alt={shopName} className="public-logo" />
-          ) : (
-            <span className="public-logo-text">{loading ? '…' : shopName}</span>
-          )}
-        </Link>
-        <nav className="public-nav" aria-label="Main">
-          {pagesReady && pageHomeEnabled && (
-            <NavLink
-              to={withShopQuery('/')}
-              end
-              className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
-            >
-              Home
-            </NavLink>
-          )}
-          <NavLink
-            to={withShopQuery('/book')}
-            className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
-          >
-            {shop?.businessType === 'restaurant' ? 'Order' : 'Book'}
-          </NavLink>
-          {pagesReady && pageServicesEnabled && (
-            <NavLink
-              to={withShopQuery(shop?.businessType === 'restaurant' ? '/menu' : '/services')}
-              className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
-            >
-              {shop?.businessType === 'restaurant' ? 'Menu' : 'Services'}
-            </NavLink>
-          )}
-          {pagesReady && pageVouchersEnabled && (
-            <NavLink
-              to={withShopQuery('/voucher')}
-              className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
-            >
-              Gift Vouchers
-            </NavLink>
-          )}
-          {pagesReady && pageAboutEnabled && (
-            <NavLink
-              to={withShopQuery('/about')}
-              className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
-            >
-              About
-            </NavLink>
-          )}
-          <Link to="/chapter99/staff" className="public-nav-link public-nav-staff">
-            Staff Login
+      {!isThemedHome && (
+        <header className="public-header">
+          <Link to={brandPath} className="public-brand">
+            {logoUrl ? (
+              <img src={logoUrl} alt={shopName} className="public-logo" />
+            ) : (
+              <span className="public-logo-text">{loading ? '…' : shopName}</span>
+            )}
           </Link>
-        </nav>
-      </header>
+          <nav className="public-nav" aria-label="Main">
+            {pagesReady && pageHomeEnabled && (
+              <NavLink
+                to={withShopQuery('/')}
+                end
+                className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
+              >
+                Home
+              </NavLink>
+            )}
+            <NavLink
+              to={withShopQuery('/book')}
+              className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
+            >
+              {shop?.businessType === 'restaurant' ? 'Order' : 'Book'}
+            </NavLink>
+            {pagesReady && pageServicesEnabled && (
+              <NavLink
+                to={withShopQuery(shop?.businessType === 'restaurant' ? '/menu' : '/services')}
+                className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
+              >
+                {shop?.businessType === 'restaurant' ? 'Menu' : 'Services'}
+              </NavLink>
+            )}
+            {pagesReady && pageVouchersEnabled && (
+              <NavLink
+                to={withShopQuery('/voucher')}
+                className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
+              >
+                Gift Vouchers
+              </NavLink>
+            )}
+            {pagesReady && pageAboutEnabled && (
+              <NavLink
+                to={withShopQuery('/about')}
+                className={({ isActive }) => `public-nav-link${isActive ? ' active' : ''}`}
+              >
+                About
+              </NavLink>
+            )}
+            <Link to="/chapter99/staff" className="public-nav-link public-nav-staff">
+              Staff Login
+            </Link>
+          </nav>
+        </header>
+      )}
 
       {error && (
         <div className="public-banner-warn" role="alert">
@@ -87,31 +97,33 @@ function PublicLayoutInner() {
         <Outlet />
       </main>
 
-      <footer className="public-footer">
-        <p>{shopName}</p>
-        <p className="public-footer-links">
-          <Link to={withShopQuery('/book')}>
-            {shop?.businessType === 'restaurant' ? 'Order online' : 'Book online'}
-          </Link>
-          <span aria-hidden> · </span>
-          <Link to="/chapter99/staff">Staff dashboard</Link>
-        </p>
-        <p className="public-footer-links public-footer-legal">
-          <LegalFooterLink href={privacyHref} label="Privacy Policy" />
-          <span aria-hidden> · </span>
-          <LegalFooterLink href={termsHref} label="Terms of Service" />
-        </p>
-        <p className="public-footer-powered">
-          Powered by{' '}
-          <a
-            href="https://chapter99info.tech/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Chapter99
-          </a>
-        </p>
-      </footer>
+      {!isThemedHome && (
+        <footer className="public-footer">
+          <p>{shopName}</p>
+          <p className="public-footer-links">
+            <Link to={withShopQuery('/book')}>
+              {shop?.businessType === 'restaurant' ? 'Order online' : 'Book online'}
+            </Link>
+            <span aria-hidden> · </span>
+            <Link to="/chapter99/staff">Staff dashboard</Link>
+          </p>
+          <p className="public-footer-links public-footer-legal">
+            <LegalFooterLink href={privacyHref} label="Privacy Policy" />
+            <span aria-hidden> · </span>
+            <LegalFooterLink href={termsHref} label="Terms of Service" />
+          </p>
+          <p className="public-footer-powered">
+            Powered by{' '}
+            <a
+              href="https://chapter99info.tech/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Chapter99
+            </a>
+          </p>
+        </footer>
+      )}
     </div>
   )
 }
