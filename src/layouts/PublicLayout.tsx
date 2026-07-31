@@ -1,9 +1,10 @@
+import { type CSSProperties } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import LegalFooterLink from '../components/legal/LegalFooterLink'
 import { ShopProvider, useShopContext } from '../contexts/ShopContext'
 import { useShopPages } from '../hooks/useShopPages'
 import { resolvePrivacyPolicyHref, resolveTermsHref } from '../lib/legalUrls'
-import { isThemeId } from '../lib/themeRegistry'
+import { getThemeAccentColor, isThemeId } from '../lib/themeRegistry'
 import './PublicLayout.css'
 
 function PublicLayoutInner() {
@@ -15,6 +16,15 @@ function PublicLayoutInner() {
   // chrome. Only suppress it on the exact home route; Book/Menu/Services/etc.
   // still get the normal header so there's a way to navigate around from there.
   const isThemedHome = location.pathname === '/' && !!shop?.themeId && isThemeId(shop.themeId)
+
+  // Auto-tint every shared public page (Book, Menu, Services, ...) to match
+  // the shop's theme instead of always showing the original green (#1a3d2b).
+  // Shops with no themeId get no inline vars, so their CSS falls back to the
+  // original hardcoded colors — unchanged.
+  const accentColor = getThemeAccentColor(shop?.themeId)
+  const accentStyle = accentColor
+    ? ({ '--pbw-accent': accentColor, '--pbw-accent-active': accentColor } as CSSProperties)
+    : undefined
   const {
     ready: pagesReady,
     pageHomeEnabled,
@@ -30,7 +40,7 @@ function PublicLayoutInner() {
   const termsHref = resolveTermsHref(shop, withShopQuery)
 
   return (
-    <div className="public-site">
+    <div className="public-site" style={accentStyle}>
       {!isThemedHome && (
         <header className="public-header">
           <Link to={brandPath} className="public-brand">

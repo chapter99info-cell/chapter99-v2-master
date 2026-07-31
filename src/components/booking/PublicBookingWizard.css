@@ -20,7 +20,7 @@
 
 .pbw-progress-seg.active,
 .pbw-progress-seg.done {
-  background: #1a3d2b;
+  background: var(--pbw-accent, #1a3d2b);
 }
 
 .pbw-progress-labels {
@@ -32,7 +32,7 @@
 }
 
 .pbw-progress-labels span.active {
-  color: #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
   font-weight: 600;
 }
 
@@ -49,7 +49,7 @@
   font-size: 1.35rem;
   font-weight: 600;
   margin: 0 0 4px;
-  color: #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
 }
 
 .pbw-step-lead {
@@ -110,10 +110,10 @@
 }
 
 .pbw-service-category-tab.active {
-  background: #0f6e56;
-  border-color: #0f6e56;
+  background: var(--pbw-accent-active, #0f6e56);
+  border-color: var(--pbw-accent-active, #0f6e56);
   color: #fff;
-  box-shadow: 0 0 0 2px rgba(15, 110, 86, 0.2);
+  box-shadow: 0 0 0 2px var(--pbw-accent-glow, rgba(15, 110, 86, 0.2));
 }
 
 .pbw-services-empty {
@@ -150,13 +150,13 @@
 }
 
 .pbw-service-card:hover {
-  border-color: #1a3d2b;
+  border-color: var(--pbw-accent, #1a3d2b);
 }
 
 .pbw-service-card.selected {
-  border-color: #1a3d2b;
+  border-color: var(--pbw-accent, #1a3d2b);
   background: #f0f7f3;
-  box-shadow: 0 0 0 1px #1a3d2b;
+  box-shadow: 0 0 0 1px var(--pbw-accent, #1a3d2b);
 }
 
 .pbw-service-img {
@@ -194,7 +194,7 @@
 
 .pbw-service-price {
   font-weight: 600;
-  color: #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
   margin-top: 4px;
   font-size: 15px;
 }
@@ -227,8 +227,8 @@
 }
 
 .pbw-cal-day.selected {
-  border-color: #1a3d2b;
-  background: #1a3d2b;
+  border-color: var(--pbw-accent, #1a3d2b);
+  background: var(--pbw-accent, #1a3d2b);
   color: #fff;
 }
 
@@ -270,8 +270,8 @@
 }
 
 .pbw-slot.selected {
-  border-color: #1a3d2b;
-  background: #1a3d2b;
+  border-color: var(--pbw-accent, #1a3d2b);
+  background: var(--pbw-accent, #1a3d2b);
   color: #fff;
 }
 
@@ -348,7 +348,7 @@
 .pbw-total {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #e0ddd5;
@@ -374,7 +374,7 @@
 }
 
 .pbw-btn-primary {
-  background: #1a3d2b;
+  background: var(--pbw-accent, #1a3d2b);
   color: #fff;
 }
 
@@ -385,8 +385,8 @@
 
 .pbw-btn-secondary {
   background: #fff;
-  color: #1a3d2b;
-  border: 2px solid #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
+  border: 2px solid var(--pbw-accent, #1a3d2b);
 }
 
 .pbw-done {
@@ -400,7 +400,7 @@
 }
 
 .pbw-done h2 {
-  color: #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
   margin: 0 0 8px;
 }
 
@@ -408,7 +408,7 @@
   font-family: ui-monospace, monospace;
   font-size: 18px;
   font-weight: 700;
-  color: #1a3d2b;
+  color: var(--pbw-accent, #1a3d2b);
   margin: 12px 0;
 }
 
