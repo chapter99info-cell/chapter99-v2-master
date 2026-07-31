@@ -409,6 +409,16 @@
   letter-spacing: -0.02em;
 }
 
+/* Menu page reuses the booking wizard's .pbw-service-card grid (same look as
+   the "Select your service" step) but browsing here isn't a click-to-select
+   action, so drop the pointer cursor / hover highlight that class implies. */
+.pbw-service-card--static {
+  cursor: default;
+}
+.pbw-service-card--static:hover {
+  border-color: #e0ddd5;
+}
+
 .public-menu-tagline {
   margin: 0;
   font-size: 14px;
