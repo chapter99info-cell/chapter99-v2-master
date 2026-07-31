@@ -17,6 +17,7 @@ export type ThemeId =
   | 'sabai'
   | 'solene'
   | 'orchidglass'
+  | 'noirbotanica'
 
 const themeLoaders: Record<
   ThemeId,
@@ -38,6 +39,7 @@ const themeLoaders: Record<
   sabai: () => import('../themes/theme-sabai/HomePage'),
   solene: () => import('../themes/theme-solene/HomePage'),
   orchidglass: () => import('../themes/theme-orchidglass/HomePage'),
+  noirbotanica: () => import('../themes/theme-noirbotanica/HomePage'),
 }
 
 export const THEME_IDS: ThemeId[] = [
@@ -57,6 +59,7 @@ export const THEME_IDS: ThemeId[] = [
   'sabai',
   'solene',
   'orchidglass',
+  'noirbotanica',
 ]
 
 export const THEME_LABELS: Record<ThemeId, string> = {
@@ -76,6 +79,7 @@ export const THEME_LABELS: Record<ThemeId, string> = {
   sabai: 'Sabai. — Calm Flow',
   solene: 'Solene — Mood Switcher',
   orchidglass: 'Orchid — Liquid Glass Split',
+  noirbotanica: 'Noir Botanica — Cinematic Scroll',
 }
 
 export function isThemeId(value: string): value is ThemeId {
