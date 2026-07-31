@@ -3,11 +3,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import PublicLayout from './layouts/PublicLayout'
 import PublicPageGuard from './components/routing/PublicPageGuard'
 import ProductHead from './components/routing/ProductHead'
+import HomeRouter from './components/routing/HomeRouter'
 import OfflineBanner from './components/pwa/OfflineBanner'
 import InstallPrompt from './components/pwa/InstallPrompt'
 
 const Chapter99StaffApp = lazy(() => import('./Chapter99StaffApp'))
-const HomePage = lazy(() => import('./pages/HomePage'))
 const BookPage = lazy(() => import('./pages/BookPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
 const PublicServicesPage = lazy(() => import('./pages/PublicServicesPage'))
@@ -50,7 +50,7 @@ export default function Root() {
             index
             element={
               <PublicPageGuard page="home">
-                <LazyPage Page={HomePage} />
+                <HomeRouter />
               </PublicPageGuard>
             }
           />

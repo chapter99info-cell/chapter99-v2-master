@@ -21,6 +21,7 @@ export interface ShopRow {
   timezone: string | null
   logo_url: string | null
   theme_color: string | null
+  theme_id: string | null
   provider_name: string | null
   provider_number: string | null
   signature_url: string | null
@@ -134,6 +135,7 @@ export function mapRowToShop(row: ShopRow): Shop {
     timezone: row.timezone ?? 'Australia/Sydney',
     logoUrl: row.logo_url ?? undefined,
     themeColor: row.theme_color ?? '#0F6E56',
+    themeId: row.theme_id ?? undefined,
     providerName: row.provider_name ?? '',
     providerNumber: row.provider_number ?? '',
     signatureUrl: row.signature_url ?? undefined,

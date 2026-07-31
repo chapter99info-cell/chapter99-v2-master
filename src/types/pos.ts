@@ -99,6 +99,8 @@ export interface Shop {
   timezone: string
   logoUrl?: string
   themeColor: string
+  /** Landing-page theme id (see src/lib/themeRegistry.ts). Undefined = use the legacy default HomePage. */
+  themeId?: string
   // Health Fund
   providerName: string
   providerNumber: string

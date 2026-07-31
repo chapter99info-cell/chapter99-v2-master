@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { createShop } from '../../lib/adminService'
 import { PLAN_PRICING, SHOP_PLANS, type ShopPlan } from '../../types/plan'
+import { THEME_IDS, THEME_LABELS, type ThemeId } from '../../lib/themeRegistry'
 
 interface AddShopModalProps {
   onClose: () => void
@@ -25,7 +26,7 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
     ownerPin: '9999',
     providerName: '',
     providerNumber: '',
-    theme: 'theme-elegant',
+    theme: 'elegant' as ThemeId,
   })
 
   const set = (key: string, val: string) =>
@@ -47,6 +48,7 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
       email: form.email,
       abn: form.abn,
       address: form.address,
+      themeId: form.theme,
     })
     setSaving(false)
     if (ok) onSaved()
@@ -123,13 +125,13 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
 
             <div className="modal-section">Theme (หน้าบ้าน)</div>
             <div className="theme-selector">
-              {['theme-elegant', 'theme-minimal', 'theme-traditional', 'theme-modern'].map(t => (
+              {THEME_IDS.map(t => (
                 <div
                   key={t}
                   className={`theme-option${form.theme === t ? ' selected' : ''}`}
-                  onClick={() => set('theme', t)}
+                  onClick={() => setForm(prev => ({ ...prev, theme: t }))}
                 >
-                  {t.replace('theme-', '')}
+                  {THEME_LABELS[t]}
                 </div>
               ))}
             </div>
@@ -148,7 +150,7 @@ export default function AddShopModal({ onClose, onSaved }: AddShopModalProps) {
               <ReviewRow label="ABN" value={form.abn} />
               <ReviewRow label="Domain" value={form.domain} />
               <ReviewRow label="Plan" value={`${plan.label} — $${plan.setup} setup + $${plan.monthly}/mo`} />
-              <ReviewRow label="Theme" value={form.theme} />
+              <ReviewRow label="Theme" value={THEME_LABELS[form.theme]} />
               <ReviewRow label="Provider" value={form.providerName} />
               <ReviewRow label="Provider No." value={form.providerNumber} />
             </div>

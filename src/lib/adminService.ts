@@ -122,15 +122,19 @@ export async function createShop(data: {
   email: string
   abn: string
   address: string
+  /** Landing-page theme id from src/lib/themeRegistry.ts (optional — omit to use the legacy default HomePage) */
+  themeId?: string
 }): Promise<boolean> {
+  const { themeId, ...rest } = data
   const { error } = await supabase.from('shops').insert({
-    ...data,
+    ...rest,
     plan: normalizeShopPlan(data.plan),
     active: true,
     currency: 'AUD',
     timezone: 'Australia/Sydney',
     card_surcharge: 0.015,
     amex_surcharge: 0.02,
+    theme_id: themeId || null,
   })
   return !error
 }
