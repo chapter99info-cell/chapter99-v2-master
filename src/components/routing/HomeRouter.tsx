@@ -30,9 +30,13 @@ export default function HomeRouter() {
   if (shop?.themeId && isThemeId(shop.themeId)) {
     const ThemeHomePage = getThemeHomePage(shop.themeId)
     return (
-      <Suspense fallback={<HomeFallback />}>
-        <ThemeHomePage />
-      </Suspense>
+      // Themes are designed edge-to-edge; .theme-full-bleed (in PublicLayout.css)
+      // breaks them out of .public-main's 960px reading-width constraint.
+      <div className="theme-full-bleed">
+        <Suspense fallback={<HomeFallback />}>
+          <ThemeHomePage />
+        </Suspense>
+      </div>
     )
   }
 
