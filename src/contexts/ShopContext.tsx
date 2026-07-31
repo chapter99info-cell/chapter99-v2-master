@@ -36,8 +36,17 @@ export interface ShopContextValue {
 
 const ShopContext = createContext<ShopContextValue | null>(null)
 
-function appendShopQuery(path: string, slug: string | null): string {
-  if (!slug || isOnCustomShopDomain()) return path
+function appendShopQuery(path: string, slug: string | null, forceQuery: boolean): string {
+  if (!slug) return path
+  // On the shared chapter99info.tech platform host, shopDomainMap.ts hard-falls-back
+  // to 'mira' so Mira's own production links stay clean of any ?shop= param. But that
+  // same fallback was silently stripping ?shop= from EVERY internal link whenever a
+  // demo/preview shop was opened via ?shop=<slug> on that same shared host — clicking
+  // "Book now" on e.g. ?shop=demo-varathai landed on plain /book, which then re-resolved
+  // to Mira via the hostname fallback. forceQuery=true (an explicit ?shop= was present
+  // in the current URL) always wins over isOnCustomShopDomain() so preview links keep
+  // their shop slug; real custom-domain clients with no ?shop= param are unaffected.
+  if (!forceQuery && isOnCustomShopDomain()) return path
   const [pathname, search = ''] = path.split('?')
   const params = new URLSearchParams(search)
   params.set(SHOP_QUERY_KEY, slug)
@@ -110,8 +119,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const businessType = shop?.businessType ?? null
 
   const withShopQuery = useCallback(
-    (path: string) => appendShopQuery(path, shopSlug),
-    [shopSlug]
+    (path: string) => appendShopQuery(path, shopSlug, Boolean(urlSlug)),
+    [shopSlug, urlSlug]
   )
 
   const value = useMemo<ShopContextValue>(
